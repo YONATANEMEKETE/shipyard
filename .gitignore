@@ -6,3 +6,7 @@ dist/
 coverage/
 *.tsbuildinfo
 .eslintcache
+
+# Environment files
+.env*
+!.env.example

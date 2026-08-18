@@ -1,5 +1,8 @@
 import express from 'express';
 import { healthResponseSchema } from '@shipyard/shared';
+import { errorHandler } from './common/middlewares/errorHandler.js';
+import { notFoundHandler } from './common/middlewares/notFound.js';
+import { sendSuccess } from './common/http/responses.js';
 
 const app = express();
 
@@ -11,7 +14,10 @@ app.get('/healthz', (_request, response) => {
     status: 'ok',
   });
 
-  response.json(health);
+  sendSuccess(response, health);
 });
+
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 export default app;

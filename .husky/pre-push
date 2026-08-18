@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+
+branch="$(git rev-parse --abbrev-ref HEAD)"
+
+if [ "$branch" = "main" ] || [ "$branch" = "HEAD" ]; then
+  exit 0
+fi
+
+case "$branch" in
+  feature/*|fix/*|chore/*|docs/*|ci/*|hotfix/*)
+    exit 0
+    ;;
+esac
+
+echo "Invalid branch name: $branch"
+echo "Use: feature/*, fix/*, chore/*, docs/*, ci/*, or hotfix/*"
+exit 1

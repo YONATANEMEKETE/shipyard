@@ -9,6 +9,7 @@
   },
   "scripts": {
     "preinstall": "node -e \"const ua=process.env.npm_config_user_agent||'';if(!ua.startsWith('pnpm/')){console.error('This repository requires pnpm.');process.exit(1)}\"",
+    "prepare": "husky",
     "dev": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
@@ -17,7 +18,20 @@
     "format:check": "prettier --check .",
     "check": "pnpm lint && pnpm typecheck && pnpm format:check && pnpm audit --audit-level=high && pnpm build"
   },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,mjs,cjs}": [
+      "pnpm exec node scripts/lint-staged-eslint.mjs",
+      "prettier --write"
+    ],
+    "*.{json,jsonc,css,scss,md,mdx,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
   "devDependencies": {
+    "@commitlint/cli": "21.2.1",
+    "@commitlint/config-conventional": "21.2.0",
+    "husky": "9.1.7",
+    "lint-staged": "17.2.0",
     "prettier": "3.9.6",
     "turbo": "^2.10.10"
   }

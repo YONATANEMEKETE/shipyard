@@ -1,7 +1,7 @@
+import 'dotenv/config';
 import app from './app.js';
+import { env } from './common/config/env.js';
 
-const port = Number(process.env.API_PORT ?? 4000);
-
-app.listen(port, () => {
-  console.log(`Shipyard API listening on http://localhost:${port}`);
+app.listen(env.API_PORT, () => {
+  console.log(`Shipyard API listening on http://localhost:${env.API_PORT}`);
 });

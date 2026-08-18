@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enforce repository file policy
+        shell: bash
+        run: |
+          wrong_lockfiles="$(
+            git ls-files |
+              grep -E '(^|/)(package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|bun\.lock|bun\.lockb)$' ||
+              true
+          )"
+
+          if [ -n "$wrong_lockfiles" ]; then
+            echo "Only pnpm-lock.yaml is allowed. Remove these files:"
+            echo "$wrong_lockfiles"
+            exit 1
+          fi
+
+          if [ ! -f pnpm-lock.yaml ]; then
+            echo "pnpm-lock.yaml is missing."
+            exit 1
+          fi
+
+          environment_files="$(
+            git ls-files |
+              grep -E '(^|/)\.env($|\.)' |
+              grep -vE '(^|/)\.env\.example$' ||
+              true
+          )"
+
+          if [ -n "$environment_files" ]; then
+            echo "Committed environment files are not allowed:"
+            echo "$environment_files"
+            exit 1
+          fi
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        # The version is read from package.json packageManager.
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit dependencies
+        run: pnpm audit --audit-level=high
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Build
+        run: pnpm build

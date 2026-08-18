@@ -63,3 +63,16 @@ export class InternalServerError extends AppError {
     });
   }
 }
+
+export class ServiceUnavailableError extends AppError {
+  constructor(
+    message = 'Service is not ready',
+    publicDetails?: unknown,
+    cause?: unknown,
+  ) {
+    super(503, ErrorCodes.SERVICE_NOT_READY, message, {
+      publicDetails,
+      cause,
+    });
+  }
+}

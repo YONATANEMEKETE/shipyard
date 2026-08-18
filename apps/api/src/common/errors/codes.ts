@@ -6,6 +6,7 @@ export const ErrorCodes = {
   NOT_FOUND: 'NOT_FOUND',
   CONFLICT: 'CONFLICT',
   INTERNAL_SERVER_ERROR: 'INTERNAL_SERVER_ERROR',
+  SERVICE_NOT_READY: 'SERVICE_NOT_READY',
 } as const;
 
 export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];

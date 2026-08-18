@@ -5,6 +5,12 @@ export const envSchema = z.object({
     .enum(['development', 'test', 'production'])
     .default('development'),
   API_PORT: z.coerce.number().int().min(1).max(65535).default(4000),
+  SHUTDOWN_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(1000)
+    .max(120000)
+    .default(30000),
   API_URL: z.string().url(),
   WEB_URL: z.string().url(),
   LOG_LEVEL: z

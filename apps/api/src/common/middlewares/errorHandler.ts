@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 import type { ErrorResponse } from '@shipyard/shared';
 import { AppError } from '../errors/AppError.js';
 import { ErrorCodes } from '../errors/codes.js';
+import { logger } from '../logger/index.js';
 
 function createErrorResponse(
   code: string,
@@ -28,13 +29,32 @@ function sendErrorEnvelope(
   res.status(status).json(body);
 }
 
+function getRequestId(request: Request): string | undefined {
+  return typeof request.id === 'string' ? request.id : undefined;
+}
+
+function getRequestErrorContext(
+  request: Request,
+  requestId: string | undefined,
+  errorCode: string,
+  statusCode: number,
+) {
+  return {
+    errorCode,
+    statusCode,
+    method: request.method,
+    path: request.originalUrl,
+    requestId,
+  };
+}
+
 function isMalformedJson(err: unknown): boolean {
   return (err as { type?: string } | null)?.type === 'entity.parse.failed';
 }
 
 export function errorHandler(
   err: unknown,
-  _request: Request,
+  request: Request,
   res: Response,
   next: NextFunction,
 ): void {
@@ -43,16 +63,38 @@ export function errorHandler(
     return;
   }
 
+  const requestId = getRequestId(request);
+
   if (err instanceof AppError) {
+    logger.warn(
+      {
+        ...getRequestErrorContext(request, requestId, err.code, err.statusCode),
+        errorName: err.name,
+      },
+      'Request failed',
+    );
     sendErrorEnvelope(
       res,
-      createErrorResponse(err.code, err.message, err.publicDetails),
+      createErrorResponse(err.code, err.message, err.publicDetails, requestId),
       err.statusCode,
     );
     return;
   }
 
   if (err instanceof ZodError) {
+    logger.warn(
+      {
+        ...getRequestErrorContext(
+          request,
+          requestId,
+          ErrorCodes.VALIDATION_ERROR,
+          400,
+        ),
+        errorName: err.name,
+        validationIssueCount: err.issues.length,
+      },
+      'Request validation failed',
+    );
     sendErrorEnvelope(
       res,
       createErrorResponse(
@@ -62,6 +104,7 @@ export function errorHandler(
           field: issue.path.length > 0 ? issue.path.join('.') : '$root',
           message: issue.message,
         })),
+        requestId,
       ),
       400,
     );
@@ -69,23 +112,42 @@ export function errorHandler(
   }
 
   if (isMalformedJson(err)) {
+    logger.warn(
+      getRequestErrorContext(request, requestId, ErrorCodes.BAD_REQUEST, 400),
+      'Malformed JSON request body',
+    );
     sendErrorEnvelope(
       res,
       createErrorResponse(
         ErrorCodes.BAD_REQUEST,
         'Malformed JSON in request body',
+        undefined,
+        requestId,
       ),
       400,
     );
     return;
   }
 
-  console.error('Unhandled error:', err);
+  logger.error(
+    {
+      ...getRequestErrorContext(
+        request,
+        requestId,
+        ErrorCodes.INTERNAL_SERVER_ERROR,
+        500,
+      ),
+      err,
+    },
+    'Unhandled request error',
+  );
   sendErrorEnvelope(
     res,
     createErrorResponse(
       ErrorCodes.INTERNAL_SERVER_ERROR,
       'An unexpected error occurred',
+      undefined,
+      requestId,
     ),
     500,
   );

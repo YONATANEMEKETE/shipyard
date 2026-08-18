@@ -1,9 +1,11 @@
 import express, { type NextFunction } from 'express';
+import helmet from 'helmet';
 import {
   healthResponseSchema,
   readinessResponseSchema,
 } from '@shipyard/shared';
 import { ServiceUnavailableError } from './common/errors/httpErrors.js';
+import { env } from './common/config/env.js';
 import { errorHandler } from './common/middlewares/errorHandler.js';
 import { notFoundHandler } from './common/middlewares/notFound.js';
 import { requestLogger } from './common/middlewares/requestLogger.js';
@@ -12,6 +14,12 @@ import { sendSuccess } from './common/http/responses.js';
 
 const app = express();
 
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    hsts: env.NODE_ENV === 'production' ? undefined : false,
+  }),
+);
 app.use(requestLogger);
 app.use(express.json());
 

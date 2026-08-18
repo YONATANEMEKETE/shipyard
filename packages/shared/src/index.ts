@@ -1,0 +1,10 @@
+import { z } from 'zod';
+
+export const SHIPYARD_NAME = 'Shipyard';
+
+export const healthResponseSchema = z.object({
+  service: z.string(),
+  status: z.literal('ok'),
+});
+
+export type HealthResponse = z.infer<typeof healthResponseSchema>;

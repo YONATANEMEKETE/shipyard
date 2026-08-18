@@ -2,10 +2,12 @@ import express from 'express';
 import { healthResponseSchema } from '@shipyard/shared';
 import { errorHandler } from './common/middlewares/errorHandler.js';
 import { notFoundHandler } from './common/middlewares/notFound.js';
+import { requestLogger } from './common/middlewares/requestLogger.js';
 import { sendSuccess } from './common/http/responses.js';
 
 const app = express();
 
+app.use(requestLogger);
 app.use(express.json());
 
 app.get('/healthz', (_request, response) => {

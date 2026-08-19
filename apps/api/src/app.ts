@@ -9,10 +9,19 @@ import { env } from './common/config/env.js';
 import { errorHandler } from './common/middlewares/errorHandler.js';
 import { notFoundHandler } from './common/middlewares/notFound.js';
 import { requestLogger } from './common/middlewares/requestLogger.js';
+import {
+  apiRateLimiter,
+  authRateLimiter,
+} from './common/middlewares/rateLimit.js';
 import { isReady } from './common/health/readiness.js';
 import { sendSuccess } from './common/http/responses.js';
 
 const app = express();
+
+app.set(
+  'trust proxy',
+  env.TRUST_PROXY_HOPS === 0 ? false : env.TRUST_PROXY_HOPS,
+);
 
 app.use(
   helmet({
@@ -21,6 +30,8 @@ app.use(
   }),
 );
 app.use(requestLogger);
+app.use('/api/v1', apiRateLimiter);
+app.use('/api/v1/auth', authRateLimiter);
 app.use(express.json());
 
 app.get('/healthz', (_request, response) => {

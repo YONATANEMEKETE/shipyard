@@ -16,7 +16,11 @@
     "typecheck": "turbo run typecheck",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm lint && pnpm typecheck && pnpm format:check && pnpm audit --audit-level=high && pnpm build"
+    "check": "pnpm lint && pnpm typecheck && pnpm format:check && pnpm audit --audit-level=high && pnpm build",
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f db",
+    "db:psql": "docker compose exec db psql -U shipyard -d shipyard"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,mjs,cjs}": [

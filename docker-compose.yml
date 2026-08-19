@@ -1,0 +1,24 @@
+name: shipyard
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-shipyard}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-shipyard}
+      POSTGRES_DB: ${POSTGRES_DB:-shipyard}
+    ports:
+      - '5433:5432'
+    volumes:
+      - shipyard_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U ${POSTGRES_USER:-shipyard} -d ${POSTGRES_DB:-shipyard}
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  shipyard_pgdata:

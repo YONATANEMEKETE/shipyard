@@ -1,19 +1,220 @@
-* {
-  box-sizing: border-box;
+/* ============================================================================
+   Shipyard — Harbor Amber Theme
+   shadcn v4 / Tailwind v4 (CSS-first) globals.css export
+   ----------------------------------------------------------------------------
+   Source of truth: 03-UI/shipyard.pen (47 ds-* variables) + 03-UI/design.md
+   Status: finalized 2026-08-12 — do not hand-edit values; change the canvas
+   design system first, then re-export (see design.md §16 Governance).
+   ========================================================================== */
+
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+/* ---------------------------------------------------------------------------
+   Theme mapping (Tailwind v4 generates utilities from these)
+   ---------------------------------------------------------------------------
+   --color-*          → shadcn semantic vars (light/dark swap at runtime)
+   --font-sans/mono   → Inter / Geist Mono (load the fonts in the app shell;
+                        e.g. next/font, @fontsource, or <link> tags)
+   --radius-*         → ds-radius scale (sm 4 / md 8 / lg 12 / xl 16, then
+                        the 4px rhythm continues: 2xl 20 / 3xl 24 / 4xl 28;
+                        pills use rounded-full = 999px)
+--------------------------------------------------------------------------- */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Harbor Amber radius scale — exact ds-radius values (4px rhythm) */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-3xl: 24px;
+  --radius-4xl: 28px;
 }
 
-html,
-body {
-  margin: 0;
-  min-height: 100%;
+/* Font stacks — ds-font-ui (Inter) and ds-font-mono (Geist Mono) */
+@theme {
+  --font-sans:
+    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --font-mono:
+    'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+
+  /* Full ds-* palette available as utilities (e.g. bg-ds-surface,
+     text-ds-muted, border-ds-border-strong) for one-off design-system use */
+  --color-ds-bg: #f4f3ef;
+  --color-ds-surface: #ffffff;
+  --color-ds-surface-subtle: #fbfaf7;
+  --color-ds-sidebar: #eeede8;
+  --color-ds-sidebar-dark: #161512;
+  --color-ds-text: #171717;
+  --color-ds-text-muted: #6c6861;
+  --color-ds-border: #dedcd5;
+  --color-ds-border-strong: #b9b5ac;
+  --color-ds-brand: #b45309;
+  --color-ds-accent: #f59e0b;
+  --color-ds-brand-soft: #fff4db;
+  --color-ds-success: #2e7d5b;
+  --color-ds-success-soft: #eaf5ef;
+  --color-ds-warning: #a65f00;
+  --color-ds-warning-soft: #fff1d6;
+  --color-ds-danger: #b42318;
+  --color-ds-danger-soft: #fdecea;
+  --color-ds-info: #2563eb;
+  --color-ds-info-soft: #eaf2ff;
+  --color-ds-focus: #f59e0b;
 }
 
-body {
-  padding: 3rem;
-  font-family: Arial, Helvetica, sans-serif;
+/* ============================================================================
+   Light — Harbor Amber
+   ========================================================================== */
+:root {
+  --radius: 12px; /* base; the full scale is fixed in @theme inline above */
+
+  /* Foundation */
+  --background: #f4f3ef; /* ds-bg */
+  --foreground: #171717; /* ds-text */
+
+  /* Surfaces */
+  --card: #ffffff; /* ds-surface */
+  --card-foreground: #171717;
+  --popover: #ffffff; /* ds-surface */
+  --popover-foreground: #171717;
+
+  /* Brand actions */
+  --primary: #b45309; /* ds-brand */
+  --primary-foreground: #ffffff;
+  --secondary: #f0efeb; /* quiet neutral surface */
+  --secondary-foreground: #171717;
+  --muted: #f0efeb; /* quiet neutral surface */
+  --muted-foreground: #6c6861; /* ds-text-muted */
+  --accent: #fff4db; /* ds-brand-soft — selection & emphasis */
+  --accent-foreground: #b45309; /* ds-brand */
+
+  /* Semantics */
+  --destructive: #b42318; /* ds-danger */
+  --destructive-foreground: #ffffff;
+  --border: #dedcd5; /* ds-border */
+  --input: #dedcd5; /* ds-border */
+  --ring: #f59e0b; /* ds-focus */
+
+  /* Charts — semantic family (brand, accent, success, info, warning) */
+  --chart-1: #b45309;
+  --chart-2: #f59e0b;
+  --chart-3: #2e7d5b;
+  --chart-4: #2563eb;
+  --chart-5: #a65f00;
+
+  /* Sidebar */
+  --sidebar: #eeede8; /* ds-sidebar */
+  --sidebar-foreground: #171717;
+  --sidebar-primary: #b45309; /* ds-brand */
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ffffff; /* active nav = white surface pill */
+  --sidebar-accent-foreground: #171717;
+  --sidebar-border: #dedcd5; /* ds-border */
+  --sidebar-ring: #f59e0b; /* ds-focus */
 }
 
-main {
-  margin: 0 auto;
-  max-width: 48rem;
+/* ============================================================================
+   Dark — Harbor Amber ("Warm without glare")
+   From the Dark Foundation frame: brown-black surfaces preserve the amber
+   character. ds-sidebar-dark is tokenized; the rest are approved canvas
+   samples (ds-surface-dark / ds-accent-soft-dark / ds-text-dark /
+   ds-text-muted-dark) — tokenize them in shipyard.pen when dark-mode
+   implementation begins.
+   ========================================================================== */
+.dark {
+  /* Foundation */
+  --background: #161512; /* ds-sidebar-dark */
+  --foreground: #f7f4ed; /* ds-text-dark */
+
+  /* Surfaces */
+  --card: #1b1916; /* ds-surface-dark */
+  --card-foreground: #f7f4ed;
+  --popover: #1b1916; /* ds-surface-dark */
+  --popover-foreground: #f7f4ed;
+
+  /* Brand actions — amber on brown-black */
+  --primary: #f59e0b; /* ds-accent */
+  --primary-foreground: #161512;
+  --secondary: #332513; /* ds-accent-soft-dark */
+  --secondary-foreground: #f7f4ed;
+  --muted: #1b1916; /* ds-surface-dark */
+  --muted-foreground: #aaa39a; /* ds-text-muted-dark */
+  --accent: #332513; /* ds-accent-soft-dark — active nav / selection */
+  --accent-foreground: #f59e0b;
+
+  /* Semantics */
+  --destructive: #b42318; /* ds-danger */
+  --destructive-foreground: #ffffff;
+  --border: #332513; /* ds-accent-soft-dark (warm border) */
+  --input: #332513;
+  --ring: #f59e0b; /* ds-focus */
+
+  /* Charts */
+  --chart-1: #f59e0b;
+  --chart-2: #b45309;
+  --chart-3: #2e7d5b;
+  --chart-4: #2563eb;
+  --chart-5: #a65f00;
+
+  /* Sidebar */
+  --sidebar: #161512; /* ds-sidebar-dark */
+  --sidebar-foreground: #f7f4ed;
+  --sidebar-primary: #f59e0b; /* ds-accent */
+  --sidebar-primary-foreground: #161512;
+  --sidebar-accent: #332513; /* ds-accent-soft-dark */
+  --sidebar-accent-foreground: #f59e0b;
+  --sidebar-border: #332513;
+  --sidebar-ring: #f59e0b;
+}
+
+/* ============================================================================
+   Base
+   ========================================================================== */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
 }

@@ -1,0 +1,13 @@
+// Prisma schema — Shipyard API
+// Connection URL lives in prisma.config.ts (Prisma 7 pattern), not here.
+// Models are added with the first feature build (see
+// shipyard-design/04-Engineering/features/*/02-data-model.md).
+
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated"
+}

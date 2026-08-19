@@ -76,3 +76,20 @@ export class ServiceUnavailableError extends AppError {
     });
   }
 }
+
+export class RateLimitError extends AppError {
+  readonly policy?: string;
+
+  constructor(
+    message = 'Too many requests, please try again later',
+    publicDetails?: unknown,
+    cause?: unknown,
+    policy?: string,
+  ) {
+    super(429, ErrorCodes.RATE_LIMITED, message, {
+      publicDetails,
+      cause,
+    });
+    this.policy = policy;
+  }
+}

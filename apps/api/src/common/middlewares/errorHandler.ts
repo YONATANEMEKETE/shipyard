@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 import type { ErrorResponse } from '@shipyard/shared';
 import { AppError } from '../errors/AppError.js';
 import { ErrorCodes } from '../errors/codes.js';
+import { RateLimitError } from '../errors/httpErrors.js';
 import { logger } from '../logger/index.js';
 
 function createErrorResponse(
@@ -70,6 +71,9 @@ export function errorHandler(
       {
         ...getRequestErrorContext(request, requestId, err.code, err.statusCode),
         errorName: err.name,
+        ...(err instanceof RateLimitError && err.policy !== undefined
+          ? { rateLimitPolicy: err.policy }
+          : {}),
       },
       'Request failed',
     );

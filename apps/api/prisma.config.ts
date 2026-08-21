@@ -12,7 +12,16 @@ const appEnv =
   loadEnv({ path: path.join(dir, '.env'), quiet: true }).parsed ?? {};
 const rootEnv =
   loadEnv({ path: path.join(dir, '../../.env'), quiet: true }).parsed ?? {};
-const env = { ...rootEnv, ...appEnv };
+// File values are merged (app-local wins); an explicit process.env override
+// wins over both so the CLI can be pointed at a different database (e.g. a
+// test container) without editing files.
+const env = {
+  ...rootEnv,
+  ...appEnv,
+  ...(process.env.DATABASE_URL
+    ? { DATABASE_URL: process.env.DATABASE_URL }
+    : {}),
+};
 
 export default defineConfig({
   schema: path.join(dir, 'prisma', 'schema.prisma'),

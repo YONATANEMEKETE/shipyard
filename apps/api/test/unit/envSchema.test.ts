@@ -7,6 +7,12 @@ function validEnv(): Record<string, string> {
     WEB_URL: 'http://localhost:3000',
     DATABASE_URL: 'postgresql://shipyard:shipyard@localhost:5433/shipyard',
     BETTER_AUTH_SECRET: 'a-very-long-secret-with-at-least-32-chars',
+    GOOGLE_CLIENT_ID: 'google-client-id',
+    GOOGLE_CLIENT_SECRET: 'google-client-secret',
+    GITHUB_CLIENT_ID: 'github-client-id',
+    GITHUB_CLIENT_SECRET: 'github-client-secret',
+    RESEND_API_KEY: 'resend-api-key',
+    EMAIL_FROM: 'Shipyard <noreply@example.com>',
   };
 }
 

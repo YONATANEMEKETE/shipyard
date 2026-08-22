@@ -13,6 +13,12 @@ setDefault('API_URL', 'http://localhost:4000');
 setDefault('WEB_URL', 'http://localhost:3000');
 setDefault('LOG_LEVEL', 'silent');
 setDefault('BETTER_AUTH_SECRET', 'test-secret-at-least-thirty-two-chars-long');
+setDefault('GOOGLE_CLIENT_ID', 'test-google-client-id');
+setDefault('GOOGLE_CLIENT_SECRET', 'test-google-client-secret');
+setDefault('GITHUB_CLIENT_ID', 'test-github-client-id');
+setDefault('GITHUB_CLIENT_SECRET', 'test-github-client-secret');
+setDefault('RESEND_API_KEY', 'test-resend-api-key');
+setDefault('EMAIL_FROM', 'Shipyard <noreply@test.example.com>');
 // Keep rate limiters permissive so integration tests aren't throttled.
 setDefault('API_RATE_LIMIT_MAX', '100000');
 setDefault('AUTH_RATE_LIMIT_MAX', '100000');

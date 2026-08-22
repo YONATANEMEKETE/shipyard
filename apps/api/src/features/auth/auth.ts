@@ -7,28 +7,22 @@ import { sendAuthEmail } from './mailer.js';
 type SocialProviders = NonNullable<BetterAuthOptions['socialProviders']>;
 
 /**
- * OAuth providers activate only when their credentials are present. F1
- * Phase 2 wires Google + GitHub; until the client IDs/secrets land, the app
- * boots with email/password only.
+ * Google + GitHub OAuth (F1 Phase 2). Credentials are required env vars,
+ * validated at startup. Callback URLs to register in each console:
+ * dev:  http://localhost:3000/api/v1/auth/callback/<provider>
+ * prod: https://shipyard.yonatanem.com/api/v1/auth/callback/<provider>
  */
 function buildSocialProviders(): SocialProviders {
-  const providers: SocialProviders = {};
-
-  if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
-    providers.google = {
+  return {
+    google: {
       clientId: env.GOOGLE_CLIENT_ID,
       clientSecret: env.GOOGLE_CLIENT_SECRET,
-    };
-  }
-
-  if (env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET) {
-    providers.github = {
+    },
+    github: {
       clientId: env.GITHUB_CLIENT_ID,
       clientSecret: env.GITHUB_CLIENT_SECRET,
-    };
-  }
-
-  return providers;
+    },
+  };
 }
 
 /**

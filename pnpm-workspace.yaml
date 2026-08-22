@@ -8,6 +8,7 @@ allowBuilds:
   msw: false
   prisma: true
   protobufjs: false
+  sharp: true
   ssh2: false
   unrs-resolver: true
 
@@ -15,3 +16,6 @@ allowBuilds:
 # @prisma/config pins 7.1.5 exactly; override to the patched line.
 overrides:
   deepmerge-ts: 8.0.1
+  # postcss (via next — web and better-auth trees): patched line for the
+  # GHSA-6g55-p6wh-862q follow-up.
+  postcss: 8.5.23

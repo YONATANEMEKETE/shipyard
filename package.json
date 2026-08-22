@@ -21,7 +21,8 @@
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down",
     "db:logs": "docker compose logs -f db",
-    "db:psql": "docker compose exec db psql -U shipyard -d shipyard"
+    "db:psql": "docker compose exec db psql -U shipyard -d shipyard",
+    "emails:dev": "pnpm --filter @shipyard/email dev"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,mjs,cjs}": [

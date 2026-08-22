@@ -11,10 +11,17 @@ import { notFoundHandler } from './common/middlewares/notFound.js';
 import { requestLogger } from './common/middlewares/requestLogger.js';
 import {
   apiRateLimiter,
-  authRateLimiter,
+  authBaseLimiter,
+  authSignInLimiter,
+  authSignUpLimiter,
+  changeEmailLimiter,
+  changePasswordLimiter,
+  oauthCallbackLimiter,
+  requestPasswordResetLimiter,
+  sendVerificationLimiter,
 } from './common/middlewares/rateLimit.js';
-import { toNodeHandler } from 'better-auth/node';
-import { auth } from './features/auth/auth.js';
+import { resolveSession } from './common/middlewares/authz.js';
+import { handleAuth } from './features/auth/handler.js';
 import { isReady, setReady } from './common/health/readiness.js';
 import { sendSuccess } from './common/http/responses.js';
 
@@ -42,11 +49,31 @@ export function createApp(options: CreateAppOptions = {}): express.Express {
   );
   app.use(requestLogger);
   app.use('/api/v1', apiRateLimiter);
-  app.use('/api/v1/auth', authRateLimiter);
-  // Better Auth handler — must run before express.json(): it consumes the
-  // raw body itself. Rate limiting above still applies to every auth route.
-  app.all('/api/v1/auth/*splat', toNodeHandler(auth));
+  app.use('/api/v1/auth', authBaseLimiter);
+
+  // express.json must run before the auth handler AND the per-endpoint
+  // limiters: Better Auth's node adapter re-serializes a pre-parsed req.body
+  // (better-call getRequest), which the per-email/per-user rate-limit keys
+  // also read.
   app.use(express.json());
+
+  // Per-endpoint auth rate limits (04-api-design.md §5) — policies before
+  // the handler, in route order.
+  app.post('/api/v1/auth/sign-up/email', authSignUpLimiter);
+  app.post('/api/v1/auth/sign-in/email', authSignInLimiter);
+  app.all('/api/v1/auth/callback/*splat', oauthCallbackLimiter);
+  app.post('/api/v1/auth/send-verification-email', sendVerificationLimiter);
+  app.post('/api/v1/auth/request-password-reset', requestPasswordResetLimiter);
+  app.post(
+    '/api/v1/auth/change-password',
+    resolveSession,
+    changePasswordLimiter,
+  );
+  app.post('/api/v1/auth/change-email', resolveSession, changeEmailLimiter);
+
+  // Better Auth handler with the Shipyard response contract (envelope +
+  // AUTH_* codes, sign-out 204, generic password-reset responses).
+  app.all('/api/v1/auth/*splat', handleAuth);
 
   app.get('/healthz', (_request, response) => {
     const health = healthResponseSchema.parse({

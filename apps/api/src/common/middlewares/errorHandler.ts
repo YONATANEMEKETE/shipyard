@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import { ZodError } from 'zod';
-import type { ErrorResponse } from '@shipyard/shared';
+import { AUTH_ERROR_CODES, type ErrorResponse } from '@shipyard/shared';
 import { AppError } from '../errors/AppError.js';
 import { ErrorCodes } from '../errors/codes.js';
 import { RateLimitError } from '../errors/httpErrors.js';
@@ -53,6 +53,11 @@ function isMalformedJson(err: unknown): boolean {
   return (err as { type?: string } | null)?.type === 'entity.parse.failed';
 }
 
+function isAuthPath(request: Request): boolean {
+  const path = request.originalUrl.split('?')[0] ?? '';
+  return path === '/api/v1/auth' || path.startsWith('/api/v1/auth/');
+}
+
 export function errorHandler(
   err: unknown,
   request: Request,
@@ -67,9 +72,16 @@ export function errorHandler(
   const requestId = getRequestId(request);
 
   if (err instanceof AppError) {
+    // Auth rate-limit errors use the AUTH_RATE_LIMITED domain code
+    // (04-api-design.md §6); the generic code applies everywhere else.
+    const code =
+      err instanceof RateLimitError && isAuthPath(request)
+        ? AUTH_ERROR_CODES.RATE_LIMITED
+        : err.code;
+
     logger.warn(
       {
-        ...getRequestErrorContext(request, requestId, err.code, err.statusCode),
+        ...getRequestErrorContext(request, requestId, code, err.statusCode),
         errorName: err.name,
         ...(err instanceof RateLimitError && err.policy !== undefined
           ? { rateLimitPolicy: err.policy }
@@ -79,7 +91,7 @@ export function errorHandler(
     );
     sendErrorEnvelope(
       res,
-      createErrorResponse(err.code, err.message, err.publicDetails, requestId),
+      createErrorResponse(code, err.message, err.publicDetails, requestId),
       err.statusCode,
     );
     return;

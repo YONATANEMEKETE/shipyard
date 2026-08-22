@@ -1,3 +1,4 @@
+import { Resend } from 'resend';
 import { env } from '../../common/config/env.js';
 import { logger } from '../../common/logger/index.js';
 
@@ -14,10 +15,14 @@ export interface AuthEmail {
   actionUrl: string;
 }
 
+const resend = new Resend(env.RESEND_API_KEY);
+
 /**
- * Dev inbox mode (F1 Phase 1): auth emails are logged so the local flow can
- * be completed by clicking the logged link. The Resend adapter (Phase 2)
- * replaces this for all environments.
+ * Auth email delivery (F1 Phase 2):
+ * - Development/test: dev inbox mode — the action link is logged so the
+ *   local flow can be completed without sending real mail.
+ * - Production: sent via Resend (RESEND_API_KEY / EMAIL_FROM are required
+ *   and validated at startup).
  */
 export function sendAuthEmail(email: AuthEmail): Promise<void> {
   if (env.NODE_ENV === 'development' || env.NODE_ENV === 'test') {
@@ -25,14 +30,29 @@ export function sendAuthEmail(email: AuthEmail): Promise<void> {
       { to: email.to, subject: email.subject, actionUrl: email.actionUrl },
       'Auth email (dev inbox mode)',
     );
-  } else {
-    // TODO(F1 Phase 2): Resend adapter (RESEND_API_KEY / EMAIL_FROM are
-    // already validated at startup).
-    logger.error(
-      { to: email.to, subject: email.subject },
-      'Auth email not sent: Resend adapter not implemented yet (F1 Phase 2)',
-    );
+    return Promise.resolve();
   }
 
-  return Promise.resolve();
+  const body = `Open this link to continue:\n${email.actionUrl}`;
+
+  return resend.emails
+    .send({
+      from: env.EMAIL_FROM,
+      to: email.to,
+      subject: email.subject,
+      text: body,
+    })
+    .then(({ data, error }) => {
+      if (error) {
+        logger.error({ err: error }, 'Failed to send auth email via Resend');
+        return;
+      }
+      logger.info(
+        { resendId: data?.id, to: email.to },
+        'Auth email sent via Resend',
+      );
+    })
+    .catch((error: unknown) => {
+      logger.error({ err: error }, 'Failed to send auth email via Resend');
+    });
 }

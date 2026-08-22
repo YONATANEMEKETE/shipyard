@@ -46,6 +46,10 @@ export const envSchema = z.object({
   // Email delivery — required for the same reason.
   RESEND_API_KEY: z.string().min(1),
   EMAIL_FROM: z.string().min(1),
+  // Public base URL for email static assets (logo). Optional: dev/test don't
+  // send real mail; production emails warn and send with a broken logo
+  // until it is set.
+  EMAIL_ASSET_URL: z.string().url().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

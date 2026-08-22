@@ -52,9 +52,8 @@ export const auth = betterAuth({
     // verification-pending screen with a rate-limited resend.
     requireEmailVerification: true,
     sendResetPassword: async ({ user, url }) => {
-      await sendAuthEmail({
-        to: user.email,
-        subject: 'Reset your Shipyard password',
+      await sendAuthEmail(user.email, 'passwordReset', {
+        email: user.email,
         actionUrl: url,
       });
     },
@@ -65,9 +64,8 @@ export const auth = betterAuth({
     autoSignInAfterVerification: true,
     expiresIn: 60 * 60 * 24, // 24h tokens
     sendVerificationEmail: async ({ user, url }) => {
-      await sendAuthEmail({
-        to: user.email,
-        subject: 'Verify your Shipyard email',
+      await sendAuthEmail(user.email, 'verification', {
+        userName: user.name,
         actionUrl: url,
       });
     },
@@ -76,6 +74,16 @@ export const auth = betterAuth({
   user: {
     changeEmail: {
       enabled: true,
+      // Better Auth's flow: the confirmation link goes to the CURRENT
+      // email; the change lands once confirmed (old address stays active
+      // until then — api-design §3.9).
+      sendChangeEmailConfirmation: async ({ user, newEmail, url }) => {
+        await sendAuthEmail(user.email, 'emailChange', {
+          userName: user.name,
+          newEmail,
+          actionUrl: url,
+        });
+      },
     },
     additionalFields: {
       // Shipyard addition (PRD §5.11): light | dark | system, account-level.

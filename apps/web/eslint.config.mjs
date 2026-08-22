@@ -9,7 +9,9 @@ export default defineConfig([
     '.next/**',
     'out/**',
     'build/**',
+    'coverage/**',
     'next-env.d.ts',
     'eslint.config.mjs',
+    'playwright.config.ts',
   ]),
 ]);

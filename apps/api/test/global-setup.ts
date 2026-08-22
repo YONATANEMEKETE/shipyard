@@ -8,12 +8,11 @@ const execAsync = promisify(exec);
 let container: Awaited<ReturnType<PostgreSqlContainer['start']>> | undefined;
 
 async function applySchema(databaseUrl: string): Promise<void> {
-  // `prisma db push` is used because the project has no migration history yet.
-  // When migrations are introduced, swap this for `prisma migrate deploy`.
+  // Migrations are the source of truth since the first auth migration.
   // prisma.config.ts honors the explicit DATABASE_URL env override below.
   // cwd is the api package root (parent of test/), where prisma.config.ts lives.
   const apiRoot = fileURLToPath(new URL('..', import.meta.url));
-  await execAsync('pnpm exec prisma db push', {
+  await execAsync('pnpm exec prisma migrate deploy', {
     cwd: apiRoot,
     env: { ...process.env, DATABASE_URL: databaseUrl },
   });

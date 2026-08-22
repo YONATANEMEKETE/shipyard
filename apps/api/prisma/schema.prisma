@@ -11,3 +11,87 @@ generator client {
   provider = "prisma-client"
   output   = "../src/generated"
 }
+
+// ============ AUTH MODULE (Better Auth canonical schema) ============
+// Source of truth: shipyard-design/04-Engineering/features/auth/02-data-model.md
+// Column names are exactly what Better Auth's Prisma adapter expects —
+// do not rename without checking better-auth/adapters/prisma.
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  // Shipyard addition (PRD §5.11 Appearance): light | dark | system.
+  // Account-level preference, exposed to Better Auth via additionalFields.
+  theme         String   @default("system")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions Session[]
+  accounts Account[]
+  // Relations to other modules (memberships, created issues, ...) are added
+  // by their owning modules' schemas — never here.
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  // Stored HASHED (Better Auth); the plaintext token lives only in the
+  // HttpOnly cookie.
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt]) // cleanup scans
+}
+
+model Account {
+  id                     String    @id @default(cuid())
+  // Provider-side user id (OAuth) — or "credential" marker.
+  accountId              String
+  // "google" | "github" | "credential"
+  providerId             String
+  userId                 String
+  accessToken            String?
+  refreshToken           String?
+  idToken                String?
+  accessTokenExpiresAt   DateTime?
+  refreshTokenExpiresAt  DateTime?
+  scope                  String?
+  // OAuth issuer identifier — expected by Better Auth ≥1.7 (addition to the
+  // design doc's schema, which predates it). NULL for credential accounts.
+  issuer                 String?
+  // Credential provider: password hash; NULL for OAuth.
+  password               String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // One provider identity per user — merge-by-email lives in the service layer.
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  // e.g. "email-verification:{email}", "reset-password:{token-hash}",
+  // "email-change:{userId}" — encodes the token's purpose.
+  identifier String
+  // Hashed token, or the pending new email for email-change flows.
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@index([expiresAt]) // cleanup scans
+}

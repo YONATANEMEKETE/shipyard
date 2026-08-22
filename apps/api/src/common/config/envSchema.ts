@@ -35,6 +35,14 @@ export const envSchema = z.object({
   BETTER_AUTH_SECRET: z
     .string()
     .min(32, 'BETTER_AUTH_SECRET must be at least 32 characters'),
+  // OAuth (Phase 2 of F1) — providers activate only when both values are set.
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GITHUB_CLIENT_ID: z.string().optional(),
+  GITHUB_CLIENT_SECRET: z.string().optional(),
+  // Resend (Phase 2 of F1) — until set, auth emails use dev inbox mode (log).
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

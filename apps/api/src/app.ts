@@ -13,6 +13,8 @@ import {
   apiRateLimiter,
   authRateLimiter,
 } from './common/middlewares/rateLimit.js';
+import { toNodeHandler } from 'better-auth/node';
+import { auth } from './features/auth/auth.js';
 import { isReady, setReady } from './common/health/readiness.js';
 import { sendSuccess } from './common/http/responses.js';
 
@@ -41,6 +43,9 @@ export function createApp(options: CreateAppOptions = {}): express.Express {
   app.use(requestLogger);
   app.use('/api/v1', apiRateLimiter);
   app.use('/api/v1/auth', authRateLimiter);
+  // Better Auth handler — must run before express.json(): it consumes the
+  // raw body itself. Rate limiting above still applies to every auth route.
+  app.all('/api/v1/auth/*splat', toNodeHandler(auth));
   app.use(express.json());
 
   app.get('/healthz', (_request, response) => {

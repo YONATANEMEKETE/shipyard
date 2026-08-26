@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react';
 
 import { GitHubIcon, GoogleIcon } from '@/components/auth/provider-icons';
 import { Button } from '@/components/ui/button';
+import { FormError } from '@/components/ui/form-error';
 import { authClient } from '@/lib/auth-client';
 
 type SocialProvider = 'google' | 'github';
@@ -40,7 +41,6 @@ export function SocialButtons({ callbackURL = '/' }: SocialButtonsProps) {
   const [startedProvider, setStartedProvider] = useState<SocialProvider | null>(
     null,
   );
-  const [providerError, setProviderError] = useState<string | null>(null);
 
   const socialMutation = useMutation({
     mutationFn: async (provider: SocialProvider) => {
@@ -53,10 +53,7 @@ export function SocialButtons({ callbackURL = '/' }: SocialButtonsProps) {
       }
       return provider;
     },
-    onError: () => {
-      setStartedProvider(null);
-      setProviderError(GENERIC_SOCIAL_ERROR);
-    },
+    onError: () => setStartedProvider(null),
   });
 
   const busy = startedProvider !== null || socialMutation.isPending;
@@ -94,13 +91,9 @@ export function SocialButtons({ callbackURL = '/' }: SocialButtonsProps) {
         </Button>
       </div>
 
-      <div aria-live="polite">
-        {providerError !== null && (
-          <p className="text-center text-xs text-destructive">
-            {providerError}
-          </p>
-        )}
-      </div>
+      <FormError
+        message={socialMutation.isError ? GENERIC_SOCIAL_ERROR : null}
+      />
     </div>
   );
 }

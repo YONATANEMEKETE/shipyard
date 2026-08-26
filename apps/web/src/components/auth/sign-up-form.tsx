@@ -10,6 +10,7 @@ import { Loader2, MailCheck } from 'lucide-react';
 
 import { ResendVerificationButton } from '@/components/auth/resend-verification-button';
 import { SocialButtons } from '@/components/auth/social-buttons';
+import { FormError } from '@/components/ui/form-error';
 import { authClient } from '@/lib/auth-client';
 import { Button } from '@/components/ui/button';
 import {
@@ -38,7 +39,6 @@ const GENERIC_ERROR = 'Unable to create your account. Please try again.';
  */
 export function SignUpForm() {
   const [sentEmail, setSentEmail] = useState<string | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm<SignUpFormValues>({
     resolver: zodResolver(signUpRequestSchema),
@@ -63,15 +63,7 @@ export function SignUpForm() {
       }
       return values.email;
     },
-    onSuccess: (email) => {
-      setSubmitError(null);
-      setSentEmail(email);
-    },
-    onError: (mutationError) => {
-      setSubmitError(
-        mutationError instanceof Error ? mutationError.message : GENERIC_ERROR,
-      );
-    },
+    onSuccess: (email) => setSentEmail(email),
   });
 
   if (sentEmail !== null) {
@@ -207,11 +199,15 @@ export function SignUpForm() {
             />
 
             {/* API error feedback (envelope message surfaces here) */}
-            <div aria-live="polite">
-              {submitError !== null && (
-                <p className="text-xs text-destructive">{submitError}</p>
-              )}
-            </div>
+            <FormError
+              message={
+                signUpMutation.isError
+                  ? signUpMutation.error instanceof Error
+                    ? signUpMutation.error.message
+                    : GENERIC_ERROR
+                  : null
+              }
+            />
 
             <Button type="submit" disabled={signUpMutation.isPending}>
               {signUpMutation.isPending ? (

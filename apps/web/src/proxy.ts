@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
+import { authClient } from '@/lib/auth-client';
+
 /**
  * Route protection for Shipyard.
  *
@@ -9,10 +11,11 @@ import { NextResponse, type NextRequest } from 'next/server';
  *   2. Authenticated users are kept out of auth pages — those redirect to
  *      the workspace root.
  *
- * Authentication is checked by session-cookie presence. This is the cheap,
- * edge-friendly signal; cryptographic validation against the API
- * (/api/v1/auth/get-session) lands with the integration pass, at which
- * point this check upgrades without changing the routing rules.
+ * Authentication is validated against the Better Auth API (get-session)
+ * with the request's own cookies forwarded. A missing session cookie skips
+ * the network call entirely; if the API is unreachable we fall back to
+ * treating cookie presence as authenticated so a transient API blip doesn't
+ * sign everyone out at the door.
  */
 
 const AUTH_PAGES = [
@@ -31,7 +34,7 @@ const SESSION_COOKIES = [
   '__Secure-better-auth.session_token',
 ] as const;
 
-function isAuthenticated(request: NextRequest): boolean {
+function hasSessionCookie(request: NextRequest): boolean {
   return SESSION_COOKIES.some((name) => request.cookies.has(name));
 }
 
@@ -41,10 +44,39 @@ function isAuthPage(pathname: string): boolean {
   );
 }
 
-export default function proxy(request: NextRequest) {
+async function isAuthenticated(request: NextRequest): Promise<boolean> {
+  // Fast path: no session cookie means no valid session — skip the API call
+  // that every unauthenticated visit (static assets aside) would otherwise
+  // pay for.
+  const maybeSession = hasSessionCookie(request);
+  if (!maybeSession) {
+    return false;
+  }
+
+  try {
+    const { data } = await authClient.getSession({
+      fetchOptions: {
+        headers: { cookie: request.headers.get('cookie') ?? '' },
+      },
+    });
+    return Boolean(data?.session);
+  } catch {
+    // API unreachable — degrade to cookie presence rather than bouncing
+    // everyone with a cookie to /sign-in during an API blip.
+    return true;
+  }
+}
+
+export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const authed = isAuthenticated(request);
   const onAuthPage = isAuthPage(pathname);
+
+  // Auth pages are the only pages reachable without validation, and only an
+  // authenticated user can violate rule 2 — skip validation when both rules
+  // would allow the request through regardless of the result.
+  const mustValidate = !onAuthPage || hasSessionCookie(request);
+
+  const authed = mustValidate ? await isAuthenticated(request) : false;
 
   if (!authed && !onAuthPage) {
     return NextResponse.redirect(new URL('/sign-in', request.url));

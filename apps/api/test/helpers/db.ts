@@ -2,11 +2,13 @@ import { prisma } from '../../src/common/db/client.js';
 
 /**
  * Truncates every user table in the public schema. Called in beforeEach to
- * keep integration tests isolated. With no tables yet this is a no-op.
+ * keep integration tests isolated. Excludes Prisma's migration history table
+ * so `migrate deploy` state survives across tests.
  */
 export async function resetDatabase(): Promise<void> {
   const tables = await prisma.$queryRaw<{ tablename: string }[]>`
-    SELECT tablename FROM pg_tables WHERE schemaname = 'public'
+    SELECT tablename FROM pg_tables
+    WHERE schemaname = 'public' AND tablename NOT LIKE '\_prisma%'
   `;
 
   if (tables.length === 0) {

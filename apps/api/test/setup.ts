@@ -13,6 +13,10 @@ setDefault('API_URL', 'http://localhost:4000');
 setDefault('WEB_URL', 'http://localhost:3000');
 setDefault('LOG_LEVEL', 'silent');
 setDefault('BETTER_AUTH_SECRET', 'test-secret-at-least-thirty-two-chars-long');
+// Required by env validation so importing the mailer/auth chain stays
+// hermetic; NODE_ENV=test makes sendEmail log instead of hitting Resend.
+setDefault('RESEND_API_KEY', 'test-resend-key');
+setDefault('RESEND_FROM', 'Shipyard <no-reply@test.local>');
 // Keep rate limiters permissive so integration tests aren't throttled.
 setDefault('API_RATE_LIMIT_MAX', '100000');
 setDefault('AUTH_RATE_LIMIT_MAX', '100000');

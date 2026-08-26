@@ -17,3 +17,4 @@ export const readinessResponseSchema = z.object({
 export type ReadinessResponse = z.infer<typeof readinessResponseSchema>;
 
 export * from './api/response.js';
+export * from './auth/index.js';

@@ -22,8 +22,8 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { GitHubIcon, GoogleIcon } from '@/components/auth/provider-icons';
 import { authClient } from '@/lib/auth-client';
+import { SocialButtons } from '@/components/auth/social-buttons';
 
 // The schema applies `.default()` to rememberMe, so its input type
 // (rememberMe optional) differs from its output (required). RHF's third
@@ -105,16 +105,8 @@ export function SignInForm() {
   return (
     <div className="flex flex-col gap-6">
       {/* Social providers */}
-      <div className="grid grid-cols-2 gap-3">
-        <Button type="button" variant="outline">
-          <GoogleIcon />
-          Google
-        </Button>
-        <Button type="button" variant="outline">
-          <GitHubIcon />
-          GitHub
-        </Button>
-      </div>
+      {/* Social providers */}
+      <SocialButtons />
 
       <div className="flex items-center gap-3">
         <Separator className="flex-1" />

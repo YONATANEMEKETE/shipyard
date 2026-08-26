@@ -148,6 +148,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.102.3
         version: 5.102.3(react@19.2.8)
+      better-auth:
+        specifier: ^1.7.1
+        version: 1.7.1(2b0e2ab5fb7fefe9ab082382beec789f)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1

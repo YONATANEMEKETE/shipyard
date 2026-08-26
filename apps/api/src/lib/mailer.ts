@@ -35,7 +35,9 @@ export async function sendEmail(
 ): Promise<SendEmailResult> {
   const { to, subject, html, text } = message;
 
-  if (env.NODE_ENV !== 'production') {
+  // Only the test environment logs; dev and prod deliver through Resend so
+  // flows are exercised against the real provider locally.
+  if (env.NODE_ENV === 'test') {
     logger.info(
       { to, subject, html, text },
       '[mailer] NODE_ENV is not production — email logged instead of sent',

@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CircleCheck, Loader2, TriangleAlert } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { authClient } from '@/lib/auth-client';
 
 type VerifyState = 'verifying' | 'success' | 'error';
 
@@ -12,22 +14,45 @@ type VerifyState = 'verifying' | 'success' | 'error';
  * Post-click landing for the verification email link (`?token=…`).
  *
  * The email link points here directly — no callbackURL round-trip through
- * the API — so this page performs the verification client-side and shows
- * success or error. With autoSignInAfterVerification enabled, a successful
- * verification also sets the session cookie, hence the "continue to your
- * workspace" CTA rather than a sign-in prompt.
+ * the API — so this page performs the verification client-side. On success
+ * it flashes a brief confirmation and automatically continues into the
+ * workspace (autoSignInAfterVerification has already set the session
+ * cookie by then); there is no manual CTA.
  */
 export function VerifyEmailFlow({ token }: { token?: string }) {
   const [state, setState] = useState<VerifyState>('verifying');
+  const router = useRouter();
 
   useEffect(() => {
     if (!token) return;
 
-    // TODO: POST the token to the verify-email endpoint once integration
-    // lands; map failures (expired/invalid) to the error state.
-    const timer = setTimeout(() => setState('success'), 900);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+
+    const verify = async () => {
+      // callbackURL is required for autoSignInAfterVerification to set the
+      // session cookie (the JSON-only path skips auto-sign-in). The response
+      // body is the followed redirect's HTML — only the error matters here;
+      // by this point the browser has already applied the session cookie.
+      const { error } = await authClient.verifyEmail({
+        query: { token, callbackURL: '/' },
+      });
+      if (cancelled) return;
+      setState(error ? 'error' : 'success');
+    };
+
+    void verify();
+    return () => {
+      cancelled = true;
+    };
   }, [token]);
+
+  // Success is transient: show the confirmation beat, then continue into
+  // the workspace automatically.
+  useEffect(() => {
+    if (state !== 'success') return;
+    const timer = setTimeout(() => router.replace('/'), 1400);
+    return () => clearTimeout(timer);
+  }, [state, router]);
 
   if (!token) {
     return (
@@ -107,17 +132,13 @@ export function VerifyEmailFlow({ token }: { token?: string }) {
 
       <header className="flex flex-col gap-2">
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          Email verified
+          Email verified successfully
         </h1>
-        <p className="text-sm leading-[1.5] text-muted-foreground">
-          Your address is confirmed and you&apos;re already signed in. Welcome
-          aboard.
+        <p className="flex items-center justify-center gap-2 text-sm leading-[1.5] text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
+          Signing you in…
         </p>
       </header>
-
-      <Button type="button" asChild>
-        <Link href="/">Continue to your workspace</Link>
-      </Button>
     </div>
   );
 }

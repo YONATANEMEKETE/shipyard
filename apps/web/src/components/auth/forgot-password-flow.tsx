@@ -6,6 +6,7 @@ import { MailCheck } from 'lucide-react';
 
 import { ForgotPasswordForm } from '@/components/auth/forgot-password-form';
 import { ResendVerificationButton } from '@/components/auth/resend-verification-button';
+import { authClient } from '@/lib/auth-client';
 
 /**
  * Two-variant forgot-password flow: the request form (main variant), then
@@ -37,6 +38,16 @@ export function ForgotPasswordFlow() {
           <ResendVerificationButton
             label="Resend reset link"
             sentMessage="Reset link sent — check your inbox"
+            onResend={() =>
+              authClient
+                .requestPasswordReset({
+                  email: sentEmail,
+                  redirectTo: '/reset-password',
+                })
+                .then((r) => {
+                  if (r.error) throw new Error(r.error.message);
+                })
+            }
           />
 
           <p className="text-sm text-muted-foreground">

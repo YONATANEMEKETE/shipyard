@@ -39,6 +39,11 @@ export const auth = betterAuth({
     minPasswordLength: 8,
     maxPasswordLength: 128,
     sendResetPassword: async ({ user, url }) => {
+      // v1.7 link shape: {webOrigin}/api/v1/auth/reset-password/{token}
+      // ?callbackURL=… — an API endpoint that validates the token and then
+      // redirects to the callback URL with a fresh ?token= for the
+      // reset-password page. It flows through the Next.js rewrite; no
+      // rewriting needed here.
       const { html, text } = await renderPasswordResetEmail({
         url,
         userEmail: user.email,

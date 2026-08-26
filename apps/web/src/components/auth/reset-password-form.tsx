@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation } from '@tanstack/react-query';
 import { resetPasswordRequestSchema } from '@shipyard/shared';
 import { Loader2 } from 'lucide-react';
 import { z } from 'zod';
@@ -19,14 +19,19 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { authClient } from '@/lib/auth-client';
+
+const GENERIC_RESET_ERROR = 'Unable to update your password. Please try again.';
 
 type ResetPasswordFormInput = z.input<typeof resetPasswordRequestSchema>;
 type ResetPasswordFormOutput = z.output<typeof resetPasswordRequestSchema>;
 
 interface ResetPasswordFormProps {
-  /** Reset token from the email link; merged into the payload on submit. */
-  token?: string;
+  /** Reset token from the email link; submitted with the new password. */
+  token: string;
   onUpdated: () => void;
+  /** The API rejected the token (invalid or expired). */
+  onInvalidToken: () => void;
 }
 
 /**
@@ -35,11 +40,13 @@ interface ResetPasswordFormProps {
  * Validation is driven by the shared `resetPasswordRequestSchema` so the
  * client and API enforce one contract. Only `newPassword` is a form field —
  * the `token` comes from the URL query and is merged in by the integration
- * layer. Submission is intentionally not wired yet.
+ * layer.
  */
-export function ResetPasswordForm({ onUpdated }: ResetPasswordFormProps) {
-  const [status, setStatus] = useState<'idle' | 'submitting'>('idle');
-
+export function ResetPasswordForm({
+  token,
+  onUpdated,
+  onInvalidToken,
+}: ResetPasswordFormProps) {
   const form = useForm<
     ResetPasswordFormInput,
     unknown,
@@ -51,19 +58,43 @@ export function ResetPasswordForm({ onUpdated }: ResetPasswordFormProps) {
     },
   });
 
-  const onSubmit = async () => {
-    // TODO: POST to the reset-password endpoint once integration lands,
-    // merging the token from the URL query into the payload; surface
-    // envelope errors here (e.g. details.auth === 'INVALID_TOKEN').
-    setStatus('submitting');
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    setStatus('idle');
+  const resetMutation = useMutation({
+    mutationFn: async (values: ResetPasswordFormOutput) => {
+      const { error } = await authClient.resetPassword({
+        newPassword: values.newPassword,
+        token,
+      });
+      if (!error) return 'updated' as const;
+
+      // Expired/used/unknown tokens land here as UNAUTHORIZED with the
+      // envelope's auth detail; treat any 4xx token rejection uniformly.
+      const authCode = (
+        error as unknown as { error?: { details?: { auth?: string } } }
+      ).error?.details?.auth;
+      if (
+        error.status === 401 ||
+        authCode === 'INVALID_TOKEN' ||
+        authCode === 'TOKEN_EXPIRED'
+      ) {
+        return 'invalid-token' as const;
+      }
+
+      throw new Error(GENERIC_RESET_ERROR);
+    },
+  });
+
+  const onSubmit = form.handleSubmit(async (values) => {
+    const result = await resetMutation.mutateAsync(values);
+    if (result === 'invalid-token') {
+      onInvalidToken();
+      return;
+    }
     onUpdated();
-  };
+  });
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
+      <form onSubmit={onSubmit} className="grid gap-4">
         <FormField
           control={form.control}
           name="newPassword"
@@ -86,11 +117,19 @@ export function ResetPasswordForm({ onUpdated }: ResetPasswordFormProps) {
           )}
         />
 
-        {/* Slot for API error feedback once integration lands */}
-        <div aria-live="polite" />
+        {/* Transport/API error feedback */}
+        <div aria-live="polite">
+          {resetMutation.isError && (
+            <p className="text-xs text-destructive">
+              {resetMutation.error instanceof Error
+                ? resetMutation.error.message
+                : GENERIC_RESET_ERROR}
+            </p>
+          )}
+        </div>
 
-        <Button type="submit" disabled={status === 'submitting'}>
-          {status === 'submitting' ? (
+        <Button type="submit" disabled={resetMutation.isPending}>
+          {resetMutation.isPending ? (
             <>
               <Loader2 className="animate-spin" />
               Updating password…

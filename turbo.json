@@ -19,6 +19,11 @@
     "test": {
       "dependsOn": ["^build"],
       "cache": false
+    },
+    "test:ui": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true
     }
   }
 }

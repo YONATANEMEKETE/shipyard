@@ -23,4 +23,7 @@ export default defineConfig({
       reportsDirectory: 'coverage',
     },
   },
+  api: {
+    port: 51205,
+  },
 });

@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -23,6 +22,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { authClient } from '@/lib/auth-client';
+import { FormError } from '@/components/ui/form-error';
 import { SocialButtons } from '@/components/auth/social-buttons';
 
 // The schema applies `.default()` to rememberMe, so its input type
@@ -42,7 +42,6 @@ const GENERIC_SIGN_IN_ERROR = 'Unable to sign in. Please try again.';
  * message is surfaced inline.
  */
 export function SignInForm() {
-  const [submitError, setSubmitError] = useState<string | null>(null);
   const router = useRouter();
 
   const form = useForm<SignInFormInput, unknown, SignInFormOutput>({
@@ -92,13 +91,6 @@ export function SignInForm() {
     onSuccess: () => {
       // Session cookie is set; replace so the authenticated root renders.
       router.replace('/');
-    },
-    onError: (mutationError) => {
-      setSubmitError(
-        mutationError instanceof Error
-          ? mutationError.message
-          : GENERIC_SIGN_IN_ERROR,
-      );
     },
   });
 
@@ -188,12 +180,15 @@ export function SignInForm() {
             )}
           />
 
-          {/* API error feedback (envelope message surfaces here) */}
-          <div aria-live="polite">
-            {submitError !== null && (
-              <p className="text-xs text-destructive">{submitError}</p>
-            )}
-          </div>
+          <FormError
+            message={
+              signInMutation.isError
+                ? signInMutation.error instanceof Error
+                  ? signInMutation.error.message
+                  : GENERIC_SIGN_IN_ERROR
+                : null
+            }
+          />
 
           <Button type="submit" disabled={signInMutation.isPending}>
             {signInMutation.isPending ? (

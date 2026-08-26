@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -32,6 +33,7 @@ type SignUpFormValues = Pick<SignUpRequest, 'name' | 'email' | 'password'>;
  */
 export function SignUpForm() {
   const [status, setStatus] = useState<'idle' | 'submitting'>('idle');
+  const router = useRouter();
 
   const form = useForm<SignUpFormValues>({
     resolver: zodResolver(signUpRequestSchema),
@@ -42,14 +44,14 @@ export function SignUpForm() {
     },
   });
 
-  const onSubmit = async () => {
+  const onSubmit = async (values: SignUpFormValues) => {
     // TODO: POST to the auth endpoint once integration lands; surface
     // envelope errors ({ error: { code, message, details.auth } }) here.
-    // Note: with requireEmailVerification enabled, a successful sign-up
-    // should route to /verify-email ("check your inbox" state).
+    // For now the happy path routes to the verify-email screen, mirroring
+    // where a successful sign-up ends up with requireEmailVerification on.
     setStatus('submitting');
     await new Promise((resolve) => setTimeout(resolve, 400));
-    setStatus('idle');
+    router.push(`/verify-email?email=${encodeURIComponent(values.email)}`);
   };
 
   return (

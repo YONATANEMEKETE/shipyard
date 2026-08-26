@@ -13,8 +13,10 @@ import {
   apiRateLimiter,
   authRateLimiter,
 } from './common/middlewares/rateLimit.js';
+import { toNodeHandler } from 'better-auth/node';
 import { isReady, setReady } from './common/health/readiness.js';
 import { sendSuccess } from './common/http/responses.js';
+import { auth } from './lib/auth.js';
 
 export interface CreateAppOptions {
   /**
@@ -65,6 +67,10 @@ export function createApp(options: CreateAppOptions = {}): express.Express {
 
     sendSuccess(response, readiness);
   });
+
+  // Better Auth — handles all subpaths under /api/v1/auth (sign-in, sign-up,
+  // session, reset-password, verify-email, oauth callbacks, ...)
+  app.all('/api/v1/auth/*splat', toNodeHandler(auth));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

@@ -24,7 +24,7 @@ export const auth = betterAuth({
   appName: 'Shipyard',
   // API is internal-only when deployed; all requests proxy through the Next.js app
   baseURL: env.WEB_URL,
-  basePath: '/api/auth',
+  basePath: '/api/v1/auth',
   secret: env.BETTER_AUTH_SECRET,
   trustedOrigins: [env.WEB_URL],
 

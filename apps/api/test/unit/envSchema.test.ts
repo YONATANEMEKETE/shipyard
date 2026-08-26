@@ -7,6 +7,11 @@ function validEnv(): Record<string, string> {
     WEB_URL: 'http://localhost:3000',
     DATABASE_URL: 'postgresql://shipyard:shipyard@localhost:5433/shipyard',
     BETTER_AUTH_SECRET: 'a-very-long-secret-with-at-least-32-chars',
+    GOOGLE_CLIENT_ID: 'google-client-id',
+    GOOGLE_CLIENT_SECRET: 'google-client-secret',
+    GITHUB_CLIENT_ID: 'github-client-id',
+    GITHUB_CLIENT_SECRET: 'github-client-secret',
+    RESEND_API_KEY: 're_test_api_key',
   };
 }
 
@@ -14,6 +19,44 @@ describe('envSchema (startup validation)', () => {
   it('parses a complete valid config', () => {
     const result = envSchema.safeParse(validEnv());
     expect(result.success).toBe(true);
+  });
+
+  it.each([
+    'GOOGLE_CLIENT_ID',
+    'GOOGLE_CLIENT_SECRET',
+    'GITHUB_CLIENT_ID',
+    'GITHUB_CLIENT_SECRET',
+    'RESEND_API_KEY',
+  ])('rejects a missing %s', (key) => {
+    const env = validEnv();
+    delete env[key];
+    const result = envSchema.safeParse(env);
+    expect(result.success).toBe(false);
+  });
+
+  it.each([
+    'GOOGLE_CLIENT_ID',
+    'GOOGLE_CLIENT_SECRET',
+    'GITHUB_CLIENT_ID',
+    'GITHUB_CLIENT_SECRET',
+    'RESEND_API_KEY',
+  ])('rejects an empty %s', (key) => {
+    const result = envSchema.safeParse({ ...validEnv(), [key]: '' });
+    expect(result.success).toBe(false);
+  });
+
+  it('keeps the provided RESEND_API_KEY value', () => {
+    const result = envSchema.safeParse(validEnv());
+    expect(result.success).toBe(true);
+    if (!result.success) throw new Error('should succeed');
+    expect(result.data.RESEND_API_KEY).toBe('re_test_api_key');
+  });
+
+  it('applies the RESEND_FROM default when not provided', () => {
+    const result = envSchema.safeParse(validEnv());
+    expect(result.success).toBe(true);
+    if (!result.success) throw new Error('should succeed');
+    expect(result.data.RESEND_FROM).toBe('Shipyard <no-reply@yonatanem.com>');
   });
 
   it('applies defaults for optional fields', () => {
@@ -24,11 +67,13 @@ describe('envSchema (startup validation)', () => {
     expect(result.data.LOG_LEVEL).toBe('info');
   });
 
-  it('rejects a missing required API_URL', () => {
+  it('applies the API_URL default when not provided', () => {
     const env = validEnv();
     delete env.API_URL;
     const result = envSchema.safeParse(env);
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
+    if (!result.success) throw new Error('should succeed');
+    expect(result.data.API_URL).toBe('http://localhost:4000');
   });
 
   it('rejects an invalid API_URL', () => {

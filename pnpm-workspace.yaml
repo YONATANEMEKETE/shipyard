@@ -4,6 +4,7 @@ packages:
 allowBuilds:
   '@prisma/client': true
   '@prisma/engines': true
+  better-sqlite3: true
   cpu-features: false
   esbuild: true
   msw: false
@@ -16,3 +17,7 @@ allowBuilds:
 # @prisma/config pins 7.1.5 exactly; override to the patched line.
 overrides:
   deepmerge-ts: 8.0.1
+  # better-auth 1.7.1 (runtime) peers better-call 1.4.0 exactly, but pnpm
+  # resolved the shared peer to the CLI chain's 1.1.8; pin better-call so the
+  # runtime ESM import of better-auth resolves kAPIErrorHeaderSymbol.
+  better-call: 1.4.0

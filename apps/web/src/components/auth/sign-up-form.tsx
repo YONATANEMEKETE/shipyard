@@ -8,8 +8,8 @@ import { useMutation } from '@tanstack/react-query';
 import { signUpRequestSchema, type SignUpRequest } from '@shipyard/shared';
 import { Loader2, MailCheck } from 'lucide-react';
 
-import { GitHubIcon, GoogleIcon } from '@/components/auth/provider-icons';
 import { ResendVerificationButton } from '@/components/auth/resend-verification-button';
+import { SocialButtons } from '@/components/auth/social-buttons';
 import { authClient } from '@/lib/auth-client';
 import { Button } from '@/components/ui/button';
 import {
@@ -132,17 +132,7 @@ export function SignUpForm() {
       </header>
 
       <div className="flex flex-col gap-6">
-        {/* Social providers */}
-        <div className="grid grid-cols-2 gap-3">
-          <Button type="button" variant="outline">
-            <GoogleIcon />
-            Google
-          </Button>
-          <Button type="button" variant="outline">
-            <GitHubIcon />
-            GitHub
-          </Button>
-        </div>
+        <SocialButtons />
 
         <div className="flex items-center gap-3">
           <Separator className="flex-1" />

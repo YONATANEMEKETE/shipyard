@@ -1,18 +1,13 @@
-import { LogOut } from 'lucide-react';
-
-import { Button } from '@/components/ui/button';
+import { SignOutButton } from '@/components/auth/sign-out-button';
 
 /**
- * Root placeholder. Sign-out is stubbed as UI-only until session handling
- * and the authenticated app shell land.
+ * Workspace root placeholder. Route protection guarantees an authenticated
+ * visitor here; sign-out is wired through Better Auth.
  */
 export default function HomePage() {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-background">
-      <Button type="button" variant="outline">
-        <LogOut />
-        Sign out
-      </Button>
+      <SignOutButton />
     </div>
   );
 }

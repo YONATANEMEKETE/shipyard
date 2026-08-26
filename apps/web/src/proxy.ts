@@ -34,17 +34,17 @@ const SESSION_COOKIES = [
   '__Secure-better-auth.session_token',
 ] as const;
 
-function hasSessionCookie(request: NextRequest): boolean {
+export function hasSessionCookie(request: NextRequest): boolean {
   return SESSION_COOKIES.some((name) => request.cookies.has(name));
 }
 
-function isAuthPage(pathname: string): boolean {
+export function isAuthPage(pathname: string): boolean {
   return AUTH_PAGES.some(
     (page) => pathname === page || pathname.startsWith(`${page}/`),
   );
 }
 
-async function isAuthenticated(request: NextRequest): Promise<boolean> {
+export async function isAuthenticated(request: NextRequest): Promise<boolean> {
   // Fast path: no session cookie means no valid session — skip the API call
   // that every unauthenticated visit (static assets aside) would otherwise
   // pay for.

@@ -8,7 +8,7 @@ import { createAuthClient } from 'better-auth/client';
  * first-party and avoids any CORS surface. Outside the browser (the Next.js
  * proxy validating sessions), it calls the API server directly.
  */
-function resolveBaseURL(): string {
+export function resolveBaseURL(): string {
   if (typeof window !== 'undefined') {
     return `${window.location.origin}/api/v1/auth`;
   }

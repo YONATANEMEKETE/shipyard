@@ -26,15 +26,25 @@ export const envSchema = z.object({
     .max(86400000)
     .default(300000),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().min(1).max(100000).default(30),
-  API_URL: z.string().url(),
-  WEB_URL: z.string().url(),
+  API_URL: z.string().url().default('http://localhost:4000'),
+  WEB_URL: z.string().url().default('http://localhost:3000'),
   LOG_LEVEL: z
     .enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent'])
     .default('info'),
-  DATABASE_URL: z.string().url('DATABASE_URL must be a valid connection URL'),
+  DATABASE_URL: z
+    .string()
+    .url('DATABASE_URL must be a valid connection URL')
+    .default('postgresql://shipyard:shipyard@localhost:5433/shipyard'),
   BETTER_AUTH_SECRET: z
     .string()
-    .min(32, 'BETTER_AUTH_SECRET must be at least 32 characters'),
+    .min(32, 'BETTER_AUTH_SECRET must be at least 32 characters')
+    .default('dev-secret-please-change-must-be-at-least-32-chars-long'),
+  RESEND_API_KEY: z.string().min(1, 'RESEND_API_KEY is required'),
+  RESEND_FROM: z.string().default('Shipyard <no-reply@yonatanem.com>'),
+  GOOGLE_CLIENT_ID: z.string().min(1, 'GOOGLE_CLIENT_ID is required'),
+  GOOGLE_CLIENT_SECRET: z.string().min(1, 'GOOGLE_CLIENT_SECRET is required'),
+  GITHUB_CLIENT_ID: z.string().min(1, 'GITHUB_CLIENT_ID is required'),
+  GITHUB_CLIENT_SECRET: z.string().min(1, 'GITHUB_CLIENT_SECRET is required'),
 });
 
 export type Env = z.infer<typeof envSchema>;

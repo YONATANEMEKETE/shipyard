@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation } from '@tanstack/react-query';
 import { forgetPasswordRequestSchema } from '@shipyard/shared';
 import { Loader2 } from 'lucide-react';
 import { z } from 'zod';
+
+import { authClient } from '@/lib/auth-client';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -19,11 +21,14 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 
+const GENERIC_REQUEST_ERROR =
+  'Unable to send the reset link. Please try again.';
+
 type ForgotPasswordFormInput = z.input<typeof forgetPasswordRequestSchema>;
 type ForgotPasswordFormOutput = z.output<typeof forgetPasswordRequestSchema>;
 
 interface ForgotPasswordFormProps {
-  /** Called after a successful (stubbed) submit, with the entered email. */
+  /** Called after a successful submit, with the entered email. */
   onSuccess?: (email: string) => void;
 }
 
@@ -32,12 +37,9 @@ interface ForgotPasswordFormProps {
  *
  * Validation is driven by the shared `forgetPasswordRequestSchema` so the
  * client and API enforce one contract (only `email` is a form field;
- * `redirectTo` is appended server-side when integration lands). Submission
- * is intentionally not wired yet.
+ * `redirectTo` points at the web page that submits the new password).
  */
 export function ForgotPasswordForm({ onSuccess }: ForgotPasswordFormProps) {
-  const [status, setStatus] = useState<'idle' | 'submitting'>('idle');
-
   const form = useForm<
     ForgotPasswordFormInput,
     unknown,
@@ -49,21 +51,30 @@ export function ForgotPasswordForm({ onSuccess }: ForgotPasswordFormProps) {
     },
   });
 
-  const onSubmit = async () => {
-    // TODO: POST to the forget-password endpoint once integration lands;
-    // surface envelope errors here. On success, show the "check your
-    // inbox" variant of this screen (reuse the verify-email layout).
-    setStatus('submitting');
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    setStatus('idle');
-    // Email comes from form state; handleSubmit has already validated it.
-    const email = form.getValues('email');
-    if (email) onSuccess?.(email);
-  };
+  const requestResetMutation = useMutation({
+    mutationFn: async (values: ForgotPasswordFormOutput) => {
+      // Enumeration-safe: the endpoint answers success whether or not the
+      // email exists, so no error mapping beyond transport failures.
+      const { error } = await authClient.requestPasswordReset({
+        email: values.email,
+        redirectTo: '/reset-password',
+      });
+      if (error) {
+        throw new Error(error.message || GENERIC_REQUEST_ERROR);
+      }
+      return values.email;
+    },
+    onSuccess: (email) => onSuccess?.(email),
+  });
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
+      <form
+        onSubmit={form.handleSubmit((values) =>
+          requestResetMutation.mutateAsync(values),
+        )}
+        className="grid gap-4"
+      >
         <FormField
           control={form.control}
           name="email"
@@ -83,11 +94,19 @@ export function ForgotPasswordForm({ onSuccess }: ForgotPasswordFormProps) {
           )}
         />
 
-        {/* Slot for API error feedback once integration lands */}
-        <div aria-live="polite" />
+        {/* Transport/API error feedback */}
+        <div aria-live="polite">
+          {requestResetMutation.isError && (
+            <p className="text-xs text-destructive">
+              {requestResetMutation.error instanceof Error
+                ? requestResetMutation.error.message
+                : GENERIC_REQUEST_ERROR}
+            </p>
+          )}
+        </div>
 
-        <Button type="submit" disabled={status === 'submitting'}>
-          {status === 'submitting' ? (
+        <Button type="submit" disabled={requestResetMutation.isPending}>
+          {requestResetMutation.isPending ? (
             <>
               <Loader2 className="animate-spin" />
               Sending reset link…

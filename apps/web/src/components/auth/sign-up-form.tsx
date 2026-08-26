@@ -93,7 +93,18 @@ export function SignUpForm() {
         </header>
 
         <div className="flex flex-col items-center gap-4">
-          <ResendVerificationButton />
+          <ResendVerificationButton
+            onResend={() =>
+              authClient
+                .sendVerificationEmail({
+                  email: sentEmail,
+                  callbackURL: '/verify-email',
+                })
+                .then((r) => {
+                  if (r.error) throw new Error(r.error.message);
+                })
+            }
+          />
 
           <p className="text-sm text-muted-foreground">
             Verified already?{' '}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Loader2, Mail } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -8,26 +8,52 @@ import { Button } from '@/components/ui/button';
 interface ResendVerificationButtonProps {
   /** Button label while idle. */
   label?: string;
-  /** Confirmation message shown after the stub send completes. */
+  /** Confirmation message shown after a successful send. */
   sentMessage?: string;
+  /**
+   * Real send action. When omitted the button falls back to a stubbed
+   * delay so screens remain demoable before integration.
+   */
+  onResend?: () => Promise<unknown>;
 }
 
+/** How long the "sent" confirmation shows before reverting to the button. */
+const SENT_MESSAGE_MS = 4000;
+
 /**
- * Stub resend action for the verify-email screen. Shows a brief loading
- * state and a confirmation; the actual API call lands with integration.
+ * Idempotent resend action for email-confirmation screens: idle → sending
+ * → sent, then automatically back to idle after a few seconds (the user
+ * may not have received the first email, so the action must stay
+ * repeatable).
  */
 export function ResendVerificationButton({
   label = 'Resend verification email',
   sentMessage = 'Verification email sent — check your inbox',
+  onResend,
 }: ResendVerificationButtonProps) {
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const [error, setError] = useState<string | null>(null);
 
-  const onResend = async () => {
-    // TODO: POST to the send-verification-email endpoint once integration
-    // lands; surface envelope errors here.
+  useEffect(() => {
+    if (status !== 'sent') return;
+    const timer = setTimeout(() => setStatus('idle'), SENT_MESSAGE_MS);
+    return () => clearTimeout(timer);
+  }, [status]);
+
+  const onResendClick = async () => {
     setStatus('sending');
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    setStatus('sent');
+    setError(null);
+    try {
+      if (onResend) {
+        await onResend();
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+      }
+      setStatus('sent');
+    } catch {
+      setStatus('idle');
+      setError('Could not send the email. Please try again.');
+    }
   };
 
   if (status === 'sent') {
@@ -40,20 +66,27 @@ export function ResendVerificationButton({
   }
 
   return (
-    <Button
-      type="button"
-      variant="outline"
-      onClick={() => void onResend()}
-      disabled={status === 'sending'}
-    >
-      {status === 'sending' ? (
-        <>
-          <Loader2 className="animate-spin" />
-          Sending…
-        </>
-      ) : (
-        label
+    <div className="flex flex-col items-center gap-1">
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => void onResendClick()}
+        disabled={status === 'sending'}
+      >
+        {status === 'sending' ? (
+          <>
+            <Loader2 className="animate-spin" />
+            Sending…
+          </>
+        ) : (
+          label
+        )}
+      </Button>
+      {error !== null && (
+        <p className="text-xs text-destructive" aria-live="polite">
+          {error}
+        </p>
       )}
-    </Button>
+    </div>
   );
 }

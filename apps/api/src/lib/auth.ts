@@ -68,8 +68,13 @@ export const auth = betterAuth({
     autoSignInAfterVerification: true,
     expiresIn: 60 * 60, // 1h
     sendVerificationEmail: async ({ user, url }) => {
+      // The generated url targets the API's verify-email endpoint; rewrite
+      // it to the web page that owns the post-click experience. The page
+      // reads ?token= and performs the verification client-side.
+      const verifyUrl = new URL(url);
+      verifyUrl.pathname = '/verify-email';
       const { html, text } = await renderEmailVerificationEmail({
-        url,
+        url: verifyUrl.toString(),
         userEmail: user.email,
       });
       // mailer logs locally in dev and never throws, so auth flow is never

@@ -4,11 +4,13 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation } from '@tanstack/react-query';
 import { signUpRequestSchema, type SignUpRequest } from '@shipyard/shared';
 import { Loader2, MailCheck } from 'lucide-react';
 
 import { GitHubIcon, GoogleIcon } from '@/components/auth/provider-icons';
 import { ResendVerificationButton } from '@/components/auth/resend-verification-button';
+import { authClient } from '@/lib/auth-client';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -24,16 +26,19 @@ import { Separator } from '@/components/ui/separator';
 
 type SignUpFormValues = Pick<SignUpRequest, 'name' | 'email' | 'password'>;
 
+const GENERIC_ERROR = 'Unable to create your account. Please try again.';
+
 /**
- * Email + password sign-up form.
+ * Email + password sign-up flow.
  *
- * Validation is driven by the shared `signUpRequestSchema` so the client and
- * API enforce one contract. Submission is intentionally not wired yet —
- * integration with Better Auth endpoints lands separately.
+ * Validation runs against the shared `signUpRequestSchema` so the client
+ * and API enforce one contract. On success the form swaps in place to the
+ * "check your email" variant — with requireEmailVerification enabled and
+ * autoSignIn disabled, no session exists until the user clicks the link.
  */
 export function SignUpForm() {
-  const [status, setStatus] = useState<'idle' | 'submitting'>('idle');
   const [sentEmail, setSentEmail] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm<SignUpFormValues>({
     resolver: zodResolver(signUpRequestSchema),
@@ -44,15 +49,30 @@ export function SignUpForm() {
     },
   });
 
-  const onSubmit = async (values: SignUpFormValues) => {
-    // TODO: POST to the auth endpoint once integration lands; surface
-    // envelope errors ({ error: { code, message, details.auth } }) here.
-    // With requireEmailVerification on and no callbackURL, the email link
-    // points at /verify-email?token=… which handles the post-click flow.
-    setStatus('submitting');
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    setSentEmail(values.email);
-  };
+  const signUpMutation = useMutation({
+    mutationFn: async (values: SignUpFormValues) => {
+      // With requireEmailVerification on and autoSignIn off, success here
+      // returns the created user without a session.
+      const { error } = await authClient.signUp.email({
+        name: values.name,
+        email: values.email,
+        password: values.password,
+      });
+      if (error) {
+        throw new Error(error.message || GENERIC_ERROR);
+      }
+      return values.email;
+    },
+    onSuccess: (email) => {
+      setSubmitError(null);
+      setSentEmail(email);
+    },
+    onError: (mutationError) => {
+      setSubmitError(
+        mutationError instanceof Error ? mutationError.message : GENERIC_ERROR,
+      );
+    },
+  });
 
   if (sentEmail !== null) {
     return (
@@ -120,7 +140,12 @@ export function SignUpForm() {
         </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
+          <form
+            onSubmit={form.handleSubmit((values) =>
+              signUpMutation.mutateAsync(values),
+            )}
+            className="grid gap-4"
+          >
             <FormField
               control={form.control}
               name="name"
@@ -180,11 +205,15 @@ export function SignUpForm() {
               )}
             />
 
-            {/* Slot for API error feedback once integration lands */}
-            <div aria-live="polite" />
+            {/* API error feedback (envelope message surfaces here) */}
+            <div aria-live="polite">
+              {submitError !== null && (
+                <p className="text-xs text-destructive">{submitError}</p>
+              )}
+            </div>
 
-            <Button type="submit" disabled={status === 'submitting'}>
-              {status === 'submitting' ? (
+            <Button type="submit" disabled={signUpMutation.isPending}>
+              {signUpMutation.isPending ? (
                 <>
                   <Loader2 className="animate-spin" />
                   Creating account…

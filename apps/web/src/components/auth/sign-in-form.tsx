@@ -108,9 +108,10 @@ export function SignInForm() {
 
       <Form {...form}>
         <form
-          onSubmit={form.handleSubmit((values) =>
-            signInMutation.mutateAsync(values),
-          )}
+          noValidate
+          onSubmit={form.handleSubmit((values) => {
+            void signInMutation.mutateAsync(values).catch(() => {});
+          })}
           className="grid gap-4"
         >
           <FormField

@@ -83,18 +83,22 @@ export function ResetPasswordForm({
     },
   });
 
-  const onSubmit = form.handleSubmit(async (values) => {
-    const result = await resetMutation.mutateAsync(values);
-    if (result === 'invalid-token') {
-      onInvalidToken();
-      return;
-    }
-    onUpdated();
+  const onSubmit = form.handleSubmit((values) => {
+    void resetMutation
+      .mutateAsync(values)
+      .then((result) => {
+        if (result === 'invalid-token') {
+          onInvalidToken();
+          return;
+        }
+        onUpdated();
+      })
+      .catch(() => {});
   });
 
   return (
     <Form {...form}>
-      <form onSubmit={onSubmit} className="grid gap-4">
+      <form noValidate onSubmit={onSubmit} className="grid gap-4">
         <FormField
           control={form.control}
           name="newPassword"

@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 
+import { ResetPasswordFlow } from '@/components/auth/reset-password-flow';
+
 export const metadata: Metadata = { title: 'Reset password' };
 
 interface ResetPasswordPageProps {
@@ -11,19 +13,5 @@ export default async function ResetPasswordPage({
 }: ResetPasswordPageProps) {
   const { token } = await searchParams;
 
-  return (
-    <div className="flex flex-col gap-2">
-      <h1 className="text-2xl font-bold tracking-tight text-ds-text">
-        Reset your password
-      </h1>
-      <p className="text-sm text-ds-text-muted">
-        Placeholder — the reset-password form will live here.
-      </p>
-      {token !== undefined && (
-        <p className="text-xs text-ds-text-muted">
-          Token from query: <code className="font-mono">{token}</code>
-        </p>
-      )}
-    </div>
-  );
+  return <ResetPasswordFlow token={token} />;
 }

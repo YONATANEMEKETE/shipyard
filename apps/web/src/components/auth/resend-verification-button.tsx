@@ -5,11 +5,21 @@ import { Loader2, Mail } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 
+interface ResendVerificationButtonProps {
+  /** Button label while idle. */
+  label?: string;
+  /** Confirmation message shown after the stub send completes. */
+  sentMessage?: string;
+}
+
 /**
  * Stub resend action for the verify-email screen. Shows a brief loading
  * state and a confirmation; the actual API call lands with integration.
  */
-export function ResendVerificationButton() {
+export function ResendVerificationButton({
+  label = 'Resend verification email',
+  sentMessage = 'Verification email sent — check your inbox',
+}: ResendVerificationButtonProps) {
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
 
   const onResend = async () => {
@@ -24,7 +34,7 @@ export function ResendVerificationButton() {
     return (
       <p className="flex items-center justify-center gap-2 text-sm text-ds-success">
         <Mail className="size-4" />
-        Verification email sent — check your inbox
+        {sentMessage}
       </p>
     );
   }
@@ -42,7 +52,7 @@ export function ResendVerificationButton() {
           Sending…
         </>
       ) : (
-        'Resend verification email'
+        label
       )}
     </Button>
   );

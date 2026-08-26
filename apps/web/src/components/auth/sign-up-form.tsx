@@ -134,8 +134,9 @@ export function SignUpForm() {
 
         <Form {...form}>
           <form
+            noValidate
             onSubmit={form.handleSubmit((values) =>
-              signUpMutation.mutateAsync(values),
+              signUpMutation.mutate(values),
             )}
             className="grid gap-4"
           >

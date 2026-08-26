@@ -4,15 +4,15 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { signInRequestSchema } from '@shipyard/shared';
+import { signUpRequestSchema, type SignUpRequest } from '@shipyard/shared';
 import { Loader2 } from 'lucide-react';
-import { z } from 'zod';
 
+import { GitHubIcon, GoogleIcon } from '@/components/auth/provider-icons';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -20,34 +20,33 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { GitHubIcon, GoogleIcon } from '@/components/auth/provider-icons';
 
-// The schema applies `.default()` to rememberMe, so its input type
-// (rememberMe optional) differs from its output (required). RHF's third
-// generic carries the post-validation transform.
-type SignInFormInput = z.input<typeof signInRequestSchema>;
-type SignInFormOutput = z.output<typeof signInRequestSchema>;
+type SignUpFormValues = Pick<SignUpRequest, 'name' | 'email' | 'password'>;
 
 /**
- * Email + password sign-in form.
+ * Email + password sign-up form.
  *
- * Validation is driven by the shared `signInRequestSchema` so the client and
+ * Validation is driven by the shared `signUpRequestSchema` so the client and
  * API enforce one contract. Submission is intentionally not wired yet —
  * integration with Better Auth endpoints lands separately.
  */
-export function SignInForm() {
+export function SignUpForm() {
   const [status, setStatus] = useState<'idle' | 'submitting'>('idle');
 
-  const form = useForm<SignInFormInput, unknown, SignInFormOutput>({
-    resolver: zodResolver(signInRequestSchema),
+  const form = useForm<SignUpFormValues>({
+    resolver: zodResolver(signUpRequestSchema),
     defaultValues: {
+      name: '',
       email: '',
       password: '',
-      rememberMe: true,
     },
   });
 
   const onSubmit = async () => {
+    // TODO: POST to the auth endpoint once integration lands; surface
+    // envelope errors ({ error: { code, message, details.auth } }) here.
+    // Note: with requireEmailVerification enabled, a successful sign-up
+    // should route to /verify-email ("check your inbox" state).
     setStatus('submitting');
     await new Promise((resolve) => setTimeout(resolve, 400));
     setStatus('idle');
@@ -77,6 +76,24 @@ export function SignInForm() {
         <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
           <FormField
             control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Name</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Ada Lovelace"
+                    autoComplete="name"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
             name="email"
             render={({ field }) => (
               <FormItem>
@@ -99,44 +116,18 @@ export function SignInForm() {
             name="password"
             render={({ field }) => (
               <FormItem>
-                <div className="flex items-center justify-between">
-                  <FormLabel>Password</FormLabel>
-                  <Link
-                    href="/forgot-password"
-                    className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
+                <FormLabel>Password</FormLabel>
                 <FormControl>
                   <Input
                     type="password"
                     placeholder="••••••••"
-                    autoComplete="current-password"
+                    autoComplete="new-password"
                     {...field}
                   />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="rememberMe"
-            render={({ field }) => (
-              <FormItem className="flex items-center gap-2">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value ?? true}
-                    onCheckedChange={(checked) =>
-                      field.onChange(checked === true)
-                    }
-                  />
-                </FormControl>
-                <FormLabel className="font-normal text-muted-foreground">
-                  Keep me signed in
-                </FormLabel>
+                <FormDescription>
+                  Must be between 8 and 128 characters.
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -149,22 +140,22 @@ export function SignInForm() {
             {status === 'submitting' ? (
               <>
                 <Loader2 className="animate-spin" />
-                Signing in…
+                Creating account…
               </>
             ) : (
-              'Sign in'
+              'Create account'
             )}
           </Button>
         </form>
       </Form>
 
       <p className="text-center text-sm text-muted-foreground">
-        Don&apos;t have an account?{' '}
+        Already have an account?{' '}
         <Link
-          href="/sign-up"
+          href="/sign-in"
           className="font-medium text-foreground underline-offset-4 hover:underline"
         >
-          Create one
+          Sign in
         </Link>
       </p>
     </div>

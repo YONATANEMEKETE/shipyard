@@ -70,9 +70,10 @@ export function ForgotPasswordForm({ onSuccess }: ForgotPasswordFormProps) {
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit((values) =>
-          requestResetMutation.mutateAsync(values),
-        )}
+        noValidate
+        onSubmit={form.handleSubmit((values) => {
+          void requestResetMutation.mutateAsync(values).catch(() => {});
+        })}
         className="grid gap-4"
       >
         <FormField

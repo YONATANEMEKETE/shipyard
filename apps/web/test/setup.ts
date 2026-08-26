@@ -28,3 +28,12 @@ afterEach(() => {
   cleanup();
 });
 afterAll(() => server.close());
+
+// --- Radix / browser APIs ---------------------------------------------------
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  globalThis.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver;
+}

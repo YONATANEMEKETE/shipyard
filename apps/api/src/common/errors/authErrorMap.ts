@@ -39,7 +39,7 @@ const notFound = (): MappedAuthError => ({
  * Explicit code-level mapping for cases where the semantics differ from (or
  * are more precise than) the HTTP status Better Auth would send.
  */
-const AUTH_CODE_MAP: Record<string, MappedAuthError> = {
+export const AUTH_CODE_MAP: Record<string, MappedAuthError> = {
   // Account/identity conflicts
   USER_ALREADY_EXISTS: conflict(),
   USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL: conflict(),

@@ -9,7 +9,7 @@ import { env } from '../config/env.js';
 import { RateLimitError } from '../errors/httpErrors.js';
 import { logger } from '../logger/index.js';
 
-const rateLimitLogger: Logger = {
+export const rateLimitLogger: Logger = {
   error: (error, message) => {
     logger.error({ err: error }, message ?? 'Rate limiter error');
   },
@@ -18,7 +18,7 @@ const rateLimitLogger: Logger = {
   },
 };
 
-const rateLimitHandler: RateLimitExceededEventHandler = (
+export const rateLimitHandler: RateLimitExceededEventHandler = (
   _request,
   _response,
   next,
@@ -32,19 +32,21 @@ const rateLimitHandler: RateLimitExceededEventHandler = (
   next(new RateLimitError(undefined, undefined, undefined, policy));
 };
 
-const isOptionsRequest = (request: Request): boolean =>
+export const isOptionsRequest = (request: Request): boolean =>
   request.method === 'OPTIONS';
 
-const isAuthPath = (request: Request): boolean => {
+export const isAuthPath = (request: Request): boolean => {
   const path = request.originalUrl.split('?')[0] ?? '';
   return path === '/api/v1/auth' || path.startsWith('/api/v1/auth/');
 };
 
-const skipOptionsRequests: ValueDeterminingMiddleware<boolean> = (request) =>
-  isOptionsRequest(request);
+export const skipOptionsRequests: ValueDeterminingMiddleware<boolean> = (
+  request,
+) => isOptionsRequest(request);
 
-const skipApiRateLimit: ValueDeterminingMiddleware<boolean> = (request) =>
-  isOptionsRequest(request) || isAuthPath(request);
+export const skipApiRateLimit: ValueDeterminingMiddleware<boolean> = (
+  request,
+) => isOptionsRequest(request) || isAuthPath(request);
 
 const sharedOptions = {
   legacyHeaders: false,

@@ -18,3 +18,4 @@ export type ReadinessResponse = z.infer<typeof readinessResponseSchema>;
 
 export * from './api/response.js';
 export * from './auth/index.js';
+export * from './workspace/index.js';

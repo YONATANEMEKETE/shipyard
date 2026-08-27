@@ -15,8 +15,9 @@ export const workspaceStatusSchema = z.enum(['ACTIVE', 'ARCHIVED']);
 
 export type WorkspaceStatus = z.infer<typeof workspaceStatusSchema>;
 
-// F2 writes only OWNER; F3 widens the enum in place (ADMIN, MEMBER).
-export const workspaceRoleSchema = z.enum(['OWNER']);
+// F2 writes only OWNER; MEMBER exists so read-only non-owner memberships
+// deserialize (ai-design §10.1 matrix), ADMIN arrives in F3.
+export const workspaceRoleSchema = z.enum(['OWNER', 'MEMBER']);
 
 export type WorkspaceRole = z.infer<typeof workspaceRoleSchema>;
 

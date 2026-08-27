@@ -16,6 +16,7 @@ import {
 import { isReady, setReady } from './common/health/readiness.js';
 import { sendSuccess } from './common/http/responses.js';
 import { authNodeHandler } from './lib/authNodeHandler.js';
+import { workspaceRouter } from './features/workspace/routes.js';
 
 export interface CreateAppOptions {
   /**
@@ -72,6 +73,10 @@ export function createApp(options: CreateAppOptions = {}): express.Express {
   // authNodeHandler wraps Better Auth's node adapter so error responses are
   // rewritten into the shared envelope contract.
   app.all('/api/v1/auth/*splat', authNodeHandler);
+
+  // Workspace module — hand-written Shipyard routes (api-design.md §2). Mounted
+  // before notFound so unmatched paths under /api/v1/workspaces 404 normally.
+  app.use('/api/v1/workspaces', workspaceRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

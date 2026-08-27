@@ -2,10 +2,9 @@
 
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
 
 import { GitHubIcon, GoogleIcon } from '@/components/auth/provider-icons';
-import { Button } from '@/components/ui/button';
+import { StatefulButton } from '@/components/motion/button/stateful';
 import { FormError } from '@/components/ui/form-error';
 import { authClient } from '@/lib/auth-client';
 
@@ -58,37 +57,44 @@ export function SocialButtons({ callbackURL = '/' }: SocialButtonsProps) {
 
   const busy = startedProvider !== null || socialMutation.isPending;
 
+  const isGoogleLoading =
+    socialMutation.isPending && socialMutation.variables === 'google';
+  const isGithubLoading =
+    socialMutation.isPending && socialMutation.variables === 'github';
+
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-3">
-        <Button
+        <StatefulButton
           type="button"
           variant="outline"
-          onClick={() => socialMutation.mutate('google')}
+          state={isGoogleLoading ? 'loading' : 'idle'}
+          loadingText="Google"
+          icon={<GoogleIcon />}
+          onClick={() => {
+            setStartedProvider('google');
+            socialMutation.mutate('google');
+          }}
           disabled={busy}
+          className="w-full"
         >
-          {startedProvider === 'google' ||
-          socialMutation.variables === 'google' ? (
-            <Loader2 className="animate-spin" />
-          ) : (
-            <GoogleIcon />
-          )}
           Google
-        </Button>
-        <Button
+        </StatefulButton>
+        <StatefulButton
           type="button"
           variant="outline"
-          onClick={() => socialMutation.mutate('github')}
+          state={isGithubLoading ? 'loading' : 'idle'}
+          loadingText="GitHub"
+          icon={<GitHubIcon />}
+          onClick={() => {
+            setStartedProvider('github');
+            socialMutation.mutate('github');
+          }}
           disabled={busy}
+          className="w-full"
         >
-          {startedProvider === 'github' ||
-          socialMutation.variables === 'github' ? (
-            <Loader2 className="animate-spin" />
-          ) : (
-            <GitHubIcon />
-          )}
           GitHub
-        </Button>
+        </StatefulButton>
       </div>
 
       <FormError

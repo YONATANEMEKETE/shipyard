@@ -4,6 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { MailCheck } from 'lucide-react';
 
+import { AuthStagger, AuthStaggerItem } from '@/components/auth/auth-anim';
+
 import { ForgotPasswordForm } from '@/components/auth/forgot-password-form';
 import { ResendVerificationButton } from '@/components/auth/resend-verification-button';
 import { authClient } from '@/lib/auth-client';
@@ -18,64 +20,74 @@ export function ForgotPasswordFlow() {
 
   if (sentEmail !== null) {
     return (
-      <div className="flex flex-col items-center gap-6 text-center">
-        <div className="grid size-14 place-items-center rounded-full bg-accent text-accent-foreground">
-          <MailCheck className="size-7" />
-        </div>
+      <AuthStagger className="flex flex-col items-center gap-6 text-center">
+        <AuthStaggerItem>
+          <div className="grid size-14 place-items-center rounded-full bg-accent text-accent-foreground">
+            <MailCheck className="size-7" />
+          </div>
+        </AuthStaggerItem>
 
-        <header className="flex flex-col gap-2">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Check your email
-          </h1>
-          <p className="text-sm leading-[1.5] text-muted-foreground">
-            We sent a password reset link to{' '}
-            <span className="font-medium text-foreground">{sentEmail}</span>.
-            The link expires in 1 hour.
-          </p>
-        </header>
+        <AuthStaggerItem>
+          <header className="flex flex-col gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Check your email
+            </h1>
+            <p className="text-sm leading-[1.5] text-muted-foreground">
+              We sent a password reset link to{' '}
+              <span className="font-medium text-foreground">{sentEmail}</span>.
+              The link expires in 1 hour.
+            </p>
+          </header>
+        </AuthStaggerItem>
 
-        <div className="flex flex-col items-center gap-4">
-          <ResendVerificationButton
-            label="Resend reset link"
-            sentMessage="Reset link sent — check your inbox"
-            onResend={() =>
-              authClient
-                .requestPasswordReset({
-                  email: sentEmail,
-                  redirectTo: '/reset-password',
-                })
-                .then((r) => {
-                  if (r.error) throw new Error(r.error.message);
-                })
-            }
-          />
+        <AuthStaggerItem>
+          <div className="flex flex-col items-center gap-4">
+            <ResendVerificationButton
+              label="Resend reset link"
+              sentMessage="Reset link sent — check your inbox"
+              onResend={() =>
+                authClient
+                  .requestPasswordReset({
+                    email: sentEmail,
+                    redirectTo: '/reset-password',
+                  })
+                  .then((r) => {
+                    if (r.error) throw new Error(r.error.message);
+                  })
+              }
+            />
 
-          <p className="text-sm text-muted-foreground">
-            <Link
-              href="/sign-in"
-              className="font-medium text-foreground underline-offset-4 hover:underline"
-            >
-              Back to sign in
-            </Link>
-          </p>
-        </div>
-      </div>
+            <p className="text-sm text-muted-foreground">
+              <Link
+                href="/sign-in"
+                className="font-medium text-foreground underline-offset-4 hover:underline"
+              >
+                Back to sign in
+              </Link>
+            </p>
+          </div>
+        </AuthStaggerItem>
+      </AuthStagger>
     );
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          Forgot your password?
-        </h1>
-        <p className="text-sm leading-[1.5] text-muted-foreground">
-          Enter the email you signed up with and we&apos;ll send you a link to
-          reset your password.
-        </p>
-      </header>
+    <AuthStagger className="flex flex-col gap-8">
+      <AuthStaggerItem>
+        <header className="flex flex-col gap-2">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            Forgot your password?
+          </h1>
+          <p className="text-sm leading-[1.5] text-muted-foreground">
+            Enter the email you signed up with and we&apos;ll send you a link to
+            reset your password.
+          </p>
+        </header>
+      </AuthStaggerItem>
 
-      <ForgotPasswordForm onSuccess={setSentEmail} />
-    </div>
+      <AuthStaggerItem>
+        <ForgotPasswordForm onSuccess={setSentEmail} />
+      </AuthStaggerItem>
+    </AuthStagger>
   );
 }

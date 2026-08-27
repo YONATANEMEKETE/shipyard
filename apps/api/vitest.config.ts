@@ -21,8 +21,8 @@ export default defineConfig({
       reporter: ['text', 'html', 'lcov'],
       reportsDirectory: 'coverage',
     },
-  },
-  api: {
-    port: 51204,
+    api: {
+      port: 51204,
+    },
   },
 });

@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2, Mail } from 'lucide-react';
+import { Mail } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { StatefulButton } from '@/components/motion/button/stateful';
 
 interface ResendVerificationButtonProps {
   /** Button label while idle. */
@@ -67,21 +67,16 @@ export function ResendVerificationButton({
 
   return (
     <div className="flex flex-col items-center gap-1">
-      <Button
+      <StatefulButton
         type="button"
         variant="outline"
         onClick={() => void onResendClick()}
+        state={status === 'sending' ? 'loading' : 'idle'}
+        loadingText="Sending…"
         disabled={status === 'sending'}
       >
-        {status === 'sending' ? (
-          <>
-            <Loader2 className="animate-spin" />
-            Sending…
-          </>
-        ) : (
-          label
-        )}
-      </Button>
+        {label}
+      </StatefulButton>
       {error !== null && (
         <p className="text-xs text-destructive" aria-live="polite">
           {error}

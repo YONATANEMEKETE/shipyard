@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, LogOut } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { StatefulButton } from '@/components/motion/button/stateful';
 import { authClient } from '@/lib/auth-client';
 
 /**
@@ -27,23 +27,16 @@ export function SignOutButton() {
   };
 
   return (
-    <Button
+    <StatefulButton
       type="button"
       variant="outline"
       onClick={() => void onSignOut()}
+      state={pending ? 'loading' : 'idle'}
+      loadingText="Signing out…"
+      icon={<LogOut />}
       disabled={pending}
     >
-      {pending ? (
-        <>
-          <Loader2 className="animate-spin" />
-          Signing out…
-        </>
-      ) : (
-        <>
-          <LogOut />
-          Sign out
-        </>
-      )}
-    </Button>
+      Sign out
+    </StatefulButton>
   );
 }

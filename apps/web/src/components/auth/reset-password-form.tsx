@@ -5,10 +5,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import { resetPasswordRequestSchema } from '@shipyard/shared';
-import { Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { z } from 'zod';
 
-import { Button } from '@/components/ui/button';
+import { AuthStagger, AuthStaggerItem } from '@/components/auth/auth-anim';
+import { StatefulButton } from '@/components/motion/button/stateful';
 import {
   Form,
   FormControl,
@@ -16,7 +18,6 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { authClient } from '@/lib/auth-client';
@@ -47,6 +48,7 @@ export function ResetPasswordForm({
   onUpdated,
   onInvalidToken,
 }: ResetPasswordFormProps) {
+  const [showPassword, setShowPassword] = useState(false);
   const form = useForm<
     ResetPasswordFormInput,
     unknown,
@@ -99,59 +101,83 @@ export function ResetPasswordForm({
   return (
     <Form {...form}>
       <form noValidate onSubmit={onSubmit} className="grid gap-4">
-        <FormField
-          control={form.control}
-          name="newPassword"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>New password</FormLabel>
-              <FormControl>
-                <Input
-                  type="password"
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                  {...field}
-                />
-              </FormControl>
-              <FormDescription>
-                Must be between 8 and 128 characters.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <AuthStagger className="grid gap-4">
+          <AuthStaggerItem>
+            <FormField
+              control={form.control}
+              name="newPassword"
+              render={({ field, fieldState }) => (
+                <FormItem>
+                  <FormLabel>New password</FormLabel>
+                  <FormControl>
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      autoComplete="new-password"
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
+                      error={fieldState.error?.message}
+                      rightIcon={
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((s) => !s)}
+                          aria-label={
+                            showPassword ? 'Hide password' : 'Show password'
+                          }
+                          className="pointer-events-auto"
+                        >
+                          {showPassword ? <EyeOff /> : <Eye />}
+                        </button>
+                      }
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Must be between 8 and 128 characters.
+                  </FormDescription>
+                </FormItem>
+              )}
+            />
+          </AuthStaggerItem>
 
-        {/* Transport/API error feedback */}
-        <div aria-live="polite">
-          {resetMutation.isError && (
-            <p className="text-xs text-destructive">
-              {resetMutation.error instanceof Error
-                ? resetMutation.error.message
-                : GENERIC_RESET_ERROR}
+          <AuthStaggerItem>
+            <div aria-live="polite">
+              {resetMutation.isError && (
+                <p className="text-xs text-destructive">
+                  {resetMutation.error instanceof Error
+                    ? resetMutation.error.message
+                    : GENERIC_RESET_ERROR}
+                </p>
+              )}
+            </div>
+          </AuthStaggerItem>
+
+          <AuthStaggerItem>
+            <StatefulButton
+              type="submit"
+              state={resetMutation.isPending ? 'loading' : 'idle'}
+              loadingText="Updating password…"
+              disabled={resetMutation.isPending}
+              className="w-full"
+            >
+              Reset password
+            </StatefulButton>
+          </AuthStaggerItem>
+
+          <AuthStaggerItem>
+            <p className="text-center text-sm text-muted-foreground">
+              Remembered it after all?{' '}
+              <Link
+                href="/sign-in"
+                className="font-medium text-foreground underline-offset-4 hover:underline"
+              >
+                Sign in
+              </Link>
             </p>
-          )}
-        </div>
-
-        <Button type="submit" disabled={resetMutation.isPending}>
-          {resetMutation.isPending ? (
-            <>
-              <Loader2 className="animate-spin" />
-              Updating password…
-            </>
-          ) : (
-            'Reset password'
-          )}
-        </Button>
-
-        <p className="text-center text-sm text-muted-foreground">
-          Remembered it after all?{' '}
-          <Link
-            href="/sign-in"
-            className="font-medium text-foreground underline-offset-4 hover:underline"
-          >
-            Sign in
-          </Link>
-        </p>
+          </AuthStaggerItem>
+        </AuthStagger>
       </form>
     </Form>
   );

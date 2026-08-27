@@ -21,3 +21,13 @@ overrides:
   # resolved the shared peer to the CLI chain's 1.1.8; pin better-call so the
   # runtime ESM import of better-auth resolves kAPIErrorHeaderSymbol.
   better-call: 1.4.0
+  # @better-auth/cli@1.4.x pins vulnerable better-auth <1.6.22
+  # (GHSA-g38m-r43w-p2q7, GHSA-fmh4-wcc4-5jm3, GHSA-qq9h-g4jm-xgf3).
+  # Force only vulnerable copies onto the patched 1.7.x line.
+  'better-auth@<1.6.22': ^1.7.1
+  # drizzle-orm <0.45.2 SQL injection via improperly escaped SQL identifiers
+  # (GHSA-gpj5-g38j-94v9); pulled transitively by better-auth's drizzle adapter.
+  'drizzle-orm@<0.45.2': ^0.45.2
+  # lodash <=4.17.23: code injection via _.template (high) and prototype
+  # pollution (moderate) — force only vulnerable copies to the patched release.
+  'lodash@<=4.17.23': ^4.17.24

@@ -24,16 +24,5 @@ export default tseslint.config(
       },
     },
   },
-  {
-    files: ['prisma.config.ts'],
-    languageOptions: {
-      parserOptions: {
-        projectService: {
-          allowDefaultProject: ['prisma.config.ts'],
-        },
-        tsconfigRootDir: fileURLToPath(new URL('.', import.meta.url)),
-      },
-    },
-  },
   eslintConfigPrettier,
 );

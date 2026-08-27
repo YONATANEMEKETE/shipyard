@@ -13,15 +13,16 @@ generator client {
 }
 
 model User {
-  id            String    @id
-  name          String
-  email         String
-  emailVerified Boolean   @default(false)
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  sessions      Session[]
-  accounts      Account[]
+  id               String            @id
+  name             String
+  email            String
+  emailVerified    Boolean           @default(false)
+  image            String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  sessions         Session[]
+  accounts         Account[]
+  workspaceMembers WorkspaceMember[]
 
   @@unique([email])
   @@map("user")
@@ -75,4 +76,49 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+// ── Workspace (F2) ───────────────────────────────────────────────────────────
+// Prisma-owned (hand-modeled, unlike F1's Better Auth tables). Follows Better
+// Auth conventions. See shipyard-design/04-Engineering/features/workspace/data-model.md.
+
+enum WorkspaceStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum WorkspaceRole {
+  OWNER
+  // F3 widens: ADMIN, MEMBER (enum widened in place; existing rows untouched)
+}
+
+model Workspace {
+  id         String          @id @default(cuid())
+  name       String          @db.VarChar(80)
+  slug       String          @unique
+  status     WorkspaceStatus @default(ACTIVE)
+  icon       String?         @db.VarChar(32)
+  archivedAt DateTime?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  members WorkspaceMember[]
+
+  @@map("workspace")
+}
+
+model WorkspaceMember {
+  id          String        @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole @default(OWNER)
+  createdAt   DateTime      @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([workspaceId])
+  @@index([userId])
+  @@map("workspace_member")
 }

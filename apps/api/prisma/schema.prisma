@@ -89,7 +89,8 @@ enum WorkspaceStatus {
 
 enum WorkspaceRole {
   OWNER
-  // F3 widens: ADMIN, MEMBER (enum widened in place; existing rows untouched)
+  MEMBER
+  // F3 adds ADMIN — enum widened in place; existing rows untouched.
 }
 
 model Workspace {

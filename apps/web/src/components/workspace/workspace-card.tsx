@@ -65,17 +65,17 @@ export function WorkspaceCard({
         )}
       />
 
-      {/* Name + meta */}
+      {/* Name + meta — w-full keeps truncation working under items-start */}
       <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
         <span
           className={cn(
-            'truncate text-[15px] font-semibold leading-none tracking-[-0.2px] text-foreground',
+            'w-full truncate text-[15px] font-semibold leading-none tracking-[-0.2px] text-foreground',
             isArchived && 'text-muted-foreground',
           )}
         >
           {workspace.name}
         </span>
-        <span className="truncate text-[11px] leading-[1.3] text-muted-foreground">
+        <span className="w-full truncate text-[11px] leading-[1.3] text-muted-foreground">
           {meta}
         </span>
       </div>
@@ -109,7 +109,9 @@ export function WorkspaceCard({
   );
 
   const classNameBase = cn(
-    'flex w-full items-center gap-3.5 rounded-xl border px-4 transition-colors',
+    // text-left overrides the button UA default (text-align: center) so the
+    // name/meta read left-aligned like the archived card's div.
+    'flex w-full items-center gap-3.5 rounded-xl border px-4 text-left transition-colors',
     isArchived
       ? 'h-[60px] border-ds-border bg-ds-surface-subtle'
       : 'h-[68px] border-ds-border-strong bg-ds-surface',

@@ -127,7 +127,7 @@ export default function OnboardingPage() {
                         leftIcon={<Container className="size-4" />}
                         error={fieldState.error?.message}
                         classNames={{
-                          field: 'h-11 rounded-xl border-border bg-card',
+                          field: 'h-11 rounded-md border-border bg-card',
                           input: 'text-sm',
                         }}
                       />
@@ -165,7 +165,7 @@ export default function OnboardingPage() {
               <StatefulButton
                 type="submit"
                 size="lg"
-                className="h-[46px] w-full rounded-xl text-sm font-semibold"
+                className="h-[46px] w-full rounded-md text-sm font-semibold"
                 icon={<ArrowRight className="h-4 w-4" />}
                 state={buttonState}
                 loadingText="Creating workspace…"

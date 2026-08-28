@@ -33,14 +33,17 @@ const CHEVRON_TRANSITION: Transition = {
   bounce: 0.3,
 };
 
-const LIST_VARIANTS: Variants = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.035, delayChildren: 0.05 } },
-};
 const ITEM_VARIANTS: Variants = {
   hidden: { opacity: 0, y: -6, filter: 'blur(3px)' },
   show: { opacity: 1, y: 0, filter: 'blur(0px)' },
 };
+
+function buildListVariants(stagger: number): Variants {
+  return {
+    hidden: {},
+    show: { transition: { staggerChildren: stagger, delayChildren: 0.05 } },
+  };
+}
 
 type Placement = 'bottom' | 'top';
 
@@ -58,6 +61,7 @@ interface SelectContextValue {
   disabled: boolean;
   placement: Placement;
   setPlacement: (p: Placement) => void;
+  listVariants: Variants;
 }
 
 const SelectContext = createContext<SelectContextValue | null>(null);
@@ -87,6 +91,12 @@ export interface SelectProps {
    */
   onOpenChange?: (open: boolean) => void;
   disabled?: boolean;
+  /**
+   * Seconds between each item's entrance animation when the panel opens.
+   * Lower = faster cascade. Default 0.035 (matches the original design);
+   * dense grids like the icon picker pass a smaller value.
+   */
+  itemStagger?: number;
   className?: string;
   children: ReactNode;
 }
@@ -99,6 +109,7 @@ export function Select({
   defaultOpen = false,
   onOpenChange,
   disabled = false,
+  itemStagger = 0.035,
   className,
   children,
 }: SelectProps) {
@@ -109,6 +120,10 @@ export function Select({
   const [internal, setInternal] = useState(defaultValue);
   const [labels, setLabels] = useState<Map<string, string>>(new Map());
   const [placement, setPlacement] = useState<Placement>('bottom');
+  const listVariants = useMemo(
+    () => buildListVariants(itemStagger),
+    [itemStagger],
+  );
 
   const controlled = value !== undefined;
   const current = controlled ? value : internal;
@@ -175,6 +190,7 @@ export function Select({
       disabled,
       placement,
       setPlacement,
+      listVariants,
     }),
     [
       current,
@@ -188,6 +204,7 @@ export function Select({
       baseId,
       disabled,
       placement,
+      listVariants,
     ],
   );
 
@@ -390,7 +407,7 @@ export function SelectContent({ className, children }: SelectContentProps) {
     >
       <motion.div
         ref={innerRef}
-        variants={ctx.reduce ? undefined : LIST_VARIANTS}
+        variants={ctx.reduce ? undefined : ctx.listVariants}
         initial={false}
         animate={open ? 'show' : 'hidden'}
         className="p-1"

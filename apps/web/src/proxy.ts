@@ -5,11 +5,10 @@ import { authClient } from '@/lib/auth-client';
 /**
  * Route protection for Shipyard.
  *
- * Two rules, evaluated per request:
- *   1. Unauthenticated users may only reach auth pages — anything else
- *      redirects to /sign-in.
- *   2. Authenticated users are kept out of auth pages — those redirect to
- *      the workspace root.
+ * Three tiers:
+ *   1. Public — / and /(marketing)/* : always reachable, even authed stays.
+ *   2. Auth pages — /(auth)/* : authed users redirect to /.
+ *   3. Protected — /onboarding, /select-workspace, /w/* : unauth → /sign-in.
  *
  * Authentication is validated against the Better Auth API (get-session)
  * with the request's own cookies forwarded. A missing session cookie skips
@@ -27,6 +26,8 @@ const AUTH_PAGES = [
   '/error',
 ] as const;
 
+const PROTECTED_PREFIXES = ['/onboarding', '/select-workspace', '/w'] as const;
+
 // Better Auth names the session cookie differently when useSecureCookies
 // is enabled (production), hence the __Secure-prefixed variant.
 const SESSION_COOKIES = [
@@ -41,6 +42,12 @@ export function hasSessionCookie(request: NextRequest): boolean {
 export function isAuthPage(pathname: string): boolean {
   return AUTH_PAGES.some(
     (page) => pathname === page || pathname.startsWith(`${page}/`),
+  );
+}
+
+export function isProtectedPage(pathname: string): boolean {
+  return PROTECTED_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
 }
 
@@ -70,22 +77,30 @@ export async function isAuthenticated(request: NextRequest): Promise<boolean> {
 export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const onAuthPage = isAuthPage(pathname);
+  const onProtected = isProtectedPage(pathname);
 
-  // Auth pages are the only pages reachable without validation, and only an
-  // authenticated user can violate rule 2 — skip validation when both rules
-  // would allow the request through regardless of the result.
-  const mustValidate = !onAuthPage || hasSessionCookie(request);
+  // Public: / and /(marketing)/* — no auth check, even authed users stay.
+  // Auth pages: redirect authed → / (but stay public for unauth).
+  // Protected: /onboarding, /select-workspace, /w/* — require session.
 
-  const authed = mustValidate ? await isAuthenticated(request) : false;
-
-  if (!authed && !onAuthPage) {
-    return NextResponse.redirect(new URL('/sign-in', request.url));
+  if (onAuthPage) {
+    const mustValidate = hasSessionCookie(request);
+    const authed = mustValidate ? await isAuthenticated(request) : false;
+    if (authed) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+    return NextResponse.next();
   }
 
-  if (authed && onAuthPage) {
-    return NextResponse.redirect(new URL('/', request.url));
+  if (onProtected) {
+    const authed = await isAuthenticated(request);
+    if (!authed) {
+      return NextResponse.redirect(new URL('/sign-in', request.url));
+    }
+    return NextResponse.next();
   }
 
+  // Public landing / marketing — no validation, no redirect for authed.
   return NextResponse.next();
 }
 

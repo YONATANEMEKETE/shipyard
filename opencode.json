@@ -5,6 +5,15 @@
       "type": "remote",
       "url": "https://mcp.beui.dev/mcp",
       "enabled": true
+    },
+    "pencil": {
+      "type": "local",
+      "command": [
+        "/tmp/.mount_pen.deYm3GrD/resources/app.asar.unpacked/out/mcp-server-linux-x64",
+        "--app",
+        "desktop"
+      ],
+      "enabled": true
     }
   }
 }

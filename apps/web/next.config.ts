@@ -15,6 +15,13 @@ const nextConfig: NextConfig = {
         source: '/api/v1/auth/:path*',
         destination: `${apiUrl}/api/v1/auth/:path*`,
       },
+      {
+        // Workspace lifecycle (F2) — same first-party cookie forwarding.
+        // Browser always hits /api/v1/workspaces on the web origin; Next
+        // rewrites to the internal API server (ADR-003). Caddy exposes only web:3000.
+        source: '/api/v1/workspaces/:path*',
+        destination: `${apiUrl}/api/v1/workspaces/:path*`,
+      },
     ];
   },
 };

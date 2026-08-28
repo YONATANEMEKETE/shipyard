@@ -13,6 +13,7 @@ vi.mock('@/lib/auth-client', () => ({
 const {
   hasSessionCookie,
   isAuthPage,
+  isProtectedPage,
   isAuthenticated,
   default: proxy,
   config,
@@ -94,6 +95,37 @@ describe('isAuthPage', () => {
   });
 });
 
+describe('isProtectedPage', () => {
+  it.each([
+    '/onboarding',
+    '/select-workspace',
+    '/w',
+    '/w/abc',
+    '/w/my-workspace/settings',
+  ])('matches protected page %s', (path) => {
+    expect(isProtectedPage(path)).toBe(true);
+  });
+
+  it.each(['/onboarding/', '/select-workspace/invite'])(
+    'matches protected subpath %s',
+    (path) => {
+      expect(isProtectedPage(path)).toBe(true);
+    },
+  );
+
+  it.each([
+    '/',
+    '/sign-in',
+    '/pricing',
+    '/about',
+    '/api/v1/workspaces',
+    '/workspace',
+    '/onboarding-other',
+  ])('does not match non-protected path %s', (path) => {
+    expect(isProtectedPage(path)).toBe(false);
+  });
+});
+
 describe('isAuthenticated', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -169,12 +201,37 @@ describe('proxy routing', () => {
     vi.clearAllMocks();
   });
 
-  it('redirects unauthenticated non-auth page to /sign-in', async () => {
-    const req = makeRequest('http://localhost:3000/dashboard');
+  it('redirects unauthenticated protected page to /sign-in', async () => {
+    const req = makeRequest('http://localhost:3000/onboarding');
     const res = await proxy(req);
     expect(res instanceof NextResponse).toBe(true);
     expect(res.headers.get('location')).toBe('http://localhost:3000/sign-in');
     expect(res.status).toBe(307); // NextResponse.redirect default
+  });
+
+  it('redirects unauthenticated select-workspace to /sign-in', async () => {
+    const req = makeRequest('http://localhost:3000/select-workspace');
+    const res = await proxy(req);
+    expect(res.headers.get('location')).toBe('http://localhost:3000/sign-in');
+  });
+
+  it('redirects unauthenticated workspace page to /sign-in', async () => {
+    const req = makeRequest('http://localhost:3000/w/my-workspace');
+    const res = await proxy(req);
+    expect(res.headers.get('location')).toBe('http://localhost:3000/sign-in');
+  });
+
+  it('allows unauthenticated public landing through', async () => {
+    const req = makeRequest('http://localhost:3000/');
+    const res = await proxy(req);
+    expect(res.headers.get('location')).toBeNull();
+    expect(getSessionMock).not.toHaveBeenCalled();
+  });
+
+  it('allows unauthenticated marketing page through', async () => {
+    const req = makeRequest('http://localhost:3000/pricing');
+    const res = await proxy(req);
+    expect(res.headers.get('location')).toBeNull();
   });
 
   it('allows unauthenticated auth page through (fast path, no validation)', async () => {
@@ -196,9 +253,20 @@ describe('proxy routing', () => {
     expect(res.headers.get('location')).toBe('http://localhost:3000/');
   });
 
-  it('allows authenticated non-auth page through', async () => {
+  it('allows authenticated protected page through', async () => {
     getSessionMock.mockResolvedValue({ data: { session: { id: 's1' } } });
-    const req = makeRequest('http://localhost:3000/dashboard', {
+    const req = makeRequest('http://localhost:3000/w/my-workspace', {
+      'better-auth.session_token': 'tok',
+    });
+    req.headers.set('cookie', 'better-auth.session_token=tok');
+
+    const res = await proxy(req);
+    expect(res.headers.get('location')).toBeNull();
+  });
+
+  it('allows authenticated public landing through (no redirect to workspace)', async () => {
+    getSessionMock.mockResolvedValue({ data: { session: { id: 's1' } } });
+    const req = makeRequest('http://localhost:3000/', {
       'better-auth.session_token': 'tok',
     });
     req.headers.set('cookie', 'better-auth.session_token=tok');
@@ -217,9 +285,9 @@ describe('proxy routing', () => {
     expect(res.headers.get('location')).toBe('http://localhost:3000/');
   });
 
-  it('degrades to authenticated on API failure so cookie bearer stays on dashboard', async () => {
+  it('degrades to authenticated on API failure so cookie bearer stays on protected page', async () => {
     getSessionMock.mockRejectedValue(new Error('api down'));
-    const req = makeRequest('http://localhost:3000/dashboard', {
+    const req = makeRequest('http://localhost:3000/w/my-workspace', {
       'better-auth.session_token': 'tok',
     });
 

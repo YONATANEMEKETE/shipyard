@@ -29,7 +29,7 @@ export function SignOutButton() {
   return (
     <StatefulButton
       type="button"
-      variant="outline"
+      variant="ghost"
       onClick={() => void onSignOut()}
       state={pending ? 'loading' : 'idle'}
       loadingText="Signing out…"

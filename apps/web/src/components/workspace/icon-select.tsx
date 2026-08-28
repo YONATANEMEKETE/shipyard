@@ -40,8 +40,11 @@ export function IconSelect({
       defaultValue={defaultValue}
       onValueChange={(v) => onValueChange?.(v as WorkspaceIconKey)}
       disabled={disabled}
+      // 52 icons would take ~1.8s to cascade at the default 0.035s stagger;
+      // 8ms each keeps the grid reveal snappy.
+      itemStagger={0.008}
     >
-      <SelectTrigger className="h-11 rounded-xl border-border bg-card px-3 hover:border-border focus-visible:ring-0 focus-visible:border-border data-[state=open]:border-border">
+      <SelectTrigger className="h-11 rounded-md border-border bg-card px-3 hover:border-border focus-visible:ring-0 focus-visible:border-border data-[state=open]:border-border">
         <span className="flex items-center gap-3">
           <IconWrapper icon={value ?? defaultValue} size="sm" variant="soft" />
           <span className="text-sm font-medium text-foreground">
@@ -50,8 +53,12 @@ export function IconSelect({
         </span>
       </SelectTrigger>
 
-      <SelectContent className="z-30 rounded-xl">
-        <div className="flex flex-wrap gap-1.5 p-1.5 list-none">
+      {/* w-fit lets the panel hug the grid instead of stretching to the
+          trigger width, so the 38px tiles sit flush with no dead space. */}
+      <SelectContent className="z-30 w-fit rounded-xl">
+        {/* Fixed 7-column grid of exactly-sized cells: tiles are flush and
+            evenly spaced with no ragged right edge. */}
+        <div className="grid list-none grid-cols-[repeat(7,2.375rem)] gap-1.5 p-1.5">
           {keys.map((key) => {
             const isSelected = (value ?? defaultValue) === key;
             return (

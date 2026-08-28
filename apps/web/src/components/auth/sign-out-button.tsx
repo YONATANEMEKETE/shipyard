@@ -11,7 +11,7 @@ import { authClient } from '@/lib/auth-client';
  * Signs the user out via Better Auth (clears the session server-side and
  * expires the cookie) and returns them to the sign-in screen.
  */
-export function SignOutButton() {
+export function SignOutButton({ className }: { className?: string }) {
   const [pending, setPending] = useState(false);
   const router = useRouter();
 
@@ -35,6 +35,7 @@ export function SignOutButton() {
       loadingText="Signing out…"
       icon={<LogOut />}
       disabled={pending}
+      className={className}
     >
       Sign out
     </StatefulButton>

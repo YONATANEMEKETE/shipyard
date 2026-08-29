@@ -6,7 +6,6 @@ import {
   Bell,
   Calendar,
   CircleCheck,
-  Ellipsis,
   Folder,
   LayoutDashboard,
   Settings,
@@ -19,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { EASE_OUT } from '@/lib/ease';
 import { useThemeToggle } from '@/components/motion/theme-toggle';
 import { Switch } from '@/components/ui/switch';
+import { UserMenu } from '@/components/workspace/user-menu';
 import { WorkspaceSwitcher } from '@/components/workspace/workspace-switcher';
 
 interface NavItem {
@@ -113,23 +113,7 @@ function SidebarContent({ slug }: { slug: string }) {
           className="rounded-lg bg-ds-sidebar transition-colors hover:bg-ds-border/60"
         />
         <div className="h-px w-full bg-ds-border" />
-        <button
-          type="button"
-          className="flex h-[50px] items-center gap-2.5 rounded-lg px-2 text-left transition-colors hover:bg-accent"
-        >
-          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-ds-brand font-mono text-[9px] font-bold text-white">
-            MC
-          </span>
-          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="truncate text-[11px] font-semibold text-foreground">
-              Maya Chen
-            </span>
-            <span className="truncate text-[8px] text-muted-foreground">
-              Workspace admin
-            </span>
-          </span>
-          <Ellipsis className="h-[15px] w-[15px] shrink-0 text-muted-foreground" />
-        </button>
+        <UserMenu />
       </div>
     </>
   );

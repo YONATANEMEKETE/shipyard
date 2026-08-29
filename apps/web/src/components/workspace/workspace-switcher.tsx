@@ -122,7 +122,9 @@ export function WorkspaceSwitcher({
           {workspace.name}
         </span>
         <span className="block truncate text-[11px] text-muted-foreground">
-          {workspace.memberCount} members
+          {workspace.memberCount === 1
+            ? 'Just you'
+            : `${workspace.memberCount} members`}
         </span>
       </span>
       {isCurrent ? <Check className="h-4 w-4 shrink-0 text-ds-brand" /> : null}
@@ -158,7 +160,11 @@ export function WorkspaceSwitcher({
               {current?.name ?? 'Select a workspace'}
             </span>
             <span className="truncate text-[8px] text-muted-foreground">
-              {current ? `${current.memberCount} members` : 'Pick a workspace'}
+              {current
+                ? current.memberCount === 1
+                  ? 'Just you'
+                  : `${current.memberCount} members`
+                : 'Pick a workspace'}
             </span>
           </span>
           <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />

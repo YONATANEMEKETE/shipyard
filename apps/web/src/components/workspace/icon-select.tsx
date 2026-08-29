@@ -55,7 +55,7 @@ export function IconSelect({
 
       {/* w-fit lets the panel hug the grid instead of stretching to the
           trigger width, so the 38px tiles sit flush with no dead space. */}
-      <SelectContent className="z-30 w-fit rounded-xl">
+      <SelectContent className="z-[60] w-fit rounded-xl">
         {/* Fixed 7-column grid of exactly-sized cells: tiles are flush and
             evenly spaced with no ragged right edge. */}
         <div className="grid list-none grid-cols-[repeat(7,2.375rem)] gap-1.5 p-1.5">

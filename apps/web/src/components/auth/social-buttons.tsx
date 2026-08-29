@@ -34,7 +34,7 @@ interface SocialButtonsProps {
  * provider — the mutation settles before the browser actually navigates,
  * so plain isPending would leave a clickable dead gap.
  */
-export function SocialButtons({ callbackURL = '/' }: SocialButtonsProps) {
+export function SocialButtons({ callbackURL = '/w' }: SocialButtonsProps) {
   // Stays set once a flow starts; cleared only on failure. Navigation
   // away tears the page down otherwise.
   const [startedProvider, setStartedProvider] = useState<SocialProvider | null>(

@@ -3,9 +3,12 @@
 import { usePathname } from 'next/navigation';
 import {
   Bell,
+  Building2,
+  Calendar,
+  CircleCheck,
+  Folder,
   PanelLeftClose,
   PanelLeftOpen,
-  Plus,
   Search,
 } from 'lucide-react';
 
@@ -17,6 +20,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { BloomMenu } from '@/components/motion/bloom-menu';
 import { Float } from '@/components/ui/float';
 import { Input } from '@/components/ui/input';
 
@@ -149,13 +153,15 @@ export function WorkspaceHeader({
       </div>
 
       {/* Create */}
-      <button
-        type="button"
-        className="inline-flex h-9 items-center gap-2 rounded-lg bg-ds-brand px-3.5 text-xs font-semibold text-white transition-colors hover:bg-ds-brand/90"
-      >
-        <Plus className="h-[15px] w-[15px]" />
-        Create
-      </button>
+      <BloomMenu
+        placement="bottom-end"
+        items={[
+          { label: 'Workspace', icon: Building2 },
+          { label: 'Issue', icon: CircleCheck },
+          { label: 'Project', icon: Folder },
+          { label: 'Cycle', icon: Calendar },
+        ]}
+      />
     </header>
   );
 }

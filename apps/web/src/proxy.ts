@@ -87,7 +87,7 @@ export default async function proxy(request: NextRequest) {
     const mustValidate = hasSessionCookie(request);
     const authed = mustValidate ? await isAuthenticated(request) : false;
     if (authed) {
-      return NextResponse.redirect(new URL('/', request.url));
+      return NextResponse.redirect(new URL('/w', request.url));
     }
     return NextResponse.next();
   }

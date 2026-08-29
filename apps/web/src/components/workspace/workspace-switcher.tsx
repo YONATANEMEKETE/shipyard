@@ -31,7 +31,7 @@ const WORKSPACES: WorkspaceOption[] = [
 
 function WorkspaceMark({ icon }: { icon: string }) {
   return (
-    <span className="grid size-[30px] shrink-0 place-items-center rounded-lg border border-amber-200 bg-ds-brand-soft">
+    <span className="grid size-[30px] shrink-0 place-items-center rounded-lg border border-ds-border bg-ds-brand-soft">
       <IconWrapper
         icon={icon}
         size="xs"
@@ -119,7 +119,7 @@ export function WorkspaceSwitcher({
           aria-expanded={open}
           title={current?.name ?? 'Select a workspace'}
           aria-label={current?.name ?? 'Select a workspace'}
-          className="mx-auto grid size-[38px] place-items-center rounded-lg transition-colors hover:bg-black/5"
+          className="mx-auto grid size-[38px] place-items-center rounded-lg transition-colors hover:bg-accent"
         >
           <WorkspaceMark icon={current?.icon ?? 'boxes'} />
         </button>
@@ -153,7 +153,7 @@ export function WorkspaceSwitcher({
             exit={reduce ? { opacity: 0 } : { opacity: 0, y: -4 }}
             transition={{ duration: 0.16, ease: EASE_OUT }}
             role="menu"
-            className="absolute left-0 right-0 top-full z-50 mt-1.5 rounded-xl border border-ds-border bg-ds-surface p-1.5 shadow-[0_8px_24px_-4px_rgba(0,0,0,0.16)]"
+            className="absolute left-0 right-0 top-full z-50 mt-1.5 rounded-xl border border-ds-border bg-ds-surface p-1.5 shadow-lg"
           >
             <Stagger stagger={0.03} delayChildren={0.02} className="contents">
               <StaggerItem>

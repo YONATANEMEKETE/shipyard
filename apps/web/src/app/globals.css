@@ -57,6 +57,28 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
+  --color-ds-bg: var(--ds-bg);
+  --color-ds-surface: var(--ds-surface);
+  --color-ds-surface-subtle: var(--ds-surface-subtle);
+  --color-ds-sidebar: var(--ds-sidebar);
+  --color-ds-sidebar-dark: var(--ds-sidebar-dark);
+  --color-ds-text: var(--ds-text);
+  --color-ds-text-muted: var(--ds-text-muted);
+  --color-ds-border: var(--ds-border);
+  --color-ds-border-strong: var(--ds-border-strong);
+  --color-ds-brand: var(--ds-brand);
+  --color-ds-accent: var(--ds-accent);
+  --color-ds-brand-soft: var(--ds-brand-soft);
+  --color-ds-success: var(--ds-success);
+  --color-ds-success-soft: var(--ds-success-soft);
+  --color-ds-warning: var(--ds-warning);
+  --color-ds-warning-soft: var(--ds-warning-soft);
+  --color-ds-danger: var(--ds-danger);
+  --color-ds-danger-soft: var(--ds-danger-soft);
+  --color-ds-info: var(--ds-info);
+  --color-ds-info-soft: var(--ds-info-soft);
+  --color-ds-focus: var(--ds-focus);
+
   /* Harbor Amber radius scale — exact ds-radius values (4px rhythm) */
   --radius-sm: 4px;
   --radius-md: 8px;
@@ -75,81 +97,79 @@
   --font-mono:
     'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono',
     'Courier New', monospace;
-
-  /* Full ds-* palette available as utilities (e.g. bg-ds-surface,
-     text-ds-muted, border-ds-border-strong) for one-off design-system use */
-  --color-ds-bg: #f4f3ef;
-  --color-ds-surface: #ffffff;
-  --color-ds-surface-subtle: #fbfaf7;
-  --color-ds-sidebar: #eeede8;
-  --color-ds-sidebar-dark: #161512;
-  --color-ds-text: #171717;
-  --color-ds-text-muted: #6c6861;
-  --color-ds-border: #dedcd5;
-  --color-ds-border-strong: #b9b5ac;
-  --color-ds-brand: #b45309;
-  --color-ds-accent: #f59e0b;
-  --color-ds-brand-soft: #fff4db;
-  --color-ds-success: #2e7d5b;
-  --color-ds-success-soft: #eaf5ef;
-  --color-ds-warning: #a65f00;
-  --color-ds-warning-soft: #fff1d6;
-  --color-ds-danger: #b42318;
-  --color-ds-danger-soft: #fdecea;
-  --color-ds-info: #2563eb;
-  --color-ds-info-soft: #eaf2ff;
-  --color-ds-focus: #f59e0b;
 }
 
 /* ============================================================================
    Light — Harbor Amber
    ========================================================================== */
 :root {
-  --radius: 12px; /* base; the full scale is fixed in @theme inline above */
+  --radius: 12px;
+
+  --ds-bg: #f4f3ef;
+  --ds-surface: #ffffff;
+  --ds-surface-subtle: #fbfaf7;
+  --ds-sidebar: #eeede8;
+  --ds-sidebar-dark: #161512;
+  --ds-text: #171717;
+  --ds-text-muted: #6c6861;
+  --ds-border: #dedcd5;
+  --ds-border-strong: #b9b5ac;
+  --ds-brand: #b45309;
+  --ds-accent: #f59e0b;
+  --ds-brand-soft: #fff4db;
+  --ds-success: #2e7d5b;
+  --ds-success-soft: #eaf5ef;
+  --ds-warning: #a65f00;
+  --ds-warning-soft: #fff1d6;
+  --ds-danger: #b42318;
+  --ds-danger-soft: #fdecea;
+  --ds-info: #2563eb;
+  --ds-info-soft: #eaf2ff;
+  --ds-focus: #f59e0b;
 
   /* Foundation */
-  --background: #f4f3ef; /* ds-bg */
-  --foreground: #171717; /* ds-text */
+  --background: var(--ds-bg);
+  --foreground: var(--ds-text);
 
   /* Surfaces */
-  --card: #ffffff; /* ds-surface */
-  --card-foreground: #171717;
-  --popover: #ffffff; /* ds-surface */
-  --popover-foreground: #171717;
+  --card: var(--ds-surface);
+  --card-foreground: var(--ds-text);
+  --popover: var(--ds-surface);
+  --popover-foreground: var(--ds-text);
 
   /* Brand actions */
-  --primary: #b45309; /* ds-brand */
+  --primary: var(--ds-brand);
   --primary-foreground: #ffffff;
-  --secondary: #f0efeb; /* quiet neutral surface */
-  --secondary-foreground: #171717;
-  --muted: #f0efeb; /* quiet neutral surface */
-  --muted-foreground: #6c6861; /* ds-text-muted */
-  --accent: #fff4db; /* ds-brand-soft — selection & emphasis */
-  --accent-foreground: #b45309; /* ds-brand */
+  --secondary: #f0efeb;
+  --secondary-foreground: var(--ds-text);
+  --muted: #f0efeb;
+  --muted-foreground: var(--ds-text-muted);
+  --accent: var(--ds-brand-soft);
+  --accent-foreground: var(--ds-brand);
 
   /* Semantics */
-  --destructive: #b42318; /* ds-danger */
+  --destructive: var(--ds-danger);
   --destructive-foreground: #ffffff;
-  --border: #dedcd5; /* ds-border */
-  --input: #dedcd5; /* ds-border */
-  --ring: #f59e0b; /* ds-focus */
+  --border: var(--ds-border);
+  --input: var(--ds-border);
+  --ring: var(--ds-focus);
 
   /* Charts — semantic family (brand, accent, success, info, warning) */
-  --chart-1: #b45309;
-  --chart-2: #f59e0b;
-  --chart-3: #2e7d5b;
-  --chart-4: #2563eb;
-  --chart-5: #a65f00;
+  --chart-1: var(--ds-brand);
+  --chart-2: var(--ds-accent);
+  --chart-3: var(--ds-success);
+  --chart-4: var(--ds-info);
+  --chart-5: var(--ds-warning);
 
   /* Sidebar */
-  --sidebar: #eeede8; /* ds-sidebar */
-  --sidebar-foreground: #171717;
-  --sidebar-primary: #b45309; /* ds-brand */
+  --sidebar: var(--ds-sidebar);
+  --sidebar-foreground: var(--ds-text);
+  --sidebar-primary: var(--ds-brand);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #ffffff; /* active nav = white surface pill */
-  --sidebar-accent-foreground: #171717;
-  --sidebar-border: #dedcd5; /* ds-border */
-  --sidebar-ring: #f59e0b; /* ds-focus */
+  --sidebar-accent: var(--ds-surface);
+  --sidebar-accent-foreground: var(--ds-text);
+  --sidebar-border: var(--ds-border);
+  --sidebar-ring: var(--ds-focus);
 }
 
 /* ============================================================================
@@ -161,49 +181,71 @@
    implementation begins.
    ========================================================================== */
 .dark {
+  --ds-bg: #161512;
+  --ds-surface: #1b1916;
+  --ds-surface-subtle: #211e1b;
+  --ds-sidebar: #211e1b;
+  --ds-sidebar-dark: #161512;
+  --ds-text: #f7f4ed;
+  --ds-text-muted: #aaa39a;
+  --ds-border: #332513;
+  --ds-border-strong: #4a3520;
+  --ds-brand: #f59e0b;
+  --ds-accent: #f59e0b;
+  --ds-brand-soft: #332513;
+  --ds-success: #3da67a;
+  --ds-success-soft: #1e2e26;
+  --ds-warning: #e6a817;
+  --ds-warning-soft: #2e2314;
+  --ds-danger: #e85d4d;
+  --ds-danger-soft: #2e1a18;
+  --ds-info: #3b82f6;
+  --ds-info-soft: #1a2236;
+  --ds-focus: #f59e0b;
+
   /* Foundation */
-  --background: #161512; /* ds-sidebar-dark */
-  --foreground: #f7f4ed; /* ds-text-dark */
+  --background: var(--ds-bg);
+  --foreground: var(--ds-text);
 
   /* Surfaces */
-  --card: #1b1916; /* ds-surface-dark */
-  --card-foreground: #f7f4ed;
-  --popover: #1b1916; /* ds-surface-dark */
-  --popover-foreground: #f7f4ed;
+  --card: var(--ds-surface);
+  --card-foreground: var(--ds-text);
+  --popover: var(--ds-surface);
+  --popover-foreground: var(--ds-text);
 
   /* Brand actions — amber on brown-black */
-  --primary: #f59e0b; /* ds-accent */
+  --primary: var(--ds-accent);
   --primary-foreground: #161512;
-  --secondary: #332513; /* ds-accent-soft-dark */
-  --secondary-foreground: #f7f4ed;
-  --muted: #1b1916; /* ds-surface-dark */
-  --muted-foreground: #aaa39a; /* ds-text-muted-dark */
-  --accent: #332513; /* ds-accent-soft-dark — active nav / selection */
-  --accent-foreground: #f59e0b;
+  --secondary: var(--ds-brand-soft);
+  --secondary-foreground: var(--ds-text);
+  --muted: var(--ds-surface);
+  --muted-foreground: var(--ds-text-muted);
+  --accent: var(--ds-brand-soft);
+  --accent-foreground: var(--ds-accent);
 
   /* Semantics */
-  --destructive: #b42318; /* ds-danger */
+  --destructive: var(--ds-danger);
   --destructive-foreground: #ffffff;
-  --border: #332513; /* ds-accent-soft-dark (warm border) */
-  --input: #332513;
-  --ring: #f59e0b; /* ds-focus */
+  --border: var(--ds-border);
+  --input: var(--ds-border);
+  --ring: var(--ds-focus);
 
   /* Charts */
-  --chart-1: #f59e0b;
-  --chart-2: #b45309;
-  --chart-3: #2e7d5b;
-  --chart-4: #2563eb;
-  --chart-5: #a65f00;
+  --chart-1: var(--ds-accent);
+  --chart-2: var(--ds-brand);
+  --chart-3: var(--ds-success);
+  --chart-4: var(--ds-info);
+  --chart-5: var(--ds-warning);
 
   /* Sidebar */
-  --sidebar: #161512; /* ds-sidebar-dark */
-  --sidebar-foreground: #f7f4ed;
-  --sidebar-primary: #f59e0b; /* ds-accent */
+  --sidebar: var(--ds-sidebar);
+  --sidebar-foreground: var(--ds-text);
+  --sidebar-primary: var(--ds-accent);
   --sidebar-primary-foreground: #161512;
-  --sidebar-accent: #332513; /* ds-accent-soft-dark */
-  --sidebar-accent-foreground: #f59e0b;
-  --sidebar-border: #332513;
-  --sidebar-ring: #f59e0b;
+  --sidebar-accent: var(--ds-brand-soft);
+  --sidebar-accent-foreground: var(--ds-accent);
+  --sidebar-border: var(--ds-border);
+  --sidebar-ring: var(--ds-focus);
 }
 
 /* ============================================================================

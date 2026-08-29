@@ -17,8 +17,8 @@ const SIZE_MAP: Record<IconWrapperSize, { tile: string; icon: number }> = {
 };
 
 const VARIANT_MAP: Record<IconWrapperVariant, string> = {
-  soft: 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900',
-  solid: 'bg-amber-600 text-white border border-amber-600',
+  soft: 'bg-ds-brand-soft text-ds-brand border border-ds-border',
+  solid: 'bg-ds-brand text-white border border-ds-brand',
   outline: 'bg-card text-muted-foreground border border-border',
 };
 

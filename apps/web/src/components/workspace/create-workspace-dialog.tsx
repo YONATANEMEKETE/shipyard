@@ -1,9 +1,10 @@
 'use client';
 
 import { Dialog as DialogPrimitive } from 'radix-ui';
-import { Container, Plus, X } from 'lucide-react';
+import { Container, X } from 'lucide-react';
 import { useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
+import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import {
@@ -20,21 +21,25 @@ import {
   FormItem,
   FormLabel,
 } from '@/components/ui/form';
+import { StatefulButton } from '@/components/motion/button/stateful';
 import { IconSelect } from '@/components/workspace/icon-select';
 import { useCreateWorkspace } from '@/hooks/use-workspaces';
+import { setSelectedWorkspace } from '@/lib/workspace/selected-workspace';
+import { useToast } from '@/components/providers/toast-provider';
 import { cn } from '@/lib/utils';
 
 export interface CreateWorkspaceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreated?: (slug: string) => void;
 }
 
 export function CreateWorkspaceDialog({
   open,
   onOpenChange,
-  onCreated,
 }: CreateWorkspaceDialogProps) {
+  const router = useRouter();
+  const { showToast } = useToast();
+
   const form = useForm<CreateWorkspaceRequest>({
     resolver: zodResolver(createWorkspaceSchema),
     mode: 'all',
@@ -48,10 +53,22 @@ export function CreateWorkspaceDialog({
   const canSubmit = createWorkspaceSchema.safeParse(values).success;
 
   const createMutation = useCreateWorkspace({
-    onSuccess: (data) => {
-      form.reset({ name: '', icon: 'boxes' });
+    onSuccess: (workspace) => {
+      showToast({
+        status: 'success',
+        title: 'Workspace created',
+        description: `${workspace.name} is ready.`,
+      });
+      setSelectedWorkspace(workspace.slug);
       onOpenChange(false);
-      onCreated?.(data.slug);
+      router.push(`/w/${workspace.slug}`);
+    },
+    onError: (error) => {
+      showToast({
+        status: 'error',
+        title: 'Failed to create workspace',
+        description: error.message || 'Please try again.',
+      });
     },
   });
 
@@ -62,17 +79,12 @@ export function CreateWorkspaceDialog({
   }, [open, form]);
 
   useEffect(() => {
-    if (!open) {
-      form.reset({ name: '', icon: 'boxes' });
-      createMutation.reset();
-    }
-  }, [open, form, createMutation]);
+    if (!open) form.reset({ name: '', icon: 'boxes' });
+  }, [open, form]);
 
   const onSubmit = form.handleSubmit((vals) => {
     createMutation.mutate(vals);
   });
-
-  const apiError = createMutation.error?.message ?? null;
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -81,7 +93,7 @@ export function CreateWorkspaceDialog({
         <DialogPrimitive.Content
           aria-describedby={undefined}
           className={cn(
-            'fixed left-1/2 top-1/2 z-50 flex max-h-[90vh] w-[500px] max-w-[calc(100vw-32px)] -translate-x-1/2 -translate-y-1/2 flex-col gap-[22px] overflow-auto rounded-xl border border-ds-border-strong bg-ds-surface p-7 shadow-xl',
+            'fixed left-1/2 top-1/2 z-50 flex max-h-[90vh] w-[500px] max-w-[calc(100vw-32px)] -translate-x-1/2 -translate-y-1/2 flex-col gap-[22px] overflow-visible rounded-xl border border-ds-border-strong bg-ds-surface p-7 shadow-xl',
             'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
           )}
         >
@@ -151,7 +163,7 @@ export function CreateWorkspaceDialog({
                 control={form.control}
                 name="icon"
                 render={({ field }) => (
-                  <FormItem className="gap-2">
+                  <FormItem className="relative z-20 gap-2">
                     <FormLabel className="text-xs font-semibold text-foreground">
                       Icon
                     </FormLabel>
@@ -170,15 +182,6 @@ export function CreateWorkspaceDialog({
                 )}
               />
 
-              {apiError ? (
-                <p
-                  role="alert"
-                  className="rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs leading-5 text-destructive"
-                >
-                  {apiError}
-                </p>
-              ) : null}
-
               <div className="flex w-full items-center justify-end gap-2.5 pt-1">
                 <DialogPrimitive.Close asChild>
                   <Button
@@ -191,22 +194,17 @@ export function CreateWorkspaceDialog({
                     Cancel
                   </Button>
                 </DialogPrimitive.Close>
-                <Button
+                <StatefulButton
                   type="submit"
-                  variant="primary"
-                  disabled={!canSubmit || createMutation.isPending}
+                  size="md"
                   className="h-9 gap-2 px-4 text-sm font-semibold"
+                  state={createMutation.isPending ? 'loading' : 'idle'}
+                  loadingText="Creating…"
+                  successText="Created"
+                  disabled={!canSubmit || createMutation.isPending}
                 >
-                  {createMutation.isPending ? (
-                    <span
-                      className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent"
-                      aria-hidden
-                    />
-                  ) : (
-                    <Plus className="size-4" />
-                  )}
-                  {createMutation.isPending ? 'Creating…' : 'Create workspace'}
-                </Button>
+                  Create workspace
+                </StatefulButton>
               </div>
             </form>
           </Form>

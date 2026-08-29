@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { WorkspaceShellRoot } from '@/components/workspace/workspace-shell';
-import { WorkspaceMemory } from '@/components/workspace/workspace-memory';
+import { WorkspaceGate } from '@/components/workspace/workspace-gate';
 
 export default async function WorkspaceLayout({
   children,
@@ -14,8 +14,7 @@ export default async function WorkspaceLayout({
 
   return (
     <WorkspaceShellRoot slug={slug}>
-      <WorkspaceMemory slug={slug} />
-      {children}
+      <WorkspaceGate slug={slug}>{children}</WorkspaceGate>
     </WorkspaceShellRoot>
   );
 }

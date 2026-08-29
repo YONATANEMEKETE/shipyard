@@ -7,33 +7,41 @@ import { Check, ChevronsUpDown, Plus } from 'lucide-react';
 
 import { Stagger, StaggerItem } from '@/components/motion/stagger';
 import { IconWrapper } from '@/components/workspace/icon-wrapper';
+import { CreateWorkspaceDialog } from '@/components/workspace/create-workspace-dialog';
+import { useWorkspaces } from '@/hooks/use-workspaces';
 import { cn } from '@/lib/utils';
 import { EASE_OUT } from '@/lib/ease';
 
 interface WorkspaceOption {
   slug: string;
   name: string;
-  icon: string;
+  icon: string | null;
   memberCount: number;
 }
 
-// Mock workspaces — replaced by GET /api/v1/workspaces during integration.
-const WORKSPACES: WorkspaceOption[] = [
-  { slug: 'acme-studio', name: 'Acme Studio', icon: 'boxes', memberCount: 14 },
-  { slug: 'harbor-labs', name: 'Harbor Labs', icon: 'anchor', memberCount: 8 },
-  {
-    slug: 'linear-clone',
-    name: 'Linear Clone',
-    icon: 'git-branch',
-    memberCount: 23,
-  },
-];
+function SwitcherSkeleton({ collapsed }: { collapsed: boolean }) {
+  if (collapsed) {
+    return (
+      <div className="mx-auto size-[38px] animate-pulse rounded-lg bg-ds-border/60" />
+    );
+  }
+  return (
+    <div className="flex h-[58px] w-full items-center gap-2.5 rounded-lg border border-ds-border bg-ds-surface px-2.5">
+      <div className="size-[30px] shrink-0 animate-pulse rounded-lg bg-ds-border/60" />
+      <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <span className="h-3 w-24 animate-pulse rounded bg-ds-border/60" />
+        <span className="h-2 w-16 animate-pulse rounded bg-ds-border/40" />
+      </span>
+    </div>
+  );
+}
 
-function WorkspaceMark({ icon }: { icon: string }) {
+function WorkspaceMark({ icon }: { icon: string | null }) {
+  const key = icon ?? 'boxes';
   return (
     <span className="grid size-[30px] shrink-0 place-items-center rounded-lg border border-ds-border bg-ds-brand-soft">
       <IconWrapper
-        icon={icon}
+        icon={key}
         size="xs"
         variant="soft"
         className="border-0 bg-transparent"
@@ -52,10 +60,19 @@ export function WorkspaceSwitcher({
   const router = useRouter();
   const reduce = useReducedMotion();
   const [open, setOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  const current = WORKSPACES.find((workspace) => workspace.slug === slug);
-  const others = WORKSPACES.filter((workspace) => workspace.slug !== slug);
+  const { data, isPending } = useWorkspaces();
+  const workspaces: WorkspaceOption[] =
+    data?.workspaces.map((w) => ({
+      slug: w.slug,
+      name: w.name,
+      icon: w.icon,
+      memberCount: w.memberCount,
+    })) ?? [];
+  const current = workspaces.find((workspace) => workspace.slug === slug);
+  const others = workspaces.filter((workspace) => workspace.slug !== slug);
 
   // Close on outside click and Escape.
   useEffect(() => {
@@ -78,6 +95,10 @@ export function WorkspaceSwitcher({
     setOpen(false);
     if (nextSlug !== slug) router.push(`/w/${nextSlug}`);
   };
+
+  if (isPending) {
+    return <SwitcherSkeleton collapsed={collapsed} />;
+  }
 
   const row = (
     workspace: WorkspaceOption,
@@ -181,7 +202,7 @@ export function WorkspaceSwitcher({
                   type="button"
                   onClick={() => {
                     setOpen(false);
-                    router.push('/onboarding');
+                    requestAnimationFrame(() => setCreateOpen(true));
                   }}
                   className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium text-foreground/80 transition-colors hover:bg-ds-sidebar hover:text-foreground"
                 >
@@ -195,6 +216,7 @@ export function WorkspaceSwitcher({
           </motion.div>
         ) : null}
       </AnimatePresence>
+      <CreateWorkspaceDialog open={createOpen} onOpenChange={setCreateOpen} />
     </div>
   );
 }

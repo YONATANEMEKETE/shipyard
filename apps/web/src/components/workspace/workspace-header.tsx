@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
   Bell,
   Building2,
@@ -59,7 +59,6 @@ export function WorkspaceHeader({
   sidebarCollapsed: boolean;
   onToggleSidebar: () => void;
 }) {
-  const router = useRouter();
   const [createOpen, setCreateOpen] = useState(false);
   const label = usePageContext(slug);
 
@@ -169,11 +168,7 @@ export function WorkspaceHeader({
           if (label === 'Workspace') setCreateOpen(true);
         }}
       />
-      <CreateWorkspaceDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        onCreated={(nextSlug) => router.push(`/w/${nextSlug}`)}
-      />
+      <CreateWorkspaceDialog open={createOpen} onOpenChange={setCreateOpen} />
     </header>
   );
 }

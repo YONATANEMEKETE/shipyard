@@ -85,7 +85,7 @@ function SidebarContent({ slug }: { slug: string }) {
               className={cn(
                 'flex h-10 items-center gap-3 rounded-lg px-3 text-[13px] transition-colors',
                 active
-                  ? 'border border-ds-border bg-ds-surface font-semibold text-foreground shadow-sm'
+                  ? 'border border-ds-border bg-ds-surface font-semibold text-foreground shadow-sm dark:bg-ds-sidebar-dark'
                   : 'bg-ds-sidebar font-medium text-foreground/80 hover:bg-ds-border/60 hover:text-foreground',
               )}
             >

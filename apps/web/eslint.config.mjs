@@ -8,7 +8,10 @@ export default defineConfig([
   {
     // Vendored beUI components (installed via shadcn). They're written for
     // the React Compiler and trip a few compiler rules; keep them as-is.
-    files: ['src/components/motion/combobox/**'],
+    files: [
+      'src/components/motion/combobox/**',
+      'src/components/motion/animated-toast-stack.tsx',
+    ],
     rules: {
       'react-hooks/refs': 'off',
       'react-hooks/set-state-in-effect': 'off',

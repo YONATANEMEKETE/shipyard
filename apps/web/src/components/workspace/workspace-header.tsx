@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Bell,
   Building2,
@@ -11,6 +11,7 @@ import {
   PanelLeftOpen,
   Search,
 } from 'lucide-react';
+import { useState } from 'react';
 
 import {
   Breadcrumb,
@@ -23,6 +24,7 @@ import {
 import { BloomMenu } from '@/components/motion/bloom-menu';
 import { Float } from '@/components/ui/float';
 import { Input } from '@/components/ui/input';
+import { CreateWorkspaceDialog } from '@/components/workspace/create-workspace-dialog';
 
 const CONTEXT: Record<string, string> = {
   '': 'Dashboard',
@@ -57,6 +59,8 @@ export function WorkspaceHeader({
   sidebarCollapsed: boolean;
   onToggleSidebar: () => void;
 }) {
+  const router = useRouter();
+  const [createOpen, setCreateOpen] = useState(false);
   const label = usePageContext(slug);
 
   return (
@@ -161,6 +165,14 @@ export function WorkspaceHeader({
           { label: 'Project', icon: Folder },
           { label: 'Cycle', icon: Calendar },
         ]}
+        onSelect={(label) => {
+          if (label === 'Workspace') setCreateOpen(true);
+        }}
+      />
+      <CreateWorkspaceDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={(nextSlug) => router.push(`/w/${nextSlug}`)}
       />
     </header>
   );

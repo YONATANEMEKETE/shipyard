@@ -33,7 +33,7 @@ const ROLE_META: Record<WorkspaceRole, { label: string; prefix: string }> = {
 
 // Two role styles: amber for the Owner, neutral gray for Admin and Member.
 const ROLE_CHIP_CLASS: Record<WorkspaceRole, string> = {
-  OWNER: 'border border-amber-200 bg-amber-50 text-amber-700',
+  OWNER: 'border border-ds-border bg-ds-brand-soft text-ds-brand',
   ADMIN: 'border border-border bg-secondary text-muted-foreground',
   MEMBER: 'border border-border bg-secondary text-muted-foreground',
 };

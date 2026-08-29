@@ -17,6 +17,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { Float } from '@/components/ui/float';
+import { Input } from '@/components/ui/input';
 
 const CONTEXT: Record<string, string> = {
   '': 'Dashboard',
@@ -60,7 +62,7 @@ export function WorkspaceHeader({
         type="button"
         aria-label="Toggle sidebar"
         onClick={onToggleSidebar}
-        className="-ml-1.5 grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-black/5 hover:text-foreground"
+        className="-ml-1.5 grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
       >
         {sidebarCollapsed ? (
           <PanelLeftOpen className="h-3.5 w-3.5" />
@@ -68,6 +70,13 @@ export function WorkspaceHeader({
           <PanelLeftClose className="h-3.5 w-3.5" />
         )}
       </button>
+
+      <span
+        aria-hidden
+        className="text-[13px] leading-none text-muted-foreground/60"
+      >
+        /
+      </span>
 
       {/* Page context */}
       <Breadcrumb aria-label="Workspace breadcrumb">
@@ -103,31 +112,41 @@ export function WorkspaceHeader({
       <div className="flex-1" />
 
       {/* Global search */}
-      <button
-        type="button"
-        className="flex h-9 w-[280px] items-center gap-2 rounded-lg border border-ds-border bg-ds-surface px-2.5 text-left transition-colors hover:border-ds-border-strong"
-      >
-        <Search className="h-[15px] w-[15px] shrink-0 text-muted-foreground" />
-        <span className="flex-1 truncate text-xs text-muted-foreground">
-          Search workspace…
-        </span>
-        <span className="inline-flex h-[22px] items-center justify-center rounded border border-ds-border bg-ds-sidebar px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-          ⌘ K
-        </span>
-      </button>
+      <Input
+        type="text"
+        placeholder="Search workspace…"
+        aria-label="Search workspace"
+        className="w-[280px]"
+        leftIcon={<Search />}
+        rightIcon={
+          <span className="inline-flex h-[22px] items-center justify-center rounded border border-ds-border bg-ds-sidebar px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+            ⌘ K
+          </span>
+        }
+        classNames={{
+          field:
+            'rounded-lg border-ds-border bg-ds-surface hover:border-ds-border-strong',
+          input: 'pl-9 pr-12 text-xs',
+          leftIcon: 'left-2.5 [&_svg]:h-[15px] [&_svg]:w-[15px]',
+          rightIcon: 'pr-1.5',
+        }}
+      />
 
       {/* Notifications */}
-      <button
-        type="button"
-        aria-label="Notifications"
-        className="relative grid size-9 place-items-center rounded-lg border border-ds-border bg-ds-surface text-foreground transition-colors hover:border-ds-border-strong"
-      >
-        <Bell className="h-[17px] w-[17px]" />
-        <span
+      <div className="relative">
+        <button
+          type="button"
+          aria-label="Notifications"
+          className="grid size-9 place-items-center rounded-lg border border-ds-border bg-ds-surface text-foreground transition-colors hover:border-ds-border-strong"
+        >
+          <Bell className="h-[17px] w-[17px]" />
+        </button>
+        <Float
+          placement="top-end"
           aria-hidden
-          className="absolute right-[3px] top-[3px] size-2 rounded-full bg-ds-accent ring-2 ring-ds-bg"
+          className="size-2 rounded-full bg-ds-accent ring-2 ring-ds-bg !translate-x-1/4 !-translate-y-1/4"
         />
-      </button>
+      </div>
 
       {/* Create */}
       <button

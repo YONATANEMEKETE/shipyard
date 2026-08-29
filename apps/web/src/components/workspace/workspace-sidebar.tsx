@@ -8,7 +8,6 @@ import {
   CircleCheck,
   Ellipsis,
   Folder,
-  Info,
   LayoutDashboard,
   Settings,
   Users,
@@ -18,6 +17,8 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 
 import { cn } from '@/lib/utils';
 import { EASE_OUT } from '@/lib/ease';
+import { useThemeToggle } from '@/components/motion/theme-toggle';
+import { Switch } from '@/components/ui/switch';
 import { WorkspaceSwitcher } from '@/components/workspace/workspace-switcher';
 
 interface NavItem {
@@ -39,6 +40,10 @@ const NAV_ITEMS: NavItem[] = [
 
 function SidebarContent({ slug }: { slug: string }) {
   const pathname = usePathname();
+  const { isDark, toggle } = useThemeToggle({
+    variant: 'rectangle',
+    start: 'bottom-up',
+  });
   const basePath = `/w/${slug}`;
   const isActive = (href: string) =>
     href === ''
@@ -80,7 +85,7 @@ function SidebarContent({ slug }: { slug: string }) {
               className={cn(
                 'flex h-10 items-center gap-3 rounded-lg px-3 text-[13px] transition-colors',
                 active
-                  ? 'border border-ds-border bg-ds-surface font-semibold text-foreground shadow-[0_1px_3px_rgba(0,0,0,0.07)]'
+                  ? 'border border-ds-border bg-ds-surface font-semibold text-foreground shadow-sm'
                   : 'bg-ds-sidebar font-medium text-foreground/80 hover:bg-ds-border/60 hover:text-foreground',
               )}
             >
@@ -101,17 +106,16 @@ function SidebarContent({ slug }: { slug: string }) {
 
       {/* Footer */}
       <div className="flex flex-col gap-1.25">
-        <button
-          type="button"
-          className="flex h-8 items-center gap-2.5 rounded-lg px-2.5 text-[11px] font-medium text-foreground/80 transition-colors hover:bg-black/5 hover:text-foreground"
-        >
-          <Info className="h-[15px] w-[15px] shrink-0" />
-          Help &amp; support
-        </button>
+        <Switch
+          label="Dark mode"
+          checked={isDark}
+          onToggle={toggle}
+          className="rounded-lg bg-ds-sidebar transition-colors hover:bg-ds-border/60"
+        />
         <div className="h-px w-full bg-ds-border" />
         <button
           type="button"
-          className="flex h-[50px] items-center gap-2.5 rounded-lg px-2 text-left transition-colors hover:bg-black/5"
+          className="flex h-[50px] items-center gap-2.5 rounded-lg px-2 text-left transition-colors hover:bg-accent"
         >
           <span className="grid size-8 shrink-0 place-items-center rounded-full bg-ds-brand font-mono text-[9px] font-bold text-white">
             MC

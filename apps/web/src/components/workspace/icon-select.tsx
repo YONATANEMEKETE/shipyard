@@ -78,8 +78,8 @@ export function IconSelect({
                     variant={isSelected ? 'solid' : 'outline'}
                     className={
                       isSelected
-                        ? 'size-[38px] rounded-lg ring-2 ring-amber-600/25 ring-offset-2 ring-offset-background'
-                        : 'size-[38px] rounded-lg bg-card transition-colors group-hover:border-amber-300 group-hover:text-amber-600 dark:group-hover:border-amber-800 dark:group-hover:text-amber-300'
+                        ? 'size-[38px] rounded-lg ring-2 ring-ds-brand/25 ring-offset-2 ring-offset-background'
+                        : 'size-[38px] rounded-lg bg-card transition-colors group-hover:border-ds-border-strong group-hover:text-ds-brand'
                     }
                   />
                 </motion.span>

@@ -25,7 +25,7 @@ export function AuthVisualStoryPanel({
   return (
     <aside
       aria-label="Shipyard"
-      className="relative hidden h-full w-[40%] max-w-[720px] overflow-hidden rounded-xl bg-ds-sidebar-dark shadow-[0_10px_30px_-8px_#17171724] md:block"
+      className="relative hidden h-full w-[40%] max-w-[720px] overflow-hidden rounded-xl bg-ds-sidebar-dark shadow-lg md:block"
     >
       {/* Background photograph */}
       <Image
@@ -40,7 +40,7 @@ export function AuthVisualStoryPanel({
       {/* Legibility overlay — top translucent → bottom opaque warm-brown */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-gradient-to-b from-[#17130E40] to-[#17130ED9]"
+        className="absolute inset-0 bg-gradient-to-b from-black/25 to-black/85"
       />
 
       {/* Content layer */}

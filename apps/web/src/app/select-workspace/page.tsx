@@ -114,7 +114,7 @@ export default function SelectWorkspacePage() {
           {/* Secondary button matches pen: brand-soft fill, amber border + text */}
           <Button
             variant="secondary"
-            className="h-11 w-full gap-2 border-amber-200 bg-ds-brand-soft px-3.5 text-xs font-semibold text-ds-brand hover:border-amber-300 sm:h-9 sm:w-auto"
+            className="h-11 w-full gap-2 border-ds-border bg-ds-brand-soft px-3.5 text-xs font-semibold text-ds-brand hover:border-ds-border-strong sm:h-9 sm:w-auto"
           >
             <Plus className="h-[15px] w-[15px]" />
             New workspace

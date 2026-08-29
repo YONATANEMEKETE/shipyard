@@ -92,8 +92,7 @@ export function SignInForm() {
       throw new Error(envelope?.message ?? GENERIC_SIGN_IN_ERROR);
     },
     onSuccess: () => {
-      // Session cookie is set; replace so the authenticated root renders.
-      router.replace('/');
+      router.replace('/w');
     },
   });
 

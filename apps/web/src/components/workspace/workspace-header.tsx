@@ -3,25 +3,29 @@
 import { usePathname } from 'next/navigation';
 import {
   Bell,
-  Calendar,
-  CircleCheck,
-  Folder,
-  LayoutDashboard,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plus,
   Search,
-  Settings,
-  Users,
 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 
-const CONTEXT: Record<string, { icon: LucideIcon; label: string }> = {
-  '': { icon: LayoutDashboard, label: 'Dashboard' },
-  '/issues': { icon: CircleCheck, label: 'Issues' },
-  '/projects': { icon: Folder, label: 'Projects' },
-  '/cycles': { icon: Calendar, label: 'Cycles' },
-  '/members': { icon: Users, label: 'Members' },
-  '/notifications': { icon: Bell, label: 'Notifications' },
-  '/settings': { icon: Settings, label: 'Workspace Settings' },
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+
+const CONTEXT: Record<string, string> = {
+  '': 'Dashboard',
+  '/issues': 'Issues',
+  '/projects': 'Projects',
+  '/cycles': 'Cycles',
+  '/members': 'Members',
+  '/notifications': 'Notifications',
+  '/settings': 'Workspace Settings',
 };
 
 function usePageContext(slug: string) {
@@ -38,16 +42,62 @@ function usePageContext(slug: string) {
   return CONTEXT[match] ?? CONTEXT['']!;
 }
 
-export function WorkspaceHeader({ slug }: { slug: string }) {
-  const { icon: Icon, label } = usePageContext(slug);
+export function WorkspaceHeader({
+  slug,
+  sidebarCollapsed,
+  onToggleSidebar,
+}: {
+  slug: string;
+  sidebarCollapsed: boolean;
+  onToggleSidebar: () => void;
+}) {
+  const label = usePageContext(slug);
 
   return (
-    <header className="flex h-16 shrink-0 items-center gap-3 bg-transparent px-6">
+    <header className="flex h-16 shrink-0 items-center gap-3 bg-transparent pr-6 pl-3">
+      {/* Collapse sidebar */}
+      <button
+        type="button"
+        aria-label="Toggle sidebar"
+        onClick={onToggleSidebar}
+        className="-ml-1.5 grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-black/5 hover:text-foreground"
+      >
+        {sidebarCollapsed ? (
+          <PanelLeftOpen className="h-3.5 w-3.5" />
+        ) : (
+          <PanelLeftClose className="h-3.5 w-3.5" />
+        )}
+      </button>
+
       {/* Page context */}
-      <div className="flex items-center gap-2">
-        <Icon className="h-[18px] w-[18px] text-muted-foreground" />
-        <span className="text-sm font-semibold text-foreground">{label}</span>
-      </div>
+      <Breadcrumb aria-label="Workspace breadcrumb">
+        <BreadcrumbList>
+          {label !== 'Dashboard' ? (
+            <>
+              <BreadcrumbItem>
+                <BreadcrumbLink
+                  href={`/w/${slug}`}
+                  className="text-[13px] text-muted-foreground"
+                >
+                  /
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage className="text-[13px] uppercase text-foreground">
+                  {label}
+                </BreadcrumbPage>
+              </BreadcrumbItem>
+            </>
+          ) : (
+            <BreadcrumbItem>
+              <BreadcrumbPage className="text-[13px] uppercase text-foreground">
+                Dashboard
+              </BreadcrumbPage>
+            </BreadcrumbItem>
+          )}
+        </BreadcrumbList>
+      </Breadcrumb>
 
       {/* Spacer */}
       <div className="flex-1" />

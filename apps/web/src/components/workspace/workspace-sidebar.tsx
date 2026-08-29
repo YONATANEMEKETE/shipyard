@@ -10,13 +10,14 @@ import {
   Folder,
   Info,
   LayoutDashboard,
-  PanelLeftClose,
   Settings,
   Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 
 import { cn } from '@/lib/utils';
+import { EASE_OUT } from '@/lib/ease';
 import { WorkspaceSwitcher } from '@/components/workspace/workspace-switcher';
 
 interface NavItem {
@@ -36,7 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Workspace Settings', href: '/settings', icon: Settings },
 ];
 
-export function WorkspaceSidebar({ slug }: { slug: string }) {
+function SidebarContent({ slug }: { slug: string }) {
   const pathname = usePathname();
   const basePath = `/w/${slug}`;
   const isActive = (href: string) =>
@@ -45,7 +46,7 @@ export function WorkspaceSidebar({ slug }: { slug: string }) {
       : pathname.startsWith(`${basePath}${href}`);
 
   return (
-    <aside className="flex w-[252px] shrink-0 flex-col gap-2.5 bg-transparent p-3">
+    <>
       {/* Brand row */}
       <div className="flex h-[42px] items-center gap-2.5 px-0.5">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -61,14 +62,6 @@ export function WorkspaceSidebar({ slug }: { slug: string }) {
         >
           Shipyard
         </span>
-        <span className="flex-1" />
-        <button
-          type="button"
-          aria-label="Collapse sidebar"
-          className="grid size-[30px] place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5 hover:text-foreground"
-        >
-          <PanelLeftClose className="h-4 w-4" />
-        </button>
       </div>
 
       {/* Workspace switcher */}
@@ -134,6 +127,74 @@ export function WorkspaceSidebar({ slug }: { slug: string }) {
           <Ellipsis className="h-[15px] w-[15px] shrink-0 text-muted-foreground" />
         </button>
       </div>
-    </aside>
+    </>
+  );
+}
+
+interface WorkspaceSidebarProps {
+  slug: string;
+  collapsed: boolean;
+  onClose: () => void;
+}
+
+export function WorkspaceSidebar({
+  slug,
+  collapsed,
+  onClose,
+}: WorkspaceSidebarProps) {
+  const reduce = useReducedMotion();
+
+  const content = <SidebarContent slug={slug} />;
+
+  // Mobile: fixed sheet with a backdrop; desktop: off-canvas rail.
+  return (
+    <>
+      {/* Desktop rail — negative margin so it slides off-canvas AND releases
+          its 252px, letting the header/content columns expand to fill. */}
+      <motion.aside
+        initial={false}
+        animate={{ marginLeft: collapsed ? -252 : 0 }}
+        transition={
+          reduce ? { duration: 0 } : { duration: 0.28, ease: EASE_OUT }
+        }
+        aria-hidden={collapsed}
+        inert={collapsed}
+        className="hidden w-[252px] shrink-0 flex-col gap-2.5 bg-transparent p-3 lg:flex"
+      >
+        {content}
+      </motion.aside>
+
+      {/* Mobile sheet + backdrop */}
+      <div className="lg:hidden">
+        <AnimatePresence>
+          {!collapsed ? (
+            <>
+              <motion.div
+                key="backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="fixed inset-0 z-40 bg-black/40"
+                onClick={onClose}
+                aria-hidden
+              />
+              <motion.aside
+                key="sheet"
+                initial={{ x: '-100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '-100%' }}
+                transition={
+                  reduce ? { duration: 0 } : { duration: 0.28, ease: EASE_OUT }
+                }
+                className="fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col gap-2.5 bg-ds-bg p-3 shadow-xl"
+              >
+                {content}
+              </motion.aside>
+            </>
+          ) : null}
+        </AnimatePresence>
+      </div>
+    </>
   );
 }

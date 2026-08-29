@@ -19,6 +19,7 @@
   },
   "iconLibrary": "lucide",
   "registries": {
-    "@beui": "https://beui.dev/r/{name}.json"
+    "@beui": "https://beui.dev/r/{name}.json",
+    "@shark": "https://shark.vini.one/r/{name}.json"
   }
 }

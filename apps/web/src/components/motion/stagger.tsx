@@ -4,17 +4,8 @@ import { motion, useReducedMotion, type Variants } from 'motion/react';
 import { EASE_OUT } from '@/lib/ease';
 import type { ReactNode } from 'react';
 
-const container: Variants = {
-  hidden: {},
-  visible: {
-    transition: {
-      staggerChildren: 0.06,
-      delayChildren: 0.04,
-    },
-  },
-};
-
-const item: Variants = {
+/** Default item entrance — override per usage for faster/subtler cascades. */
+export const staggerItem: Variants = {
   hidden: { opacity: 0, y: 10, filter: 'blur(4px)' },
   visible: {
     opacity: 1,
@@ -27,9 +18,15 @@ const item: Variants = {
 export function Stagger({
   children,
   className,
+  stagger = 0.06,
+  delayChildren = 0.04,
 }: {
   children: ReactNode;
   className?: string;
+  /** Seconds between each child's entrance. Default 0.06. */
+  stagger?: number;
+  /** Seconds before the first child starts. Default 0.04. */
+  delayChildren?: number;
 }) {
   const reduce = useReducedMotion();
 
@@ -42,7 +39,10 @@ export function Stagger({
       className={className}
       initial="hidden"
       animate="visible"
-      variants={container}
+      variants={{
+        hidden: {},
+        visible: { transition: { staggerChildren: stagger, delayChildren } },
+      }}
     >
       {children}
     </motion.div>
@@ -52,9 +52,12 @@ export function Stagger({
 export function StaggerItem({
   children,
   className,
+  variants = staggerItem,
 }: {
   children: ReactNode;
   className?: string;
+  /** Overrides the shared entrance variants (hidden/visible). */
+  variants?: Variants;
 }) {
   const reduce = useReducedMotion();
 
@@ -63,7 +66,7 @@ export function StaggerItem({
   }
 
   return (
-    <motion.div variants={item} className={className}>
+    <motion.div variants={variants} className={className}>
       {children}
     </motion.div>
   );

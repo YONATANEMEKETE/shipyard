@@ -33,7 +33,7 @@ export function SignOutButton({ className }: { className?: string }) {
       onClick={() => void onSignOut()}
       state={pending ? 'loading' : 'idle'}
       loadingText="Signing out…"
-      icon={<LogOut />}
+      icon={<LogOut className="h-[15px] w-[15px]" />}
       disabled={pending}
       className={className}
     >

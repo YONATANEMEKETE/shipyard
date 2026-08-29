@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
+import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation } from '@tanstack/react-query';
 import { ArrowRight, Container } from 'lucide-react';
 
 import {
@@ -19,26 +18,21 @@ import {
   FormItem,
   FormLabel,
 } from '@/components/ui/form';
-import {
-  StatefulButton,
-  type ButtonState,
-} from '@/components/motion/button/stateful';
+import { StatefulButton } from '@/components/motion/button/stateful';
 import { Stagger, StaggerItem } from '@/components/motion/stagger';
 import { IconSelect } from '@/components/workspace/icon-select';
+import { useCreateWorkspace } from '@/hooks/use-workspaces';
+import { setSelectedWorkspace } from '@/lib/workspace/selected-workspace';
+import { useToast } from '@/components/providers/toast-provider';
 
 type OnboardingFormValues = CreateWorkspaceRequest;
 
-/** Simulated creation round-trip until the form is wired to the API. */
-const SIMULATED_LATENCY_MS = 300;
-const SUCCESS_RESET_MS = 1600;
-
 export default function OnboardingPage() {
-  const [buttonState, setButtonState] = useState<ButtonState>('idle');
-  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const router = useRouter();
+  const { showToast } = useToast();
 
   const form = useForm<OnboardingFormValues>({
     resolver: zodResolver(createWorkspaceSchema),
-    // Validate on change + blur so field errors appear as the user types.
     mode: 'all',
     defaultValues: {
       name: 'Acme Studio',
@@ -46,37 +40,29 @@ export default function OnboardingPage() {
     },
   });
 
-  // `useWatch` mirrors defaultValues on the server and first client render,
-  // so this validity check is hydration-safe (unlike `formState.isValid`,
-  // which RHF evaluates differently pre/post hydration).
   const values = useWatch({ control: form.control });
   const canSubmit = createWorkspaceSchema.safeParse(values).success;
 
-  // TODO(workspace): replace with POST /api/v1/workspaces when integrating.
-  const createMutation = useMutation({
-    mutationFn: async (values: OnboardingFormValues) => {
-      await new Promise((resolve) => setTimeout(resolve, SIMULATED_LATENCY_MS));
-      return values;
+  const createMutation = useCreateWorkspace({
+    onSuccess: (workspace) => {
+      showToast({
+        status: 'success',
+        title: 'Workspace created',
+        description: `${workspace.name} is ready.`,
+      });
+      setSelectedWorkspace(workspace.slug);
+      router.replace(`/w/${workspace.slug}`);
     },
-    onSuccess: () => setButtonState('success'),
-    onError: () => setButtonState('error'),
+    onError: (error) => {
+      showToast({
+        status: 'error',
+        title: 'Failed to create workspace',
+        description: error.message || 'Please try again.',
+      });
+    },
   });
 
-  // Return the button to idle shortly after the simulated success/error so
-  // the form stays re-usable while the real API isn't wired up yet.
-  useEffect(() => {
-    if (buttonState !== 'success' && buttonState !== 'error') return;
-    resetTimer.current = setTimeout(
-      () => setButtonState('idle'),
-      SUCCESS_RESET_MS,
-    );
-    return () => {
-      if (resetTimer.current) clearTimeout(resetTimer.current);
-    };
-  }, [buttonState]);
-
   const onSubmit = form.handleSubmit((values) => {
-    setButtonState('loading');
     createMutation.mutate(values);
   });
 
@@ -167,7 +153,7 @@ export default function OnboardingPage() {
                 size="lg"
                 className="h-[46px] w-full rounded-md text-sm font-semibold"
                 icon={<ArrowRight className="h-4 w-4" />}
-                state={buttonState}
+                state={createMutation.isPending ? 'loading' : 'idle'}
                 loadingText="Creating workspace…"
                 successText="Workspace created"
                 disabled={!canSubmit || createMutation.isPending}

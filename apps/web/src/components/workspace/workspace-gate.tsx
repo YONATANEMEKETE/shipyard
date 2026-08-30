@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { Loader } from '@/components/motion/loader';
 import { useWorkspace, useWorkspaces } from '@/hooks/use-workspaces';
 import { WorkspaceMemory } from '@/components/workspace/workspace-memory';
+import { canViewArchived } from '@/lib/workspace/role';
 
 export function WorkspaceGate({
   slug,
@@ -59,6 +60,8 @@ export function WorkspaceGate({
   }
 
   if (!data) notFound();
+
+  if (data.status === 'ARCHIVED' && !canViewArchived(data.role)) notFound();
 
   return (
     <>

@@ -41,6 +41,7 @@ export interface BloomMenuProps {
   /** Where the panel opens relative to the trigger. Default: "center". */
   placement?: 'center' | 'bottom-end';
   className?: string;
+  disabled?: boolean;
 }
 
 export function BloomMenu({
@@ -48,6 +49,7 @@ export function BloomMenu({
   onSelect,
   placement = 'center',
   className,
+  disabled = false,
 }: BloomMenuProps) {
   const [open, setOpen] = useState(false);
   const reduce = useReducedMotion();
@@ -215,10 +217,15 @@ export function BloomMenu({
               transition={morph}
               style={{ borderRadius: 8 }}
               onClick={() => setOpen(true)}
+              disabled={disabled}
               aria-haspopup="menu"
               aria-expanded={open}
               whileTap={reduce ? undefined : { scale: 0.97 }}
-              className="inline-flex h-9 w-28 cursor-pointer items-center justify-center rounded-lg bg-ds-brand text-xs font-semibold text-white transition-colors hover:bg-ds-brand/90"
+              className={cn(
+                'inline-flex h-9 w-28 cursor-pointer items-center justify-center rounded-lg bg-ds-brand text-xs font-semibold text-white transition-colors hover:bg-ds-brand/90',
+                disabled &&
+                  'cursor-not-allowed bg-ds-surface-subtle text-muted-foreground opacity-60 hover:bg-ds-surface-subtle',
+              )}
             >
               {/* own `layout` counter-scales the label so it stays crisp while the
                   button box morphs, instead of stretching with it */}

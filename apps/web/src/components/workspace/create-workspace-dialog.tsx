@@ -197,7 +197,7 @@ export function CreateWorkspaceDialog({
                 <StatefulButton
                   type="submit"
                   size="md"
-                  className="h-9 gap-2 px-4 text-sm font-semibold"
+                  className="h-9 gap-2 bg-ds-brand px-4 text-sm font-semibold text-white hover:bg-ds-brand/90"
                   state={createMutation.isPending ? 'loading' : 'idle'}
                   loadingText="Creating…"
                   successText="Created"

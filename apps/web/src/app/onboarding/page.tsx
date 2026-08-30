@@ -151,7 +151,7 @@ export default function OnboardingPage() {
               <StatefulButton
                 type="submit"
                 size="lg"
-                className="h-[46px] w-full rounded-md text-sm font-semibold"
+                className="h-[46px] w-full rounded-md bg-ds-brand text-sm font-semibold text-white hover:bg-ds-brand/90"
                 icon={<ArrowRight className="h-4 w-4" />}
                 state={createMutation.isPending ? 'loading' : 'idle'}
                 loadingText="Creating workspace…"

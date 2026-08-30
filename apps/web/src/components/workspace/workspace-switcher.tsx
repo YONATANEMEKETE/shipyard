@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { Check, ChevronsUpDown, Plus } from 'lucide-react';
+import { Archive, Check, ChevronsUpDown, Plus } from 'lucide-react';
 
 import { Stagger, StaggerItem } from '@/components/motion/stagger';
 import { IconWrapper } from '@/components/workspace/icon-wrapper';
@@ -11,12 +11,15 @@ import { CreateWorkspaceDialog } from '@/components/workspace/create-workspace-d
 import { useWorkspaces } from '@/hooks/use-workspaces';
 import { cn } from '@/lib/utils';
 import { EASE_OUT } from '@/lib/ease';
+import { isArchived } from '@/lib/workspace/is-archived';
 
 interface WorkspaceOption {
   slug: string;
   name: string;
   icon: string | null;
   memberCount: number;
+  role: string;
+  status: string;
 }
 
 function SwitcherSkeleton({ collapsed }: { collapsed: boolean }) {
@@ -70,6 +73,8 @@ export function WorkspaceSwitcher({
       name: w.name,
       icon: w.icon,
       memberCount: w.memberCount,
+      role: w.role,
+      status: w.status,
     })) ?? [];
   const current = workspaces.find((workspace) => workspace.slug === slug);
   const others = workspaces.filter((workspace) => workspace.slug !== slug);
@@ -104,32 +109,57 @@ export function WorkspaceSwitcher({
     workspace: WorkspaceOption,
     isCurrent: boolean,
     onClick: () => void,
-  ) => (
-    <button
-      key={workspace.slug}
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors',
-        isCurrent
-          ? 'bg-ds-surface text-foreground hover:bg-ds-sidebar'
-          : 'text-foreground/80 hover:bg-ds-sidebar hover:text-foreground',
-      )}
-    >
-      <WorkspaceMark icon={workspace.icon} />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13px] font-medium text-foreground">
-          {workspace.name}
+  ) => {
+    const archived = isArchived(workspace);
+    return (
+      <button
+        key={workspace.slug}
+        type="button"
+        onClick={onClick}
+        className={cn(
+          'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors',
+          archived
+            ? 'bg-ds-surface-subtle text-muted-foreground hover:bg-ds-surface-subtle/80'
+            : isCurrent
+              ? 'bg-ds-surface text-foreground hover:bg-ds-sidebar'
+              : 'text-foreground/80 hover:bg-ds-sidebar hover:text-foreground',
+        )}
+      >
+        <WorkspaceMark icon={workspace.icon} />
+        <span className="min-w-0 flex-1">
+          <span
+            className={cn(
+              'block truncate text-[13px] font-medium text-foreground',
+              archived && 'text-muted-foreground',
+            )}
+          >
+            {workspace.name}
+          </span>
+          <span className="flex items-center gap-1 truncate text-[11px] text-muted-foreground">
+            {archived ? (
+              <>
+                <Archive className="h-3 w-3 shrink-0" />
+                Archived · {workspace.role === 'OWNER' ? 'Owner' : 'Member'}
+              </>
+            ) : workspace.role === 'OWNER' ? (
+              'Owner'
+            ) : (
+              'Member'
+            )}
+          </span>
         </span>
-        <span className="block truncate text-[11px] text-muted-foreground">
-          {workspace.memberCount === 1
-            ? 'Just you'
-            : `${workspace.memberCount} members`}
-        </span>
-      </span>
-      {isCurrent ? <Check className="h-4 w-4 shrink-0 text-ds-brand" /> : null}
-    </button>
-  );
+        {archived ? (
+          <span className="inline-flex shrink-0 items-center rounded-full border border-ds-border bg-ds-surface px-1.5 py-0.5 font-mono text-[9px] font-semibold tracking-[0.6px] text-muted-foreground">
+            Archived
+          </span>
+        ) : isCurrent ? (
+          <Check className="h-4 w-4 shrink-0 text-ds-brand" />
+        ) : null}
+      </button>
+    );
+  };
+
+  const currentArchived = current ? isArchived(current) : false;
 
   return (
     <div ref={rootRef} className="relative">
@@ -152,19 +182,38 @@ export function WorkspaceSwitcher({
           onClick={() => setOpen((value) => !value)}
           aria-haspopup="menu"
           aria-expanded={open}
-          className="flex h-[58px] w-full items-center gap-2.5 rounded-lg border border-ds-border bg-ds-surface px-2.5 text-left transition-colors hover:border-ds-border-strong"
+          className={cn(
+            'flex h-[58px] w-full items-center gap-2.5 rounded-lg border px-2.5 text-left transition-colors',
+            currentArchived
+              ? 'border-ds-border bg-ds-surface-subtle'
+              : 'border-ds-border bg-ds-surface hover:border-ds-border-strong',
+          )}
         >
           <WorkspaceMark icon={current?.icon ?? 'boxes'} />
           <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="truncate text-[11px] font-semibold text-foreground">
+            <span
+              className={cn(
+                'truncate text-[11px] font-semibold text-foreground',
+                currentArchived && 'text-muted-foreground',
+              )}
+            >
               {current?.name ?? 'Select a workspace'}
             </span>
-            <span className="truncate text-[8px] text-muted-foreground">
-              {current
-                ? current.memberCount === 1
-                  ? 'Just you'
-                  : `${current.memberCount} members`
-                : 'Pick a workspace'}
+            <span className="flex items-center gap-1 truncate text-[8px] text-muted-foreground">
+              {currentArchived ? (
+                <>
+                  <Archive className="h-3 w-3 shrink-0" />
+                  Archived
+                </>
+              ) : current ? (
+                current.role === 'OWNER' ? (
+                  'Owner'
+                ) : (
+                  'Member'
+                )
+              ) : (
+                'Pick a workspace'
+              )}
             </span>
           </span>
           <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />

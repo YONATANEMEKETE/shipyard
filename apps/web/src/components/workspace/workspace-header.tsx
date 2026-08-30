@@ -16,10 +16,8 @@ import { useState } from 'react';
 import {
   Breadcrumb,
   BreadcrumbItem,
-  BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
-  BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { BloomMenu } from '@/components/motion/bloom-menu';
 import { Float } from '@/components/ui/float';
@@ -78,40 +76,28 @@ export function WorkspaceHeader({
         )}
       </button>
 
-      <span
-        aria-hidden
-        className="text-[13px] leading-none text-muted-foreground/60"
-      >
-        /
-      </span>
-
-      {/* Page context */}
+      {/* Page context — single "/" then label, no duplicate separators */}
       <Breadcrumb aria-label="Workspace breadcrumb">
         <BreadcrumbList>
-          {label !== 'Dashboard' ? (
-            <>
-              <BreadcrumbItem>
-                <BreadcrumbLink
-                  href={`/w/${slug}`}
-                  className="text-[13px] text-muted-foreground"
-                >
-                  /
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage className="text-[13px] uppercase text-foreground">
-                  {label}
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-            </>
-          ) : (
-            <BreadcrumbItem>
+          <BreadcrumbItem>
+            <span
+              aria-hidden
+              className="text-[13px] leading-none text-muted-foreground/60"
+            >
+              /
+            </span>
+          </BreadcrumbItem>
+          <BreadcrumbItem>
+            {label === 'Dashboard' ? (
               <BreadcrumbPage className="text-[13px] uppercase text-foreground">
                 Dashboard
               </BreadcrumbPage>
-            </BreadcrumbItem>
-          )}
+            ) : (
+              <BreadcrumbPage className="text-[13px] uppercase text-foreground">
+                {label}
+              </BreadcrumbPage>
+            )}
+          </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
 

@@ -55,13 +55,13 @@ export function WorkspaceCard({
 
   const content = (
     <>
-      {/* Icon tile */}
       <IconWrapper
-        icon={isArchived ? null : workspace.icon}
+        icon={workspace.icon}
         size={isArchived ? 'sm' : 'md'}
         variant={isArchived ? 'outline' : 'soft'}
         className={cn(
-          isArchived && 'bg-secondary/60 text-muted-foreground border-border',
+          isArchived &&
+            'bg-ds-surface-subtle text-muted-foreground border-ds-border',
         )}
       />
 

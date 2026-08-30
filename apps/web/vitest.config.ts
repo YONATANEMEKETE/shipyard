@@ -16,6 +16,12 @@ export default defineConfig({
     setupFiles: ['test/setup.ts'],
     css: true,
     env: { NODE_ENV: 'test' },
+    // jsdom + RTL under parallel CI load: the settings prefill test was the
+    // first to blow past the 5s default under heavy CPU contention. Roomier
+    // per-test budget keeps real failures (which fail fast) distinguishable
+    // from slow-environment false positives.
+    testTimeout: 15_000,
+    hookTimeout: 15_000,
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],

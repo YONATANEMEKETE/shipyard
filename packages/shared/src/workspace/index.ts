@@ -15,9 +15,8 @@ export const workspaceStatusSchema = z.enum(['ACTIVE', 'ARCHIVED']);
 
 export type WorkspaceStatus = z.infer<typeof workspaceStatusSchema>;
 
-// F2 writes only OWNER; MEMBER exists so read-only non-owner memberships
-// deserialize (ai-design §10.1 matrix), ADMIN arrives in F3.
-export const workspaceRoleSchema = z.enum(['OWNER', 'MEMBER']);
+// Mirrors Prisma WorkspaceRole — OWNER | ADMIN | MEMBER (F3 widened, additive).
+export const workspaceRoleSchema = z.enum(['OWNER', 'ADMIN', 'MEMBER']);
 
 export type WorkspaceRole = z.infer<typeof workspaceRoleSchema>;
 

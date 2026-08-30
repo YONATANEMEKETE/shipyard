@@ -240,7 +240,7 @@ export const membersService = {
         throw new TransferTargetInvalidError();
 
       await tx.$executeRawUnsafe(
-        `UPDATE workspace_member SET role = CASE id WHEN $1 THEN 'ADMIN' WHEN $2 THEN 'OWNER' END WHERE id IN ($1, $2)`,
+        `UPDATE workspace_member SET role = CASE id WHEN $1 THEN 'ADMIN'::"WorkspaceRole" WHEN $2 THEN 'OWNER'::"WorkspaceRole" END WHERE id IN ($1, $2)`,
         context.memberId,
         targetMemberId,
       );

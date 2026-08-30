@@ -67,18 +67,18 @@ export default function OnboardingPage() {
   });
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-16">
+    <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-background px-4 py-8 sm:px-6 sm:py-12 md:py-16">
       <Form {...form}>
-        <Stagger className="w-full max-w-[580px] flex flex-col gap-8">
+        <Stagger className="flex w-full max-w-[580px] flex-col gap-6 sm:gap-8">
           {/* display:contents keeps Stagger controlling the layout while the
               form still owns submit for all three staggered sections */}
           <form onSubmit={onSubmit} noValidate className="contents">
             {/* Intro Block — matches pen Display Heading + Support Copy */}
-            <StaggerItem className="flex flex-col gap-3.5">
-              <h1 className="text-[38px] font-bold tracking-[-1.2px] leading-[1.12] text-foreground">
+            <StaggerItem className="flex flex-col gap-2.5 sm:gap-3.5">
+              <h1 className="text-balance text-[28px] font-bold leading-[1.1] tracking-[-0.9px] text-foreground sm:text-[34px] sm:leading-[1.12] sm:tracking-[-1.1px] md:text-[38px] md:tracking-[-1.2px]">
                 Set up your team&apos;s home base.
               </h1>
-              <p className="text-sm leading-6 text-muted-foreground">
+              <p className="text-[13px] leading-6 text-muted-foreground sm:text-sm">
                 Every project, issue, and teammate in Shipyard lives inside a
                 workspace. Pick a name and an icon — you can change both later.
               </p>
@@ -87,7 +87,7 @@ export default function OnboardingPage() {
             {/* Fields Stack — gap 22 in pen → gap-5.5. z-20 lifts the icon select
             panel above the actions section (each stagger item is its own
             stacking context once animated in). */}
-            <StaggerItem className="relative z-20 flex flex-col gap-[22px]">
+            <StaggerItem className="relative z-20 flex flex-col gap-4 sm:gap-[22px]">
               {/* Name Field Group — validated against shared nameSchema */}
               <FormField
                 control={form.control}
@@ -147,11 +147,11 @@ export default function OnboardingPage() {
             </StaggerItem>
 
             {/* Actions Stack — gap 12 */}
-            <StaggerItem className="flex flex-col gap-3">
+            <StaggerItem className="flex flex-col gap-2.5 sm:gap-3">
               <StatefulButton
                 type="submit"
                 size="lg"
-                className="h-[46px] w-full rounded-md bg-ds-brand text-sm font-semibold text-white hover:bg-ds-brand/90"
+                className="h-11 w-full rounded-md bg-ds-brand text-[13px] font-semibold text-white hover:bg-ds-brand/90 sm:h-[46px] sm:text-sm"
                 icon={<ArrowRight className="h-4 w-4" />}
                 state={createMutation.isPending ? 'loading' : 'idle'}
                 loadingText="Creating workspace…"
@@ -160,7 +160,7 @@ export default function OnboardingPage() {
               >
                 Create workspace
               </StatefulButton>
-              <p className="text-center text-[11px] leading-4 text-muted-foreground">
+              <p className="text-balance px-2 text-center text-[11px] leading-4 text-muted-foreground sm:px-0">
                 You can rename the workspace or change its icon anytime in
                 settings.
               </p>

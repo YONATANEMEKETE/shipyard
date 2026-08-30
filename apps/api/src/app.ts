@@ -17,6 +17,7 @@ import { isReady, setReady } from './common/health/readiness.js';
 import { sendSuccess } from './common/http/responses.js';
 import { authNodeHandler } from './lib/authNodeHandler.js';
 import { workspaceRouter } from './features/workspace/routes.js';
+import { testRouter } from './features/test/routes.js';
 
 export interface CreateAppOptions {
   /**
@@ -77,6 +78,9 @@ export function createApp(options: CreateAppOptions = {}): express.Express {
   // Workspace module — hand-written Shipyard routes (api-design.md §2). Mounted
   // before notFound so unmatched paths under /api/v1/workspaces 404 normally.
   app.use('/api/v1/workspaces', workspaceRouter);
+  if (env.NODE_ENV !== 'production') {
+    app.use('/api/v1/test', testRouter);
+  }
 
   app.use(notFoundHandler);
   app.use(errorHandler);

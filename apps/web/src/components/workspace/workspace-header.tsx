@@ -23,6 +23,8 @@ import { BloomMenu } from '@/components/motion/bloom-menu';
 import { Float } from '@/components/ui/float';
 import { Input } from '@/components/ui/input';
 import { CreateWorkspaceDialog } from '@/components/workspace/create-workspace-dialog';
+import { useWorkspace } from '@/hooks/use-workspaces';
+import { isArchived } from '@/lib/workspace/is-archived';
 
 const CONTEXT: Record<string, string> = {
   '': 'Dashboard',
@@ -59,6 +61,8 @@ export function WorkspaceHeader({
 }) {
   const [createOpen, setCreateOpen] = useState(false);
   const label = usePageContext(slug);
+  const { data: workspace } = useWorkspace(slug);
+  const archived = isArchived(workspace);
 
   return (
     <header className="flex h-16 shrink-0 items-center gap-3 bg-transparent pr-6 pl-3">
@@ -141,9 +145,10 @@ export function WorkspaceHeader({
         />
       </div>
 
-      {/* Create */}
+      {/* Create — disabled while this workspace is archived (read-only) */}
       <BloomMenu
         placement="bottom-end"
+        disabled={archived}
         items={[
           { label: 'Workspace', icon: Building2 },
           { label: 'Issue', icon: CircleCheck },

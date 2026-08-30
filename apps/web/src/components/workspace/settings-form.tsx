@@ -45,6 +45,7 @@ import { IconSelect } from '@/components/workspace/icon-select';
 import { Dialog as DialogPrimitive } from 'radix-ui';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { isArchived } from '@/lib/workspace/is-archived';
 import { cn } from '@/lib/utils';
 
 const settingsSchema = z.object({
@@ -79,7 +80,7 @@ export function SettingsForm({ slug }: { slug: string }) {
 
   const hasChanges = values.name !== defaultName || values.icon !== defaultIcon;
 
-  const isArchived = workspace?.status === 'ARCHIVED';
+  const archived = isArchived(workspace);
 
   const archiveMutation = useArchiveWorkspace(slug, {
     onSuccess: () => {
@@ -206,6 +207,7 @@ export function SettingsForm({ slug }: { slug: string }) {
                       <FormControl>
                         <Input
                           value={field.value ?? ''}
+                          disabled={archived}
                           onChange={(value) =>
                             field.onChange(value, {
                               shouldValidate: form.formState.isSubmitted,
@@ -240,6 +242,7 @@ export function SettingsForm({ slug }: { slug: string }) {
                       <FormControl>
                         <IconSelect
                           value={field.value as WorkspaceIconKey}
+                          disabled={archived}
                           onValueChange={(next) =>
                             field.onChange(next, {
                               shouldValidate: form.formState.isSubmitted,
@@ -255,7 +258,10 @@ export function SettingsForm({ slug }: { slug: string }) {
                   <StatefulButton
                     type="submit"
                     disabled={
-                      !canSave || !hasChanges || updateMutation.isPending
+                      archived ||
+                      !canSave ||
+                      !hasChanges ||
+                      updateMutation.isPending
                     }
                     state={updateMutation.isPending ? 'loading' : 'idle'}
                     loadingText="Saving…"
@@ -277,17 +283,17 @@ export function SettingsForm({ slug }: { slug: string }) {
             <div className="flex items-center justify-between gap-4">
               <div className="flex flex-1 flex-col gap-[3px]">
                 <p className="text-[13px] font-semibold leading-none text-foreground">
-                  {isArchived
+                  {archived
                     ? 'Restore this workspace'
                     : 'Archive this workspace'}
                 </p>
                 <p className="text-[11px] leading-[1.45] text-muted-foreground">
-                  {isArchived
+                  {archived
                     ? 'Make it active and editable again.'
                     : 'Becomes read-only for every member. Fully restorable, history preserved.'}
                 </p>
               </div>
-              {isArchived ? (
+              {archived ? (
                 <StatefulButton
                   type="button"
                   variant="outline"
@@ -319,14 +325,14 @@ export function SettingsForm({ slug }: { slug: string }) {
                   Permanently delete workspace
                 </p>
                 <p className="text-[11px] leading-[1.45] text-muted-foreground">
-                  {isArchived
+                  {archived
                     ? 'Type the workspace name to confirm. This cannot be undone.'
                     : 'Archive first — only archived workspaces can be deleted.'}
                 </p>
               </div>
               <Button
                 variant="outline"
-                disabled={!isArchived}
+                disabled={!archived}
                 onClick={() => {
                   setConfirmName('');
                   setDeleteOpen(true);

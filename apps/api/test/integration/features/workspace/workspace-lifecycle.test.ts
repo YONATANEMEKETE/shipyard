@@ -432,6 +432,37 @@ describe('workspace lifecycle (integration)', () => {
     expect(dataOf<WsResp>(fetched).name).toBe('New Name');
   });
 
+  it('trims confirmName before comparing, so padded input still deletes', async () => {
+    const ws = await makeOwnerWorkspace(ownerCookies);
+    await request
+      .post(`/api/v1/workspaces/${ws.slug}/archive`)
+      .set('Cookie', ownerCookies)
+      .send({ confirm: true });
+
+    const deleted = await request
+      .delete(`/api/v1/workspaces/${ws.slug}`)
+      .set('Cookie', ownerCookies)
+      .send({ confirmName: '  Shipyard Team  ' });
+    expect(deleted.status).toBe(204);
+    const gone = await request
+      .get(`/api/v1/workspaces/${ws.slug}`)
+      .set('Cookie', ownerCookies);
+    expect(gone.status).toBe(404);
+  });
+
+  it('patches icon-only without touching name or slug', async () => {
+    const ws = await makeOwnerWorkspace(ownerCookies);
+    const updated = dataOf<WsResp>(
+      await request
+        .patch(`/api/v1/workspaces/${ws.slug}`)
+        .set('Cookie', ownerCookies)
+        .send({ icon: 'ship' }),
+    );
+    expect(updated.icon).toBe('ship');
+    expect(updated.name).toBe('Shipyard Team');
+    expect(updated.slug).toBe(ws.slug);
+  });
+
   it('returns 403 FORBIDDEN_ROLE for a non-owner member on owner-only routes', async () => {
     const ws = await makeOwnerWorkspace(ownerCookies);
 

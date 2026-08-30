@@ -66,16 +66,16 @@ export function WorkspaceCard({
       />
 
       {/* Name + meta — w-full keeps truncation working under items-start */}
-      <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
+      <div className="flex min-w-0 flex-1 flex-col items-start gap-0.5 sm:gap-1">
         <span
           className={cn(
-            'w-full truncate text-[15px] font-semibold leading-none tracking-[-0.2px] text-foreground',
+            'w-full truncate text-[13px] font-semibold leading-none tracking-[-0.2px] text-foreground sm:text-[15px]',
             isArchived && 'text-muted-foreground',
           )}
         >
           {workspace.name}
         </span>
-        <span className="w-full truncate text-[11px] leading-[1.3] text-muted-foreground">
+        <span className="w-full truncate text-[10px] leading-[1.3] text-muted-foreground sm:text-[11px]">
           {meta}
         </span>
       </div>
@@ -87,34 +87,33 @@ export function WorkspaceCard({
             event.stopPropagation();
             onRestore?.();
           }}
-          className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg px-3.5 text-xs font-semibold text-foreground transition-colors hover:bg-primary/5 disabled:pointer-events-none disabled:opacity-50"
+          className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-semibold text-foreground transition-colors hover:bg-primary/5 disabled:pointer-events-none disabled:opacity-50 sm:h-9 sm:gap-2 sm:px-3.5 sm:text-xs"
         >
-          <ArchiveRestore className="h-[15px] w-[15px]" />
+          <ArchiveRestore className="h-3.5 w-3.5 sm:h-[15px] sm:w-[15px]" />
           Restore
         </button>
       ) : (
         <>
           <span
             className={cn(
-              'inline-flex h-[22px] shrink-0 items-center gap-1.5 rounded-full px-2.5 font-mono text-[9px] font-semibold tracking-[0.8px]',
+              'hidden h-[22px] shrink-0 items-center gap-1.5 rounded-full px-2.5 font-mono text-[9px] font-semibold tracking-[0.8px] sm:inline-flex',
               ROLE_CHIP_CLASS[role],
             )}
           >
             {roleInfo.label}
           </span>
-          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <ChevronRight className="hidden h-4 w-4 shrink-0 text-muted-foreground sm:block" />
+          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground sm:hidden" />
         </>
       )}
     </>
   );
 
   const classNameBase = cn(
-    // text-left overrides the button UA default (text-align: center) so the
-    // name/meta read left-aligned like the archived card's div.
-    'flex w-full items-center gap-3.5 rounded-xl border px-4 text-left transition-colors',
+    'flex w-full items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-colors sm:gap-3.5 sm:px-4 sm:py-0',
     isArchived
-      ? 'h-[60px] border-ds-border bg-ds-surface-subtle'
-      : 'h-[68px] border-ds-border-strong bg-ds-surface',
+      ? 'min-h-[56px] border-ds-border bg-ds-surface-subtle sm:h-[60px] sm:min-h-0'
+      : 'min-h-[60px] border-ds-border-strong bg-ds-surface sm:h-[68px] sm:min-h-0',
     !isArchived && 'hover:border-ds-border hover:bg-ds-surface-subtle',
     className,
   );

@@ -82,13 +82,13 @@ export function WorkspaceHeader({
   }, [role]);
 
   return (
-    <header className="flex h-16 shrink-0 items-center gap-3 bg-transparent pr-6 pl-3">
+    <header className="flex h-14 shrink-0 items-center gap-2 bg-transparent px-3 sm:h-16 sm:gap-3 sm:px-3 sm:pr-6">
       {/* Collapse sidebar */}
       <button
         type="button"
         aria-label="Toggle sidebar"
         onClick={onToggleSidebar}
-        className="-ml-1.5 grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        className="-ml-1 grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:-ml-1.5"
       >
         {sidebarCollapsed ? (
           <PanelLeftOpen className="h-3.5 w-3.5" />
@@ -97,8 +97,11 @@ export function WorkspaceHeader({
         )}
       </button>
 
-      {/* Page context — single "/" then label, no duplicate separators */}
-      <Breadcrumb aria-label="Workspace breadcrumb">
+      {/* Page context — hidden on very small screens to save space */}
+      <Breadcrumb
+        aria-label="Workspace breadcrumb"
+        className="hidden shrink-0 sm:block"
+      >
         <BreadcrumbList>
           <BreadcrumbItem>
             <span
@@ -109,51 +112,46 @@ export function WorkspaceHeader({
             </span>
           </BreadcrumbItem>
           <BreadcrumbItem>
-            {label === 'Dashboard' ? (
-              <BreadcrumbPage className="text-[13px] uppercase text-foreground">
-                Dashboard
-              </BreadcrumbPage>
-            ) : (
-              <BreadcrumbPage className="text-[13px] uppercase text-foreground">
-                {label}
-              </BreadcrumbPage>
-            )}
+            <BreadcrumbPage className="max-w-[20ch] truncate text-[12px] uppercase text-foreground sm:max-w-none sm:text-[13px]">
+              {label}
+            </BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
 
-      {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Global search */}
-      <Input
-        type="text"
-        placeholder="Search workspace…"
-        aria-label="Search workspace"
-        className="w-[280px]"
-        leftIcon={<Search />}
-        rightIcon={
-          <span className="inline-flex h-[22px] items-center justify-center rounded border border-ds-border bg-ds-sidebar px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-            ⌘ K
-          </span>
-        }
-        classNames={{
-          field:
-            'rounded-lg border-ds-border bg-ds-surface hover:border-ds-border-strong',
-          input: 'pl-9 pr-12 text-xs',
-          leftIcon: 'left-2.5 [&_svg]:h-[15px] [&_svg]:w-[15px]',
-          rightIcon: 'pr-1.5',
-        }}
-      />
+      {/* Global search — hidden on mobile, visible from sm+ */}
+      <div className="hidden sm:block">
+        <Input
+          type="text"
+          placeholder="Search workspace…"
+          aria-label="Search workspace"
+          className="w-[200px] lg:w-[280px]"
+          leftIcon={<Search />}
+          rightIcon={
+            <span className="inline-flex h-[22px] items-center justify-center rounded border border-ds-border bg-ds-sidebar px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+              ⌘ K
+            </span>
+          }
+          classNames={{
+            field:
+              'h-9 rounded-lg border-ds-border bg-ds-surface hover:border-ds-border-strong',
+            input: 'pl-9 pr-12 text-xs',
+            leftIcon: 'left-2.5 [&_svg]:h-[15px] [&_svg]:w-[15px]',
+            rightIcon: 'pr-1.5',
+          }}
+        />
+      </div>
 
       {/* Notifications */}
-      <div className="relative">
+      <div className="relative shrink-0">
         <button
           type="button"
           aria-label="Notifications"
-          className="grid size-9 place-items-center rounded-lg border border-ds-border bg-ds-surface text-foreground transition-colors hover:border-ds-border-strong"
+          className="grid size-8 place-items-center rounded-lg border border-ds-border bg-ds-surface text-foreground transition-colors hover:border-ds-border-strong sm:size-9"
         >
-          <Bell className="h-[17px] w-[17px]" />
+          <Bell className="h-4 w-4 sm:h-[17px] sm:w-[17px]" />
         </button>
         <Float
           placement="top-end"
@@ -163,14 +161,16 @@ export function WorkspaceHeader({
       </div>
 
       {/* Create — disabled while archived; filtered by role */}
-      <BloomMenu
-        placement="bottom-end"
-        disabled={archived}
-        items={createItems as never}
-        onSelect={(label) => {
-          if (label === 'Workspace') setCreateOpen(true);
-        }}
-      />
+      <div className="shrink-0">
+        <BloomMenu
+          placement="bottom-end"
+          disabled={archived}
+          items={createItems as never}
+          onSelect={(label) => {
+            if (label === 'Workspace') setCreateOpen(true);
+          }}
+        />
+      </div>
       <CreateWorkspaceDialog open={createOpen} onOpenChange={setCreateOpen} />
     </header>
   );

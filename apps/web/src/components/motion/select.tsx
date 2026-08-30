@@ -330,7 +330,7 @@ export function SelectContent({ className, children }: SelectContentProps) {
     const below = window.innerHeight - rect.bottom;
     const above = rect.top;
     setPlacement(below < h + 16 && above > below ? 'top' : 'bottom');
-  }, [open, ctx.triggerId, setPlacement]);
+  }, [open, ctx, setPlacement]);
 
   // Specify EVERY corner + both margins each render. The near edge (facing the
   // trigger) animates flat->round and the gap opens on that side; the far edge
@@ -432,13 +432,16 @@ export function SelectItem({
   children,
 }: SelectItemProps) {
   const ctx = useSelectContext('SelectItem');
+  // Destructure the stable callbacks so the effect deps don't reference `ctx`
+  // itself (ctx is memoized in Select, but the lint rule wants the narrowest deps).
+  const { register, unregister } = ctx;
   const selected = ctx.value === value;
   const label = typeof children === 'string' ? children : value;
 
   useLayoutEffect(() => {
-    ctx.register(value, label);
-    return () => ctx.unregister(value);
-  }, [ctx.register, ctx.unregister, value, label]);
+    register(value, label);
+    return () => unregister(value);
+  }, [register, unregister, value, label]);
 
   return (
     <motion.li

@@ -37,7 +37,6 @@ export default function SelectWorkspacePage() {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [createOpen, setCreateOpen] = useState(false);
-  const [restoringSlug, setRestoringSlug] = useState<string | null>(null);
   const { data, isPending, isError, error } = useWorkspaces();
 
   const workspaces = (data?.workspaces ?? []) as WorkspaceCardInput[];
@@ -53,7 +52,6 @@ export default function SelectWorkspacePage() {
   };
 
   const handleRestore = async (slug: string) => {
-    setRestoringSlug(slug);
     try {
       await restoreWorkspace(slug);
       await queryClient.invalidateQueries({ queryKey: workspaceKeys.all });
@@ -62,8 +60,6 @@ export default function SelectWorkspacePage() {
       const msg =
         err instanceof Error ? err.message : 'Failed to restore workspace.';
       showToast({ status: 'error', title: msg });
-    } finally {
-      setRestoringSlug(null);
     }
   };
 

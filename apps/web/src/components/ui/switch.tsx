@@ -247,14 +247,21 @@ const Switch = forwardRef<HTMLDivElement, SwitchProps>(
             render={(props) => {
               const {
                 style: baseStyle,
-                onDrag: _onDrag,
-                onDragStart: _onDragStart,
-                onDragEnd: _onDragEnd,
-                onAnimationStart: _onAnimationStart,
-                onAnimationEnd: _onAnimationEnd,
-                onAnimationIteration: _onAnimationIteration,
+                // strip motion-injected handlers Base UI doesn't forward
+                onDrag: _onDrag$,
+                onDragStart: _onDragStart$,
+                onDragEnd: _onDragEnd$,
+                onAnimationStart: _onAnimationStart$,
+                onAnimationEnd: _onAnimationEnd$,
+                onAnimationIteration: _onAnimationIteration$,
                 ...rest
               } = props as React.HTMLAttributes<HTMLSpanElement>;
+              void _onDrag$;
+              void _onDragStart$;
+              void _onDragEnd$;
+              void _onAnimationStart$;
+              void _onAnimationEnd$;
+              void _onAnimationIteration$;
               return (
                 <motion.span
                   {...rest}

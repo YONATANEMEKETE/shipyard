@@ -46,7 +46,6 @@ export const revokeInvitationSchema = z.object({
 export type RevokeInvitationRequest = z.infer<typeof revokeInvitationSchema>;
 
 export const changeMemberRoleSchema = z.object({
-  memberId: z.string().cuid(),
   role: z.enum(['MEMBER', 'ADMIN']),
 });
 
@@ -59,7 +58,7 @@ export const removeMemberSchema = z.object({
 export type RemoveMemberRequest = z.infer<typeof removeMemberSchema>;
 
 export const transferOwnershipSchema = z.object({
-  targetMemberId: z.string().cuid(),
+  targetMemberId: z.string().min(1),
 });
 
 export type TransferOwnershipRequest = z.infer<typeof transferOwnershipSchema>;

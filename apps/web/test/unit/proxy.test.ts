@@ -242,7 +242,7 @@ describe('proxy routing', () => {
     expect(getSessionMock).not.toHaveBeenCalled();
   });
 
-  it('redirects authenticated auth page to /', async () => {
+  it('redirects authenticated auth page to /w', async () => {
     getSessionMock.mockResolvedValue({ data: { session: { id: 's1' } } });
     const req = makeRequest('http://localhost:3000/sign-in', {
       'better-auth.session_token': 'tok',
@@ -250,7 +250,7 @@ describe('proxy routing', () => {
     req.headers.set('cookie', 'better-auth.session_token=tok');
 
     const res = await proxy(req);
-    expect(res.headers.get('location')).toBe('http://localhost:3000/');
+    expect(res.headers.get('location')).toBe('http://localhost:3000/w');
   });
 
   it('allows authenticated protected page through', async () => {
@@ -282,7 +282,7 @@ describe('proxy routing', () => {
     });
 
     const res = await proxy(req);
-    expect(res.headers.get('location')).toBe('http://localhost:3000/');
+    expect(res.headers.get('location')).toBe('http://localhost:3000/w');
   });
 
   it('degrades to authenticated on API failure so cookie bearer stays on protected page', async () => {

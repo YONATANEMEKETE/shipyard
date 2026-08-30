@@ -8,7 +8,7 @@ import type { ReactNode } from 'react';
 export function WorkspaceContent({ children }: { children: ReactNode }) {
   return (
     <main className="min-h-0 flex-1 overflow-hidden p-1.5">
-      <div className="h-full overflow-auto rounded-xl border border-ds-border bg-ds-surface p-6">
+      <div className="h-full overflow-auto rounded-xl border border-ds-border bg-ds-surface p-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {children}
       </div>
     </main>

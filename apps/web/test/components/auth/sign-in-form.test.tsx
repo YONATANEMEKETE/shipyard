@@ -145,7 +145,7 @@ describe('SignInForm — user behaviour (isolated)', () => {
     ).toBeDisabled();
 
     resolve({ error: null });
-    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/w'));
   });
 
   it('on success redirects to workspace root', async () => {
@@ -156,7 +156,7 @@ describe('SignInForm — user behaviour (isolated)', () => {
     await user.type(screen.getByLabelText(/^password$/i), 'sup3r-secret-pass');
     await user.click(screen.getByRole('button', { name: /^sign in$/i }));
 
-    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/w'));
     expect(mockSignInEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         email: 'ada@example.com',
@@ -275,7 +275,7 @@ describe('SignInForm — user behaviour (isolated)', () => {
     await user.click(screen.getByRole('button', { name: /^google$/i }));
     expect(mockSocialSignIn).toHaveBeenCalledWith({
       provider: 'google',
-      callbackURL: '/',
+      callbackURL: '/w',
     });
     expect(screen.getByRole('button', { name: /^google$/i })).toBeDisabled();
 

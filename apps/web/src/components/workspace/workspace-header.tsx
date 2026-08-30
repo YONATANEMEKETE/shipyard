@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { CreateWorkspaceDialog } from '@/components/workspace/create-workspace-dialog';
 import { useWorkspace } from '@/hooks/use-workspaces';
 import { isArchived } from '@/lib/workspace/is-archived';
+import { useMemo } from 'react';
 
 const CONTEXT: Record<string, string> = {
   '': 'Dashboard',
@@ -63,6 +64,22 @@ export function WorkspaceHeader({
   const label = usePageContext(slug);
   const { data: workspace } = useWorkspace(slug);
   const archived = isArchived(workspace);
+  const role = workspace?.role ?? null;
+
+  const createItems = useMemo(() => {
+    const all = [
+      { label: 'Workspace', icon: Building2 },
+      { label: 'Issue', icon: CircleCheck },
+      { label: 'Project', icon: Folder },
+      { label: 'Cycle', icon: Calendar },
+    ] as const;
+    if (role === 'MEMBER') {
+      return all.filter(
+        (item) => item.label === 'Workspace' || item.label === 'Issue',
+      );
+    }
+    return [...all];
+  }, [role]);
 
   return (
     <header className="flex h-16 shrink-0 items-center gap-3 bg-transparent pr-6 pl-3">
@@ -145,16 +162,11 @@ export function WorkspaceHeader({
         />
       </div>
 
-      {/* Create — disabled while this workspace is archived (read-only) */}
+      {/* Create — disabled while archived; filtered by role */}
       <BloomMenu
         placement="bottom-end"
         disabled={archived}
-        items={[
-          { label: 'Workspace', icon: Building2 },
-          { label: 'Issue', icon: CircleCheck },
-          { label: 'Project', icon: Folder },
-          { label: 'Cycle', icon: Calendar },
-        ]}
+        items={createItems as never}
         onSelect={(label) => {
           if (label === 'Workspace') setCreateOpen(true);
         }}

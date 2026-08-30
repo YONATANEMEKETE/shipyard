@@ -23,6 +23,7 @@ model User {
   sessions         Session[]
   accounts         Account[]
   workspaceMembers WorkspaceMember[]
+  sentInvitations  Invitation[]      @relation("CreatedInvitations")
 
   @@unique([email])
   @@map("user")
@@ -89,8 +90,16 @@ enum WorkspaceStatus {
 
 enum WorkspaceRole {
   OWNER
+  ADMIN
   MEMBER
-  // F3 adds ADMIN — enum widened in place; existing rows untouched.
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  DECLINED
+  EXPIRED
 }
 
 model Workspace {
@@ -103,7 +112,8 @@ model Workspace {
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
 
-  members WorkspaceMember[]
+  members     WorkspaceMember[]
+  invitations Invitation[]
 
   @@map("workspace")
 }
@@ -122,4 +132,26 @@ model WorkspaceMember {
   @@index([workspaceId])
   @@index([userId])
   @@map("workspace_member")
+}
+
+model Invitation {
+  id          String           @id @default(cuid())
+  workspaceId String
+  email       String           @db.VarChar(320)
+  role        WorkspaceRole
+  token       String           @unique
+  status      InvitationStatus @default(PENDING)
+  expiresAt   DateTime
+  createdById String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User?     @relation("CreatedInvitations", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+  @@index([email])
+  @@index([expiresAt])
+  @@index([createdById])
+  @@map("invitation")
 }

@@ -336,8 +336,12 @@ export const membersService = {
       }
     });
 
-    // Send emails after commit — failure does not roll back rows.
-    for (const card of created) {
+    // Send emails after commit — dispatched in parallel so a 20-invite batch
+    // adds only the slowest send to the request, not the sum. Per-email
+    // failures are logged and never roll back rows.
+    const dispatchInvitationEmail = async (
+      card: InvitationCard,
+    ): Promise<void> => {
       const inviteUrl = `${env.WEB_URL}/invite/${card.token}`;
       const rendered = await renderWorkspaceInvitationEmail({
         workspaceName,
@@ -359,7 +363,9 @@ export const membersService = {
           '[members] Failed to send invitation email',
         );
       });
-    }
+    };
+
+    await Promise.allSettled(created.map(dispatchInvitationEmail));
 
     return created;
   },

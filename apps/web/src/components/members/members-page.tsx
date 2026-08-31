@@ -1,11 +1,14 @@
 'use client';
 
 import { Filter, Search, UserPlus } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { InviteMembersDialog } from '@/components/members/invite-members-dialog';
 import { MemberDirectory } from '@/components/members/member-directory';
+import { mockMembers } from '@/components/members/mock-members';
 import { PendingInvitations } from '@/components/members/pending-invitations';
+import { useInvitations } from '@/hooks/use-invitations';
+import { useMembers } from '@/hooks/use-members';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -30,8 +33,32 @@ export function MembersPage({ slug }: { slug: string }) {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [search, setSearch] = useState('');
 
+  const membersQuery = useMembers(slug);
+  const invitationsQuery = useInvitations(slug);
+
+  // Temporary: log fetched members + invitations until the directory UI is wired.
+  useEffect(() => {
+    if (membersQuery.data) {
+      console.log('[members] loaded', membersQuery.data.members);
+    }
+    if (invitationsQuery.data) {
+      console.log(
+        '[members] invitations loaded',
+        invitationsQuery.data.invitations,
+      );
+    }
+    if (membersQuery.isError) {
+      console.error('[members] load failed', membersQuery.error);
+    }
+  }, [
+    membersQuery.data,
+    membersQuery.isError,
+    membersQuery.error,
+    invitationsQuery.data,
+  ]);
+
   return (
-    <div className="flex w-full flex-col gap-6">
+    <div className="flex h-full w-full flex-col gap-6">
       <span className="font-mono text-[10px] font-semibold uppercase tracking-[1.5px] text-ds-brand">
         Members
       </span>
@@ -62,13 +89,14 @@ export function MembersPage({ slug }: { slug: string }) {
       </div>
 
       {/* Tabs + toolbar — Directory / Pending with search + role filter */}
-      <Tabs defaultValue="directory" className="gap-5">
+      <Tabs defaultValue="directory" className="min-h-0 flex-1 flex-col gap-5">
         <div className="flex w-full flex-wrap items-center justify-between gap-3">
           <TabsList className="gap-2 border border-ds-border bg-ds-bg p-[3px]">
             <TabsTrigger value="directory" className="group gap-2">
               Directory
               <span className="inline-flex h-[18px] items-center rounded-full border border-ds-border bg-ds-surface px-1.5 font-mono text-[10px] font-bold leading-none text-muted-foreground transition-colors group-aria-selected:border-[#F0D9B0] group-aria-selected:bg-ds-brand-soft group-aria-selected:text-ds-brand">
-                0
+                {/* Temporary — counts come from live queries when wired */}
+                {mockMembers.length}
               </span>
             </TabsTrigger>
             <TabsTrigger value="pending" className="group gap-2">
@@ -108,10 +136,10 @@ export function MembersPage({ slug }: { slug: string }) {
           </div>
         </div>
 
-        <TabsContent value="directory">
+        <TabsContent value="directory" className="min-h-0">
           <MemberDirectory />
         </TabsContent>
-        <TabsContent value="pending">
+        <TabsContent value="pending" className="min-h-0">
           <PendingInvitations />
         </TabsContent>
       </Tabs>

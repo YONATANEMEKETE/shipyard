@@ -7,7 +7,7 @@ import { MailPlus } from 'lucide-react';
  */
 export function PendingInvitations() {
   return (
-    <div className="flex h-[576px] w-full flex-col overflow-hidden rounded-xl border border-ds-border bg-ds-surface">
+    <div className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-ds-border bg-ds-surface">
       <div className="grid h-9 grid-cols-[2fr_3fr_1fr_auto] items-center gap-3 border-b border-ds-border bg-ds-bg px-4 font-mono text-[10px] font-semibold uppercase tracking-[0.8px] text-muted-foreground">
         <span>Invitee</span>
         <span>Email</span>

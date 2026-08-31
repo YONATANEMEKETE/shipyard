@@ -11,9 +11,20 @@ import { mockMembers } from '@/components/members/mock-members';
 export function MemberDirectory({
   members = mockMembers,
   loading = false,
+  error = false,
+  onRetry,
 }: {
   members?: WorkspaceMemberCard[];
   loading?: boolean;
+  error?: boolean;
+  onRetry?: () => void;
 }) {
-  return <MembersTable members={members} loading={loading} />;
+  return (
+    <MembersTable
+      members={members}
+      loading={loading}
+      error={error}
+      onRetry={onRetry}
+    />
+  );
 }

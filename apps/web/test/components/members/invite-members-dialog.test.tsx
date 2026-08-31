@@ -24,6 +24,19 @@ vi.mock('@/hooks/use-invitations', () => ({
     mockInviteOptions = options as typeof mockInviteOptions;
     return { mutate: mockMutate, isPending: mockIsPending };
   },
+  useInvitations: () => ({
+    data: undefined,
+    isError: false,
+    error: null,
+  }),
+}));
+
+vi.mock('@/hooks/use-members', () => ({
+  useMembers: () => ({
+    data: undefined,
+    isError: false,
+    error: null,
+  }),
 }));
 
 vi.mock('@/hooks/use-workspaces', async () => {

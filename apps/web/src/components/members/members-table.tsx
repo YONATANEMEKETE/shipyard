@@ -159,12 +159,17 @@ export function MembersTable({
   error = false,
   onRetry,
   currentUserId,
+  emptyTitle,
+  emptyDescription,
 }: {
   members: WorkspaceMemberCard[];
   loading?: boolean;
   error?: boolean;
   onRetry?: () => void;
   currentUserId?: string;
+  /** Customize the empty state copy — e.g. "no matches" when filters are active. */
+  emptyTitle?: string;
+  emptyDescription?: string;
 }) {
   const showEmpty = !loading && !error && members.length === 0;
   const centered = (showEmpty || error) && !loading;
@@ -217,8 +222,11 @@ export function MembersTable({
         ) : showEmpty ? (
           <EmptyState
             icon={Users}
-            title="No members yet"
-            description="Invite teammates to get started — they'll show up here once they accept."
+            title={emptyTitle ?? 'No members yet'}
+            description={
+              emptyDescription ??
+              "Invite teammates to get started — they'll show up here once they accept."
+            }
           />
         ) : (
           members.map((member) => (

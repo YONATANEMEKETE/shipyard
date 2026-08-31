@@ -40,7 +40,6 @@ import {
   clearSelectedWorkspace,
   getSelectedWorkspace,
 } from '@/lib/workspace/selected-workspace';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { IconSelect } from '@/components/workspace/icon-select';
 import { Dialog as DialogPrimitive } from 'radix-ui';
 import { useRouter } from 'next/navigation';
@@ -178,189 +177,171 @@ export function SettingsForm({ slug }: { slug: string }) {
         </p>
       </div>
 
-      <Tabs defaultValue="general" className="w-full">
-        <TabsList className="gap-0.5 rounded-md border border-ds-border bg-ds-surface-subtle">
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="members">Members</TabsTrigger>
-        </TabsList>
+      <div className="mt-2 flex flex-col gap-6">
+        <section className="flex w-full flex-col gap-[18px] rounded-xl border border-ds-border bg-ds-bg p-6">
+          <span className="font-mono text-[10px] font-semibold uppercase tracking-[1.2px] text-muted-foreground">
+            General / Identity
+          </span>
 
-        <TabsContent value="general" className="mt-6 flex flex-col gap-6">
-          <section className="flex w-full flex-col gap-[18px] rounded-xl border border-ds-border bg-ds-bg p-6">
-            <span className="font-mono text-[10px] font-semibold uppercase tracking-[1.2px] text-muted-foreground">
-              General / Identity
-            </span>
+          <Form {...form}>
+            <form
+              noValidate
+              onSubmit={onSubmit}
+              className="flex flex-col gap-[18px]"
+            >
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field, fieldState }) => (
+                  <FormItem className="gap-2">
+                    <FormLabel className="text-xs font-semibold text-foreground">
+                      Workspace name
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        value={field.value ?? ''}
+                        disabled={archived}
+                        onChange={(value) =>
+                          field.onChange(value, {
+                            shouldValidate: form.formState.isSubmitted,
+                          })
+                        }
+                        onBlur={() => {
+                          field.onBlur();
+                          form.trigger('name');
+                        }}
+                        placeholder="Acme Studio"
+                        leftIcon={<Container className="size-4" />}
+                        error={fieldState.error?.message}
+                        classNames={{
+                          field:
+                            'h-11 rounded-md border-ds-border bg-ds-surface',
+                          input: 'text-sm',
+                        }}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
 
-            <Form {...form}>
-              <form
-                noValidate
-                onSubmit={onSubmit}
-                className="flex flex-col gap-[18px]"
-              >
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field, fieldState }) => (
-                    <FormItem className="gap-2">
-                      <FormLabel className="text-xs font-semibold text-foreground">
-                        Workspace name
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          value={field.value ?? ''}
-                          disabled={archived}
-                          onChange={(value) =>
-                            field.onChange(value, {
-                              shouldValidate: form.formState.isSubmitted,
-                            })
-                          }
-                          onBlur={() => {
-                            field.onBlur();
-                            form.trigger('name');
-                          }}
-                          placeholder="Acme Studio"
-                          leftIcon={<Container className="size-4" />}
-                          error={fieldState.error?.message}
-                          classNames={{
-                            field:
-                              'h-11 rounded-md border-ds-border bg-ds-surface',
-                            input: 'text-sm',
-                          }}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+              <FormField
+                control={form.control}
+                name="icon"
+                render={({ field }) => (
+                  <FormItem className="w-full gap-2 sm:w-1/2">
+                    <FormLabel className="text-xs font-semibold text-foreground">
+                      Icon
+                    </FormLabel>
+                    <FormControl>
+                      <IconSelect
+                        value={field.value as WorkspaceIconKey}
+                        disabled={archived}
+                        onValueChange={(next) =>
+                          field.onChange(next, {
+                            shouldValidate: form.formState.isSubmitted,
+                          })
+                        }
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="icon"
-                  render={({ field }) => (
-                    <FormItem className="w-full gap-2 sm:w-1/2">
-                      <FormLabel className="text-xs font-semibold text-foreground">
-                        Icon
-                      </FormLabel>
-                      <FormControl>
-                        <IconSelect
-                          value={field.value as WorkspaceIconKey}
-                          disabled={archived}
-                          onValueChange={(next) =>
-                            field.onChange(next, {
-                              shouldValidate: form.formState.isSubmitted,
-                            })
-                          }
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <div className="flex w-full items-center justify-between pt-1">
-                  <StatefulButton
-                    type="submit"
-                    disabled={
-                      archived ||
-                      !canSave ||
-                      !hasChanges ||
-                      updateMutation.isPending
-                    }
-                    state={updateMutation.isPending ? 'loading' : 'idle'}
-                    loadingText="Saving…"
-                    icon={<Check className="h-4 w-4" />}
-                    className="h-9 gap-2 bg-ds-brand px-4 text-sm font-semibold text-white hover:bg-ds-brand/90"
-                  >
-                    Save changes
-                  </StatefulButton>
-                </div>
-              </form>
-            </Form>
-          </section>
-
-          <section className="flex w-full flex-col gap-[18px] rounded-xl border border-ds-border bg-ds-bg p-6">
-            <span className="font-mono text-[10px] font-semibold uppercase tracking-[1.2px] text-ds-danger">
-              Danger Zone · Owner Only
-            </span>
-
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex flex-1 flex-col gap-[3px]">
-                <p className="text-[13px] font-semibold leading-none text-foreground">
-                  {archived
-                    ? 'Restore this workspace'
-                    : 'Archive this workspace'}
-                </p>
-                <p className="text-[11px] leading-[1.45] text-muted-foreground">
-                  {archived
-                    ? 'Make it active and editable again.'
-                    : 'Becomes read-only for every member. Fully restorable, history preserved.'}
-                </p>
-              </div>
-              {archived ? (
+              <div className="flex w-full items-center justify-between pt-1">
                 <StatefulButton
-                  type="button"
-                  variant="outline"
-                  state={restoreMutation.isPending ? 'loading' : 'idle'}
-                  loadingText="Restoring…"
-                  icon={<ArchiveRestore className="h-3.5 w-3.5" />}
-                  onClick={() => restoreMutation.mutate()}
-                  className="h-8 shrink-0 gap-1.5 rounded-md border-ds-border bg-ds-surface px-3 text-xs font-semibold text-foreground"
+                  type="submit"
+                  disabled={
+                    archived ||
+                    !canSave ||
+                    !hasChanges ||
+                    updateMutation.isPending
+                  }
+                  state={updateMutation.isPending ? 'loading' : 'idle'}
+                  loadingText="Saving…"
+                  icon={<Check className="h-4 w-4" />}
+                  className="h-9 gap-2 bg-ds-brand px-4 text-sm font-semibold text-white hover:bg-ds-brand/90"
                 >
-                  Restore
+                  Save changes
                 </StatefulButton>
-              ) : (
-                <Button
-                  variant="outline"
-                  onClick={() => setArchiveOpen(true)}
-                  className="h-8 shrink-0 gap-1.5 rounded-md border-ds-danger bg-ds-danger-soft px-3 text-xs font-semibold text-ds-danger hover:bg-ds-danger-soft/80"
-                >
-                  <Archive className="h-3.5 w-3.5" />
-                  Archive…
-                </Button>
-              )}
-            </div>
-
-            <div className="h-px w-full bg-ds-border" />
-
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex flex-1 flex-col gap-[3px]">
-                <p className="flex-1 text-[13px] font-semibold text-foreground">
-                  Permanently delete workspace
-                </p>
-                <p className="text-[11px] leading-[1.45] text-muted-foreground">
-                  {archived
-                    ? 'Type the workspace name to confirm. This cannot be undone.'
-                    : 'Archive first — only archived workspaces can be deleted.'}
-                </p>
               </div>
+            </form>
+          </Form>
+        </section>
+
+        <section className="flex w-full flex-col gap-[18px] rounded-xl border border-ds-border bg-ds-bg p-6">
+          <span className="font-mono text-[10px] font-semibold uppercase tracking-[1.2px] text-ds-danger">
+            Danger Zone · Owner Only
+          </span>
+
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-1 flex-col gap-[3px]">
+              <p className="text-[13px] font-semibold leading-none text-foreground">
+                {archived ? 'Restore this workspace' : 'Archive this workspace'}
+              </p>
+              <p className="text-[11px] leading-[1.45] text-muted-foreground">
+                {archived
+                  ? 'Make it active and editable again.'
+                  : 'Becomes read-only for every member. Fully restorable, history preserved.'}
+              </p>
+            </div>
+            {archived ? (
+              <StatefulButton
+                type="button"
+                variant="outline"
+                state={restoreMutation.isPending ? 'loading' : 'idle'}
+                loadingText="Restoring…"
+                icon={<ArchiveRestore className="h-3.5 w-3.5" />}
+                onClick={() => restoreMutation.mutate()}
+                className="h-8 shrink-0 gap-1.5 rounded-md border-ds-border bg-ds-surface px-3 text-xs font-semibold text-foreground"
+              >
+                Restore
+              </StatefulButton>
+            ) : (
               <Button
                 variant="outline"
-                disabled={!archived}
-                onClick={() => {
-                  setConfirmName('');
-                  setDeleteOpen(true);
-                }}
-                className="h-8 shrink-0 gap-1.5 rounded-md border-ds-danger bg-ds-danger-soft px-3 text-xs font-semibold text-ds-danger hover:bg-ds-danger-soft/80 disabled:border-ds-border disabled:bg-transparent disabled:text-muted-foreground disabled:opacity-60"
+                onClick={() => setArchiveOpen(true)}
+                className="h-8 shrink-0 gap-1.5 rounded-md border-ds-danger bg-ds-danger-soft px-3 text-xs font-semibold text-ds-danger hover:bg-ds-danger-soft/80"
               >
-                <Trash2 className="h-3.5 w-3.5" />
-                Delete…
+                <Archive className="h-3.5 w-3.5" />
+                Archive…
               </Button>
-            </div>
-          </section>
-
-          <p className="flex items-center gap-2 text-[11px] leading-none text-muted-foreground">
-            <Info className="h-3 w-3 shrink-0" />
-            Changes propagate instantly to the switcher, header and every
-            member&apos;s sidebar.
-          </p>
-        </TabsContent>
-
-        <TabsContent value="members" className="mt-6">
-          <div className="rounded-lg border border-ds-border bg-ds-surface p-8 text-center">
-            <p className="text-sm font-medium text-foreground">Members</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Member management ships later.
-            </p>
+            )}
           </div>
-        </TabsContent>
-      </Tabs>
+
+          <div className="h-px w-full bg-ds-border" />
+
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-1 flex-col gap-[3px]">
+              <p className="flex-1 text-[13px] font-semibold text-foreground">
+                Permanently delete workspace
+              </p>
+              <p className="text-[11px] leading-[1.45] text-muted-foreground">
+                {archived
+                  ? 'Type the workspace name to confirm. This cannot be undone.'
+                  : 'Archive first — only archived workspaces can be deleted.'}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              disabled={!archived}
+              onClick={() => {
+                setConfirmName('');
+                setDeleteOpen(true);
+              }}
+              className="h-8 shrink-0 gap-1.5 rounded-md border-ds-danger bg-ds-danger-soft px-3 text-xs font-semibold text-ds-danger hover:bg-ds-danger-soft/80 disabled:border-ds-border disabled:bg-transparent disabled:text-muted-foreground disabled:opacity-60"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete…
+            </Button>
+          </div>
+        </section>
+
+        <p className="flex items-center gap-2 text-[11px] leading-none text-muted-foreground">
+          <Info className="h-3 w-3 shrink-0" />
+          Changes propagate instantly to the switcher, header and every
+          member&apos;s sidebar.
+        </p>
+      </div>
 
       <DialogPrimitive.Root open={archiveOpen} onOpenChange={setArchiveOpen}>
         <DialogPrimitive.Portal>

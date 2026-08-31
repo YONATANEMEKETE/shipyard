@@ -7,6 +7,7 @@ import { InviteMembersDialog } from '@/components/members/invite-members-dialog'
 import { MemberDirectory } from '@/components/members/member-directory';
 import { PendingInvitations } from '@/components/members/pending-invitations';
 import { useMembers } from '@/hooks/use-members';
+import { useSession } from '@/hooks/use-session';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -32,6 +33,7 @@ export function MembersPage({ slug }: { slug: string }) {
   const [search, setSearch] = useState('');
 
   const membersQuery = useMembers(slug);
+  const { data: session } = useSession();
 
   return (
     <div className="flex h-full w-full flex-col gap-6">
@@ -117,6 +119,7 @@ export function MembersPage({ slug }: { slug: string }) {
             loading={membersQuery.isPending}
             error={membersQuery.isError}
             onRetry={membersQuery.refetch}
+            currentUserId={session?.user.id}
           />
         </TabsContent>
         <TabsContent value="pending" className="min-h-0">

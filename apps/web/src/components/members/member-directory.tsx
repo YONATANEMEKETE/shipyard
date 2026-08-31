@@ -13,11 +13,13 @@ export function MemberDirectory({
   loading = false,
   error = false,
   onRetry,
+  currentUserId,
 }: {
   members: WorkspaceMemberCard[];
   loading?: boolean;
   error?: boolean;
   onRetry?: () => void;
+  currentUserId?: string;
 }) {
   return (
     <MembersTable
@@ -25,6 +27,7 @@ export function MemberDirectory({
       loading={loading}
       error={error}
       onRetry={onRetry}
+      currentUserId={currentUserId}
     />
   );
 }

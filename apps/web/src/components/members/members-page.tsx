@@ -55,6 +55,54 @@ export function MembersPage({ slug }: { slug: string }) {
   const hasActiveFilters =
     search.trim() !== '' || (roleFilter !== undefined && roleFilter !== 'ALL');
 
+  // Members who aren't Owner/Admin get the member view: no invite button,
+  // no tabs — just the directory with search + role filter (shipyard.pen
+  // "Screen / Members — Member View").
+  const isMemberView = workspace?.role === 'MEMBER';
+
+  const toolbar = (
+    <div className="flex items-center gap-2">
+      <Input
+        value={search}
+        onChange={setSearch}
+        placeholder="Search members…"
+        leftIcon={<Search className="size-[14px] text-muted-foreground" />}
+        classNames={{
+          field: 'h-[34px] w-[220px] rounded-lg border-ds-border bg-ds-surface',
+          input: 'text-xs',
+        }}
+      />
+      <Select value={roleFilter} onValueChange={setRoleFilter}>
+        <SelectTrigger className="h-[34px] gap-1.5 border-ds-border bg-ds-surface px-3 text-xs text-muted-foreground hover:border-ds-border">
+          <Filter className="size-[14px]" />
+          <SelectValue placeholder="Role" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="ALL">All roles</SelectItem>
+          <SelectItem value="OWNER">Owner</SelectItem>
+          <SelectItem value="ADMIN">Admin</SelectItem>
+          <SelectItem value="MEMBER">Member</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
+  const directory = (
+    <MemberDirectory
+      members={visibleMembers}
+      loading={membersQuery.isPending}
+      error={membersQuery.isError}
+      onRetry={membersQuery.refetch}
+      currentUserId={session?.user.id}
+      emptyTitle={hasActiveFilters ? 'No members match' : undefined}
+      emptyDescription={
+        hasActiveFilters
+          ? 'Try a different name or role — or clear the filters.'
+          : undefined
+      }
+    />
+  );
+
   return (
     <div className="flex h-full w-full flex-col gap-6">
       <span className="font-mono text-[10px] font-semibold uppercase tracking-[1.5px] text-ds-brand">
@@ -68,90 +116,63 @@ export function MembersPage({ slug }: { slug: string }) {
             Members
           </h1>
           <p className="text-[13px] leading-[1.5] text-muted-foreground">
-            Everyone with access to {workspaceName}. Roles take effect
-            immediately — projects owned by a removed member transfer
-            automatically to the Workspace Owner.
+            {isMemberView
+              ? `Everyone with access to ${workspaceName}. As a Member you can view the directory and manage your own work here — invite and role management are handled by Owners and Admins.`
+              : `Everyone with access to ${workspaceName}. Roles take effect immediately — projects owned by a removed member transfer automatically to the Workspace Owner.`}
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <Button
-            type="button"
-            onClick={() => setInviteOpen(true)}
-            className="h-9 gap-2 rounded-md bg-ds-brand px-4 text-sm font-semibold text-white hover:bg-ds-brand/90"
-          >
-            <UserPlus className="size-4" />
-            Invite members
-          </Button>
-        </div>
+        {!isMemberView ? (
+          <div className="flex items-center gap-2.5">
+            <Button
+              type="button"
+              onClick={() => setInviteOpen(true)}
+              className="h-9 gap-2 rounded-md bg-ds-brand px-4 text-sm font-semibold text-white hover:bg-ds-brand/90"
+            >
+              <UserPlus className="size-4" />
+              Invite members
+            </Button>
+          </div>
+        ) : null}
       </div>
 
-      {/* Tabs + toolbar — Directory / Pending with search + role filter */}
-      <Tabs defaultValue="directory" className="min-h-0 flex-1 flex-col gap-5">
-        <div className="flex w-full flex-wrap items-center justify-between gap-3">
-          <TabsList className="gap-2 border border-ds-border bg-ds-bg p-[3px]">
-            <TabsTrigger value="directory" className="group gap-2">
-              Directory
-              <span className="inline-flex h-[18px] items-center rounded-full border border-ds-border bg-ds-surface px-1.5 font-mono text-[10px] font-bold leading-none text-muted-foreground transition-colors group-aria-selected:border-[#F0D9B0] group-aria-selected:bg-ds-brand-soft group-aria-selected:text-ds-brand">
-                {membersQuery.data?.members.length ?? 0}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="pending" className="group gap-2">
-              Pending
-              <span className="inline-flex h-[18px] items-center rounded-full border border-ds-border bg-ds-surface px-1.5 font-mono text-[10px] font-bold leading-none text-muted-foreground transition-colors group-aria-selected:border-[#F0D9B0] group-aria-selected:bg-ds-brand-soft group-aria-selected:text-ds-brand">
-                0
-              </span>
-            </TabsTrigger>
-          </TabsList>
-
-          <div className="flex items-center gap-2">
-            <Input
-              value={search}
-              onChange={setSearch}
-              placeholder="Search members…"
-              leftIcon={
-                <Search className="size-[14px] text-muted-foreground" />
-              }
-              classNames={{
-                field:
-                  'h-[34px] w-[220px] rounded-lg border-ds-border bg-ds-surface',
-                input: 'text-xs',
-              }}
-            />
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="h-[34px] gap-1.5 border-ds-border bg-ds-surface px-3 text-xs text-muted-foreground hover:border-ds-border">
-                <Filter className="size-[14px]" />
-                <SelectValue placeholder="Role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All roles</SelectItem>
-                <SelectItem value="OWNER">Owner</SelectItem>
-                <SelectItem value="ADMIN">Admin</SelectItem>
-                <SelectItem value="MEMBER">Member</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      {isMemberView ? (
+        <div className="flex min-h-0 flex-1 flex-col gap-5">
+          {toolbar}
+          {directory}
         </div>
+      ) : (
+        <Tabs
+          defaultValue="directory"
+          className="min-h-0 flex-1 flex-col gap-5"
+        >
+          <div className="flex w-full flex-wrap items-center justify-between gap-3">
+            <TabsList className="gap-2 border border-ds-border bg-ds-bg p-[3px]">
+              <TabsTrigger value="directory" className="group gap-2">
+                Directory
+                <span className="inline-flex h-[18px] items-center rounded-full border border-ds-border bg-ds-surface px-1.5 font-mono text-[10px] font-bold leading-none text-muted-foreground transition-colors group-aria-selected:border-[#F0D9B0] group-aria-selected:bg-ds-brand-soft group-aria-selected:text-ds-brand">
+                  {membersQuery.data?.members.length ?? 0}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="pending" className="group gap-2">
+                Pending
+                <span className="inline-flex h-[18px] items-center rounded-full border border-ds-border bg-ds-surface px-1.5 font-mono text-[10px] font-bold leading-none text-muted-foreground transition-colors group-aria-selected:border-[#F0D9B0] group-aria-selected:bg-ds-brand-soft group-aria-selected:text-ds-brand">
+                  0
+                </span>
+              </TabsTrigger>
+            </TabsList>
 
-        <TabsContent value="directory" className="min-h-0">
-          <MemberDirectory
-            members={visibleMembers}
-            loading={membersQuery.isPending}
-            error={membersQuery.isError}
-            onRetry={membersQuery.refetch}
-            currentUserId={session?.user.id}
-            emptyTitle={hasActiveFilters ? 'No members match' : undefined}
-            emptyDescription={
-              hasActiveFilters
-                ? 'Try a different name or role — or clear the filters.'
-                : undefined
-            }
-          />
-        </TabsContent>
-        <TabsContent value="pending" className="min-h-0">
-          <PendingInvitations />
-        </TabsContent>
-      </Tabs>
+            {toolbar}
+          </div>
+
+          <TabsContent value="directory" className="min-h-0">
+            {directory}
+          </TabsContent>
+          <TabsContent value="pending" className="min-h-0">
+            <PendingInvitations />
+          </TabsContent>
+        </Tabs>
+      )}
 
       <InviteMembersDialog
         open={inviteOpen}

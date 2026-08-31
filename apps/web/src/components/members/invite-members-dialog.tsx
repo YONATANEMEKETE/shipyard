@@ -4,6 +4,9 @@ import { Mail, Send, X } from 'lucide-react';
 import { useState, type KeyboardEvent } from 'react';
 import { Dialog as DialogPrimitive } from 'radix-ui';
 
+import { StatefulButton } from '@/components/motion/button/stateful';
+import { useToast } from '@/components/providers/toast-provider';
+import { useInviteMembers } from '@/hooks/use-invitations';
 import { Button } from '@/components/ui/button';
 import { Input, type InputChip } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -24,6 +27,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 interface InviteMembersDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  slug: string;
   workspaceName: string;
 }
 
@@ -31,8 +35,9 @@ interface InviteMembersDialogProps {
  * Invite members dialog — matches "Element / Invite Members Modal" in
  * shipyard.pen: title + subcopy header, chip input for email addresses
  * (Enter commits, Backspace removes the last chip) and a two-card role
- * selector with Member preselected. UI-only for now; the send action is
- * wired to the API next.
+ * selector with Member preselected. Send posts the chips + role to
+ * useInviteMembers (single batch call), toasts on result and closes on
+ * success; on error the chips stay intact for fixing.
  *
  * Content is keyed by open state so it remounts fresh on every open (the
  * emails/role/error reset without effect-based setState).
@@ -40,6 +45,7 @@ interface InviteMembersDialogProps {
 export function InviteMembersDialog({
   open,
   onOpenChange,
+  slug,
   workspaceName,
 }: InviteMembersDialogProps) {
   return (
@@ -47,7 +53,9 @@ export function InviteMembersDialog({
       <DialogPrimitive.Portal>
         <InviteMembersDialogContent
           key={open ? 'open' : 'closed'}
+          slug={slug}
           workspaceName={workspaceName}
+          onOpenChange={onOpenChange}
         />
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
@@ -55,10 +63,35 @@ export function InviteMembersDialog({
 }
 
 function InviteMembersDialogContent({
+  slug,
   workspaceName,
+  onOpenChange,
 }: {
+  slug: string;
   workspaceName: string;
+  onOpenChange: (open: boolean) => void;
 }) {
+  const { showToast } = useToast();
+  const inviteMutation = useInviteMembers(slug, {
+    onSuccess: (data) => {
+      const count = data.invitations.length;
+      showToast({
+        status: 'success',
+        title: 'Invitations sent',
+        description:
+          count === 1 ? '1 invitation sent.' : `${count} invitations sent.`,
+      });
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      showToast({
+        status: 'error',
+        title: 'Failed to send invitations',
+        description: error.message,
+      });
+    },
+  });
+
   const [emails, setEmails] = useState<InputChip[]>([]);
   const [draft, setDraft] = useState('');
   const [error, setError] = useState<string | boolean>(false);
@@ -221,15 +254,23 @@ function InviteMembersDialogContent({
               Cancel
             </Button>
           </DialogPrimitive.Close>
-          <Button
+          <StatefulButton
             type="button"
+            state={inviteMutation.isPending ? 'loading' : 'idle'}
+            loadingText="Sending…"
             disabled={emails.length === 0}
+            onClick={() =>
+              inviteMutation.mutate({
+                emails: emails.map((chip) => chip.label),
+                role,
+              })
+            }
+            icon={<Send className="size-4" />}
             className="h-9 gap-2 rounded-md bg-ds-brand px-3.5 text-xs font-semibold text-white hover:bg-ds-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Send className="size-4" />
             Send {emails.length}{' '}
             {emails.length === 1 ? 'invitation' : 'invitations'}
-          </Button>
+          </StatefulButton>
         </div>
       </DialogPrimitive.Content>
     </>

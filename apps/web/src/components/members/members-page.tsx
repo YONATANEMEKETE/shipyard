@@ -54,6 +54,7 @@ export function MembersPage({ slug }: { slug: string }) {
       <InviteMembersDialog
         open={inviteOpen}
         onOpenChange={setInviteOpen}
+        slug={slug}
         workspaceName={workspaceName}
       />
     </div>

@@ -45,6 +45,7 @@ function MemberRowSkeleton() {
   return (
     <div
       aria-hidden
+      data-testid="member-row-skeleton"
       className="flex h-12 items-center gap-3 border-b border-ds-border/70 px-4 last:border-b-0"
     >
       {/* Identity — avatar + name/email placeholders */}
@@ -72,7 +73,13 @@ function MemberRowSkeleton() {
   );
 }
 
-function MemberRow({ member }: { member: WorkspaceMemberCard }) {
+function MemberRow({
+  member,
+  isCurrentUser,
+}: {
+  member: WorkspaceMemberCard;
+  isCurrentUser: boolean;
+}) {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -83,17 +90,33 @@ function MemberRow({ member }: { member: WorkspaceMemberCard }) {
     >
       {/* Identity — avatar + name/email */}
       <div className="flex min-w-0 flex-1 items-center gap-3">
-        <span
-          className={cn(
-            'grid size-7 shrink-0 place-items-center rounded-full font-mono text-[9px] font-bold',
-            AVATAR_TONE[member.role],
-          )}
-        >
-          {initialsOf(member.name)}
-        </span>
+        {member.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={member.image}
+            alt=""
+            className="size-7 shrink-0 rounded-full border border-ds-border/60 object-cover"
+          />
+        ) : (
+          <span
+            className={cn(
+              'grid size-7 shrink-0 place-items-center rounded-full font-mono text-[9px] font-bold',
+              AVATAR_TONE[member.role],
+            )}
+          >
+            {initialsOf(member.name)}
+          </span>
+        )}
         <div className="flex min-w-0 flex-col gap-[3px]">
-          <span className="truncate text-[12.5px] font-semibold leading-none text-foreground">
-            {member.name}
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate text-[12.5px] font-semibold leading-none text-foreground">
+              {member.name}
+            </span>
+            {isCurrentUser ? (
+              <span className="inline-flex h-[18px] shrink-0 items-center rounded-full bg-foreground px-1.5 font-mono text-[8px] font-bold leading-none text-white">
+                YOU
+              </span>
+            ) : null}
           </span>
           <span className="truncate text-[10.5px] leading-none text-muted-foreground">
             {member.email}
@@ -135,11 +158,13 @@ export function MembersTable({
   loading = false,
   error = false,
   onRetry,
+  currentUserId,
 }: {
   members: WorkspaceMemberCard[];
   loading?: boolean;
   error?: boolean;
   onRetry?: () => void;
+  currentUserId?: string;
 }) {
   const showEmpty = !loading && !error && members.length === 0;
   const centered = (showEmpty || error) && !loading;
@@ -196,7 +221,13 @@ export function MembersTable({
             description="Invite teammates to get started — they'll show up here once they accept."
           />
         ) : (
-          members.map((member) => <MemberRow key={member.id} member={member} />)
+          members.map((member) => (
+            <MemberRow
+              key={member.id}
+              member={member}
+              isCurrentUser={member.userId === currentUserId}
+            />
+          ))
         )}
         {/* Bottom fade — lets the last rows dissolve into the surface before the footer */}
         <div

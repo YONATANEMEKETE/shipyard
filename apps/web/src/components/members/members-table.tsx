@@ -1,11 +1,13 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Users } from 'lucide-react';
+import { RotateCw, Users } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState } from 'react';
 import type { WorkspaceMemberCard, WorkspaceRole } from '@shipyard/shared';
 
 import { MemberBadge } from '@/components/members/member-badge';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorState } from '@/components/ui/error-state';
+import { Button } from '@/components/ui/button';
 import { SPRING_LAYOUT } from '@/lib/ease';
 import { cn } from '@/lib/utils';
 
@@ -131,11 +133,16 @@ function MemberRow({ member }: { member: WorkspaceMemberCard }) {
 export function MembersTable({
   members,
   loading = false,
+  error = false,
+  onRetry,
 }: {
   members: WorkspaceMemberCard[];
   loading?: boolean;
+  error?: boolean;
+  onRetry?: () => void;
 }) {
-  const showEmpty = !loading && members.length === 0;
+  const showEmpty = !loading && !error && members.length === 0;
+  const centered = (showEmpty || error) && !loading;
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-ds-border bg-ds-surface">
@@ -157,13 +164,31 @@ export function MembersTable({
       <div
         className={cn(
           'relative min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-          showEmpty && 'flex flex-col items-center justify-center',
+          centered && 'flex flex-col items-center justify-center',
         )}
       >
         {loading ? (
           Array.from({ length: 16 }, (_, index) => (
             <MemberRowSkeleton key={index} />
           ))
+        ) : error ? (
+          <ErrorState
+            title="Couldn't load members"
+            description="We ran into a problem fetching the member list. Try again in a moment."
+            action={
+              onRetry ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onRetry}
+                  className="h-8 gap-2 rounded-md border-ds-border bg-ds-surface px-3 text-xs font-semibold text-foreground"
+                >
+                  <RotateCw className="size-3.5" />
+                  Try again
+                </Button>
+              ) : undefined
+            }
+          />
         ) : showEmpty ? (
           <EmptyState
             icon={Users}

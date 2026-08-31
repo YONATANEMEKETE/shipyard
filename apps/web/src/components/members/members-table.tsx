@@ -1,9 +1,11 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState } from 'react';
 import type { WorkspaceMemberCard, WorkspaceRole } from '@shipyard/shared';
 
 import { MemberBadge } from '@/components/members/member-badge';
+import { EmptyState } from '@/components/ui/empty-state';
 import { SPRING_LAYOUT } from '@/lib/ease';
 import { cn } from '@/lib/utils';
 
@@ -133,6 +135,8 @@ export function MembersTable({
   members: WorkspaceMemberCard[];
   loading?: boolean;
 }) {
+  const showEmpty = !loading && members.length === 0;
+
   return (
     <div className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-ds-border bg-ds-surface">
       {/* Mono column header */}
@@ -150,14 +154,25 @@ export function MembersTable({
       </div>
 
       {/* Rows */}
-      <div className="relative min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {loading
-          ? Array.from({ length: 16 }, (_, index) => (
-              <MemberRowSkeleton key={index} />
-            ))
-          : members.map((member) => (
-              <MemberRow key={member.id} member={member} />
-            ))}
+      <div
+        className={cn(
+          'relative min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+          showEmpty && 'flex flex-col items-center justify-center',
+        )}
+      >
+        {loading ? (
+          Array.from({ length: 16 }, (_, index) => (
+            <MemberRowSkeleton key={index} />
+          ))
+        ) : showEmpty ? (
+          <EmptyState
+            icon={Users}
+            title="No members yet"
+            description="Invite teammates to get started — they'll show up here once they accept."
+          />
+        ) : (
+          members.map((member) => <MemberRow key={member.id} member={member} />)
+        )}
         {/* Bottom fade — lets the last rows dissolve into the surface before the footer */}
         <div
           aria-hidden

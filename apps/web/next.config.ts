@@ -23,6 +23,12 @@ const nextConfig: NextConfig = {
         destination: `${apiUrl}/api/v1/workspaces/:path*`,
       },
       {
+        // Members (F3) — workspace-scoped member directory, role changes,
+        // remove/leave, transfer-ownership, and invitation management.
+        source: '/api/v1/invitations/:path*',
+        destination: `${apiUrl}/api/v1/invitations/:path*`,
+      },
+      {
         source: '/api/v1/test/:path*',
         destination: `${apiUrl}/api/v1/test/:path*`,
       },

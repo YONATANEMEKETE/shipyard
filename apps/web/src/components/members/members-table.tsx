@@ -36,6 +36,38 @@ function formatJoined(iso: string): string {
   });
 }
 
+/** Skeleton row — mirrors MemberRow's cell geometry so loading → data swaps without layout shift. */
+function MemberRowSkeleton() {
+  return (
+    <div
+      aria-hidden
+      className="flex h-12 items-center gap-3 border-b border-ds-border/70 px-4 last:border-b-0"
+    >
+      {/* Identity — avatar + name/email placeholders */}
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <span className="size-7 shrink-0 animate-pulse rounded-full bg-ds-border/70" />
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <span className="h-2.5 w-32 max-w-full animate-pulse rounded bg-ds-border/70" />
+          <span className="h-2 w-48 max-w-full animate-pulse rounded bg-ds-border/40" />
+        </div>
+      </div>
+
+      {/* Role cell — same 92px column as MemberBadge */}
+      <div className="flex w-[92px] shrink-0 items-center justify-start">
+        <span className="h-5 w-[68px] animate-pulse rounded-full bg-ds-border/70" />
+      </div>
+
+      {/* Joined cell — same ml-6 w-24 column */}
+      <div className="ml-6 w-24 shrink-0">
+        <span className="block h-2.5 w-16 animate-pulse rounded bg-ds-border/40" />
+      </div>
+
+      {/* Row action spacer */}
+      <span className="size-[26px] shrink-0" />
+    </div>
+  );
+}
+
 function MemberRow({ member }: { member: WorkspaceMemberCard }) {
   const [hovered, setHovered] = useState(false);
 
@@ -94,7 +126,13 @@ function MemberRow({ member }: { member: WorkspaceMemberCard }) {
   );
 }
 
-export function MembersTable({ members }: { members: WorkspaceMemberCard[] }) {
+export function MembersTable({
+  members,
+  loading = false,
+}: {
+  members: WorkspaceMemberCard[];
+  loading?: boolean;
+}) {
   return (
     <div className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-ds-border bg-ds-surface">
       {/* Mono column header */}
@@ -113,9 +151,13 @@ export function MembersTable({ members }: { members: WorkspaceMemberCard[] }) {
 
       {/* Rows */}
       <div className="relative min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {members.map((member) => (
-          <MemberRow key={member.id} member={member} />
-        ))}
+        {loading
+          ? Array.from({ length: 16 }, (_, index) => (
+              <MemberRowSkeleton key={index} />
+            ))
+          : members.map((member) => (
+              <MemberRow key={member.id} member={member} />
+            ))}
         {/* Bottom fade — lets the last rows dissolve into the surface before the footer */}
         <div
           aria-hidden
@@ -129,20 +171,20 @@ export function MembersTable({ members }: { members: WorkspaceMemberCard[] }) {
           <button
             type="button"
             aria-label="Previous page"
-            className="grid size-7 place-items-center rounded-lg border border-ds-border bg-ds-bg text-muted-foreground transition-colors hover:text-foreground"
+            className="grid size-7 place-items-center rounded-md border border-ds-border bg-ds-bg text-muted-foreground transition-colors hover:text-foreground"
           >
             <ChevronLeft className="size-[14px]" />
           </button>
           <button
             type="button"
-            className="grid size-7 place-items-center rounded-lg bg-ds-brand text-xs font-semibold text-white"
+            className="grid size-7 place-items-center rounded-md bg-ds-brand text-xs font-semibold text-white"
           >
             1
           </button>
           <button
             type="button"
             aria-label="Next page"
-            className="grid size-7 place-items-center rounded-lg border border-ds-border bg-ds-bg text-muted-foreground transition-colors hover:text-foreground"
+            className="grid size-7 place-items-center rounded-md border border-ds-border bg-ds-bg text-muted-foreground transition-colors hover:text-foreground"
           >
             <ChevronRight className="size-[14px]" />
           </button>

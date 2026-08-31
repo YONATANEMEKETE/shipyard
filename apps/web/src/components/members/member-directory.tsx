@@ -4,8 +4,8 @@ import { mockMembers } from '@/components/members/mock-members';
 /**
  * Member directory tab content — renders the members table from mock data
  * shaped exactly like the API response. Swaps to live useMembers data
- * when wired.
+ * when wired; `loading` drives the row skeletons.
  */
-export function MemberDirectory() {
-  return <MembersTable members={mockMembers} />;
+export function MemberDirectory({ loading = false }: { loading?: boolean }) {
+  return <MembersTable members={mockMembers} loading={loading} />;
 }

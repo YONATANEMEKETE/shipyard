@@ -1,13 +1,11 @@
 'use client';
 
 import { Filter, Search, UserPlus } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { InviteMembersDialog } from '@/components/members/invite-members-dialog';
 import { MemberDirectory } from '@/components/members/member-directory';
-import { mockMembers } from '@/components/members/mock-members';
 import { PendingInvitations } from '@/components/members/pending-invitations';
-import { useInvitations } from '@/hooks/use-invitations';
 import { useMembers } from '@/hooks/use-members';
 import { Button } from '@/components/ui/button';
 import {
@@ -34,28 +32,6 @@ export function MembersPage({ slug }: { slug: string }) {
   const [search, setSearch] = useState('');
 
   const membersQuery = useMembers(slug);
-  const invitationsQuery = useInvitations(slug);
-
-  // Temporary: log fetched members + invitations until the directory UI is wired.
-  useEffect(() => {
-    if (membersQuery.data) {
-      console.log('[members] loaded', membersQuery.data.members);
-    }
-    if (invitationsQuery.data) {
-      console.log(
-        '[members] invitations loaded',
-        invitationsQuery.data.invitations,
-      );
-    }
-    if (membersQuery.isError) {
-      console.error('[members] load failed', membersQuery.error);
-    }
-  }, [
-    membersQuery.data,
-    membersQuery.isError,
-    membersQuery.error,
-    invitationsQuery.data,
-  ]);
 
   return (
     <div className="flex h-full w-full flex-col gap-6">
@@ -95,8 +71,7 @@ export function MembersPage({ slug }: { slug: string }) {
             <TabsTrigger value="directory" className="group gap-2">
               Directory
               <span className="inline-flex h-[18px] items-center rounded-full border border-ds-border bg-ds-surface px-1.5 font-mono text-[10px] font-bold leading-none text-muted-foreground transition-colors group-aria-selected:border-[#F0D9B0] group-aria-selected:bg-ds-brand-soft group-aria-selected:text-ds-brand">
-                {/* Temporary — counts come from live queries when wired */}
-                {mockMembers.length}
+                {membersQuery.data?.members.length ?? 0}
               </span>
             </TabsTrigger>
             <TabsTrigger value="pending" className="group gap-2">
@@ -137,7 +112,12 @@ export function MembersPage({ slug }: { slug: string }) {
         </div>
 
         <TabsContent value="directory" className="min-h-0">
-          <MemberDirectory />
+          <MemberDirectory
+            members={membersQuery.data?.members ?? []}
+            loading={membersQuery.isPending}
+            error={membersQuery.isError}
+            onRetry={membersQuery.refetch}
+          />
         </TabsContent>
         <TabsContent value="pending" className="min-h-0">
           <PendingInvitations />

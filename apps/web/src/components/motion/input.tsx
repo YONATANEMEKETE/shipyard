@@ -7,6 +7,7 @@ import {
   motion,
   useReducedMotion,
 } from 'motion/react';
+import { X } from 'lucide-react';
 import {
   forwardRef,
   useEffect,
@@ -29,6 +30,11 @@ export type InputClassNames = {
   errorMessage?: string;
 };
 
+export interface InputChip {
+  id: string;
+  label: string;
+}
+
 export interface InputProps extends Omit<
   InputHTMLAttributes<HTMLInputElement>,
   'value' | 'defaultValue' | 'onChange'
@@ -42,6 +48,11 @@ export interface InputProps extends Omit<
   success?: boolean;
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
+  /** Render value chips inside the field (tag-input mode). Combine with
+   *  onRemoveChip; Enter/Backspace behaviour is owned by the consumer. */
+  chips?: InputChip[];
+  onRemoveChip?: (id: string) => void;
+  chipRemoveIcon?: ReactNode;
   className?: string;
   classNames?: InputClassNames;
 }
@@ -58,6 +69,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     success,
     leftIcon,
     rightIcon,
+    chips,
+    onRemoveChip,
+    chipRemoveIcon,
     className,
     classNames,
     disabled,
@@ -84,6 +98,39 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
 
   // Right edge shows the success check, otherwise the caller's right icon.
   const rightSlot = success ? null : rightIcon;
+  const chipsPresent = (chips?.length ?? 0) > 0;
+
+  const inputElement = (
+    <input
+      ref={ref}
+      id={id}
+      type={type}
+      value={value}
+      disabled={disabled}
+      aria-invalid={hasError || undefined}
+      aria-describedby={errorMessage ? `${id}-error` : undefined}
+      {...rest}
+      onChange={(e) => handleChange(e.target.value)}
+      onFocus={(event) => {
+        setFocused(true);
+        onFocus?.(event);
+      }}
+      onBlur={(event) => {
+        setFocused(false);
+        onBlur?.(event);
+      }}
+      className={cn(
+        chipsPresent
+          ? 'h-6 min-w-[140px] flex-1 bg-transparent text-sm text-foreground caret-ds-brand outline-none'
+          : 'peer h-full w-full bg-transparent text-base leading-6 text-foreground caret-foreground outline-none',
+        'placeholder:text-muted-foreground/60',
+        !chipsPresent && (leftIcon ? 'pl-10' : 'pl-3.5'),
+        !chipsPresent && (rightSlot || success ? 'pr-10' : 'pr-3.5'),
+        disabled && 'cursor-not-allowed',
+        classNames?.input,
+      )}
+    />
+  );
 
   // Shake the field when an error appears.
   useEffect(() => {
@@ -126,7 +173,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
                 : 'idle'
         }
         className={cn(
-          'relative h-9 overflow-hidden rounded-md border transition-colors duration-200',
+          'relative rounded-md border transition-colors duration-200',
+          chipsPresent
+            ? 'flex h-auto min-h-9 flex-wrap items-center gap-1.5'
+            : 'h-9 overflow-hidden',
           'border-border',
           focused && !hasError && 'border-foreground/40 ring-2 ring-ring/40',
           hasError && 'border-destructive ring-2 ring-destructive/25',
@@ -145,33 +195,37 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           </span>
         ) : null}
 
-        <input
-          ref={ref}
-          id={id}
-          type={type}
-          value={value}
-          disabled={disabled}
-          aria-invalid={hasError || undefined}
-          aria-describedby={errorMessage ? `${id}-error` : undefined}
-          {...rest}
-          onChange={(e) => handleChange(e.target.value)}
-          onFocus={(event) => {
-            setFocused(true);
-            onFocus?.(event);
-          }}
-          onBlur={(event) => {
-            setFocused(false);
-            onBlur?.(event);
-          }}
-          className={cn(
-            'peer h-full w-full bg-transparent text-base leading-6 text-foreground caret-foreground outline-none',
-            'placeholder:text-muted-foreground/60',
-            leftIcon ? 'pl-10' : 'pl-3.5',
-            rightSlot || success ? 'pr-10' : 'pr-3.5',
-            disabled && 'cursor-not-allowed',
-            classNames?.input,
-          )}
-        />
+        {chipsPresent ? (
+          <div
+            className={cn(
+              'flex min-w-0 flex-1 flex-wrap items-center gap-1.5 py-2',
+              leftIcon ? 'pl-10' : 'pl-3.5',
+              'pr-2.5',
+            )}
+          >
+            {chips?.map((chip) => (
+              <span
+                key={chip.id}
+                className="inline-flex h-6 max-w-full items-center gap-1.5 rounded-full border border-[#EED8A8] bg-ds-brand-soft px-2 text-[11px] font-medium text-foreground"
+              >
+                <span className="truncate">{chip.label}</span>
+                {onRemoveChip ? (
+                  <button
+                    type="button"
+                    aria-label={`Remove ${chip.label}`}
+                    onClick={() => onRemoveChip(chip.id)}
+                    className="flex size-3.5 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    {chipRemoveIcon ?? <X className="size-3" />}
+                  </button>
+                ) : null}
+              </span>
+            ))}
+            {inputElement}
+          </div>
+        ) : (
+          inputElement
+        )}
 
         {success ? (
           <motion.svg

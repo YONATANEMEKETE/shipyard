@@ -1,20 +1,20 @@
 import type { WorkspaceMemberCard } from '@shipyard/shared';
 
 import { MembersTable } from '@/components/members/members-table';
-import { mockMembers } from '@/components/members/mock-members';
 
 /**
- * Member directory tab content — renders the members table. Uses mock data
- * shaped exactly like the API response until useMembers is wired; `loading`
- * drives the row skeletons, an empty list renders the global EmptyState.
+ * Member directory tab content — renders the members table with live data.
+ * The table resolves its own states: `loading` drives the row skeletons,
+ * `error` renders the ErrorState with retry, an empty list renders the
+ * EmptyState, otherwise the roster rows.
  */
 export function MemberDirectory({
-  members = mockMembers,
+  members,
   loading = false,
   error = false,
   onRetry,
 }: {
-  members?: WorkspaceMemberCard[];
+  members: WorkspaceMemberCard[];
   loading?: boolean;
   error?: boolean;
   onRetry?: () => void;

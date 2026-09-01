@@ -33,6 +33,7 @@ import {
   WorkspaceArchivedError,
 } from '../workspace/errors.js';
 import { membersRepository } from './repository.js';
+import { projectsService } from '../projects/service.js';
 
 /**
  * Members service — owns roles, invitation lifecycle, and membership
@@ -179,11 +180,25 @@ export const membersService = {
     if (context.role === 'ADMIN' && target.role !== 'MEMBER')
       throw new ForbiddenRoleError();
 
-    await prisma.$transaction(async (tx) => {
-      // Project transfer hookup (Checkpoint B) — currently projects table does
-      // not exist, so this is a no-op in Checkpoint A. Kept in-transaction so
-      // future F4 wiring is atomic without restructuring.
+    // F4 Checkpoint B: transfer the removed member's owned projects to the
+    // current workspace OWNER inside the same transaction as the removal —
+    // all-or-nothing (api-design §8.7 / §6.6). Covers archived projects too.
+    const owner = await membersRepository.findOwnerMember(
+      prisma,
+      context.workspaceId,
+    );
+    const transferredProjects = await prisma.$transaction(async (tx) => {
+      let transferred = 0;
+      if (owner && target.userId !== owner.userId) {
+        transferred = await projectsService.transferOwnedProjects(
+          context.workspaceId,
+          target.userId,
+          owner.userId,
+          tx,
+        );
+      }
       await membersRepository.deleteMember(tx, memberId);
+      return transferred;
     });
 
     logger.info(
@@ -193,12 +208,12 @@ export const membersService = {
         removedMemberId: memberId,
         actorMemberId: context.memberId,
         actorRole: context.role,
-        transferredProjects: 0,
+        transferredProjects,
       },
       'member.removed',
     );
 
-    return { removedMemberId: memberId, transferredProjects: 0 };
+    return { removedMemberId: memberId, transferredProjects };
   },
 
   // ── Leave ──────────────────────────────────────────────────────────────
@@ -214,8 +229,28 @@ export const membersService = {
     if (context.status === 'ARCHIVED') throw new WorkspaceArchivedError();
     if (context.role === 'OWNER') throw new TransferRequiredError();
 
-    await prisma.$transaction(async (tx) => {
+    // F4 Checkpoint B: transfer the leaving member's owned projects to the
+    // current workspace OWNER inside the same transaction as the leave.
+    const owner = await membersRepository.findOwnerMember(
+      prisma,
+      context.workspaceId,
+    );
+    const leaver = await membersRepository.findMemberById(
+      prisma,
+      context.memberId,
+    );
+    const transferredProjects = await prisma.$transaction(async (tx) => {
+      let transferred = 0;
+      if (owner && leaver && leaver.userId !== owner.userId) {
+        transferred = await projectsService.transferOwnedProjects(
+          context.workspaceId,
+          leaver.userId,
+          owner.userId,
+          tx,
+        );
+      }
       await membersRepository.deleteMember(tx, context.memberId);
+      return transferred;
     });
 
     logger.info(
@@ -223,11 +258,12 @@ export const membersService = {
         workspaceId: context.workspaceId,
         workspaceSlug: context.slug,
         memberId: context.memberId,
+        transferredProjects,
       },
       'member.left_workspace',
     );
 
-    return { transferredProjects: 0 };
+    return { transferredProjects };
   },
 
   // ── Transfer ownership ─────────────────────────────────────────────────

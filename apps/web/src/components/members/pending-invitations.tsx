@@ -1,28 +1,50 @@
-import { MailPlus } from 'lucide-react';
+'use client';
 
-import { EmptyState } from '@/components/ui/empty-state';
+import { useMemo } from 'react';
+
+import { PendingInvitationsTable } from '@/components/members/pending-invitations-table';
+import { MOCK_PENDING_INVITATIONS } from '@/components/members/mock-pending-invitations';
 
 /**
- * Pending invitations content — placeholder for the pending invites tab
- * (screen "Screen / Members — Pending Invitations" in shipyard.pen).
- * Wired to useInvitations next.
+ * Pending tab content — the invitations table fed by mock rows today
+ * (mock-pending-invitations.ts). The toolbar (search + status filter) lives
+ * in MembersPage's "Tabs + Toolbar Row" per shipyard.pen; this component only
+ * filters the roster and renders the card, mirroring MemberDirectory's shape
+ * so the swap to useInvitations later touches one file.
  */
-export function PendingInvitations() {
+export function PendingInvitations({
+  search = '',
+  status,
+}: {
+  search?: string;
+  status?: string | undefined;
+}) {
+  // Client-side filtering — same shape as MembersPage's directory filtering.
+  const visibleInvitations = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return MOCK_PENDING_INVITATIONS.filter((invitation) => {
+      const matchesSearch =
+        query === '' || invitation.email.toLowerCase().includes(query);
+      const matchesStatus =
+        status === undefined ||
+        status === 'ALL' ||
+        invitation.status === status;
+      return matchesSearch && matchesStatus;
+    });
+  }, [search, status]);
+
+  const hasActiveFilters =
+    search.trim() !== '' || (status !== undefined && status !== 'ALL');
+
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-ds-border bg-ds-surface">
-      <div className="grid h-9 grid-cols-[2fr_3fr_1fr_auto] items-center gap-3 border-b border-ds-border bg-ds-bg px-4 font-mono text-[10px] font-semibold uppercase tracking-[0.8px] text-muted-foreground">
-        <span>Invitee</span>
-        <span>Email</span>
-        <span>Role</span>
-        <span>Actions</span>
-      </div>
-      <div className="flex min-h-0 flex-1 items-center justify-center">
-        <EmptyState
-          icon={MailPlus}
-          title="Pending invitations"
-          description="Invite rows (with resend / revoke) land here once wired to the API."
-        />
-      </div>
-    </div>
+    <PendingInvitationsTable
+      invitations={visibleInvitations}
+      emptyTitle={hasActiveFilters ? 'No invitations match' : undefined}
+      emptyDescription={
+        hasActiveFilters
+          ? 'Try a different email or status — or clear the filters.'
+          : undefined
+      }
+    />
   );
 }

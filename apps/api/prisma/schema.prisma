@@ -24,6 +24,8 @@ model User {
   accounts         Account[]
   workspaceMembers WorkspaceMember[]
   sentInvitations  Invitation[]      @relation("CreatedInvitations")
+  ownedProjects    Project[]
+  viewPreferences  ViewPreference[]
 
   @@unique([email])
   @@map("user")
@@ -112,8 +114,10 @@ model Workspace {
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
 
-  members     WorkspaceMember[]
-  invitations Invitation[]
+  members         WorkspaceMember[]
+  invitations     Invitation[]
+  projects        Project[]
+  viewPreferences ViewPreference[]
 
   @@map("workspace")
 }
@@ -154,4 +158,67 @@ model Invitation {
   @@index([expiresAt])
   @@index([createdById])
   @@map("invitation")
+}
+
+// ── Projects (F4) ───────────────────────────────────────────────────────────
+// Prisma-owned (hand-modeled, like workspace/members). See
+// shipyard-design/04-Engineering/features/projects/data-model.md §2.
+
+enum ProjectStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+}
+
+// Generic per-user-per-workspace, per-entity List/Kanban choice (rule 12).
+// PROJECT ships here (F4); F5 widens with ISSUE (additive enum widening).
+enum ViewScope {
+  PROJECT
+}
+
+enum ViewType {
+  LIST
+  KANBAN
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  workspaceId String
+  name        String        @db.VarChar(120)
+  description String?       @db.Text
+  status      ProjectStatus @default(ACTIVE)
+  ownerId     String
+  archivedAt  DateTime?
+  startDate   DateTime?     @db.Date
+  targetDate  DateTime?     @db.Date
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  owner     User      @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+
+  // D3: case-insensitive, workspace-scoped name uniqueness is a raw SQL
+  // functional index (project_name_unique) appended to the migration.
+  @@index([workspaceId])
+  @@index([status])
+  @@index([ownerId])
+  @@index([archivedAt])
+  @@map("project")
+}
+
+model ViewPreference {
+  id          String    @id @default(cuid())
+  workspaceId String
+  userId      String
+  scope       ViewScope
+  view        ViewType  @default(LIST)
+  updatedAt   DateTime  @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // one preference per user per workspace per entity (rule 12 independence)
+  @@unique([workspaceId, userId, scope])
+  @@index([workspaceId])
+  @@map("view_preference")
 }

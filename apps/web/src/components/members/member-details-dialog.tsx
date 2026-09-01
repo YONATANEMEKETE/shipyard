@@ -57,6 +57,7 @@ interface MemberDetailsDialogProps {
   member: WorkspaceMemberCard;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onChangeRole: () => void;
   workspaceName: string;
   /** Viewer's role on this workspace — drives which action sections render. */
   viewerRole?: WorkspaceRole;
@@ -69,6 +70,7 @@ export function MemberDetailsDialog({
   member,
   open,
   onOpenChange,
+  onChangeRole,
   workspaceName,
   viewerRole,
   currentUserId,
@@ -195,6 +197,7 @@ export function MemberDetailsDialog({
             <div className="flex w-full flex-col gap-2.5 px-6 pb-2 pt-6">
               <button
                 type="button"
+                onClick={onChangeRole}
                 className="flex h-11 w-full items-center gap-3 rounded-lg border border-ds-border bg-ds-bg px-3 text-left transition-colors hover:border-ds-border-strong"
               >
                 <UserCog

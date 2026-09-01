@@ -189,13 +189,13 @@ export function MembersPage({ slug }: { slug: string }) {
             <TabsList className="gap-2 border border-ds-border bg-ds-bg p-[3px]">
               <TabsTrigger value="directory" className="group gap-2">
                 Directory
-                <span className="inline-flex h-[18px] items-center rounded-full border border-ds-border bg-ds-surface px-1.5 font-mono text-[10px] font-bold leading-none text-muted-foreground transition-colors group-aria-selected:border-[#F0D9B0] group-aria-selected:bg-ds-brand-soft group-aria-selected:text-ds-brand">
+                <span className="inline-flex h-[18px] items-center rounded-full border border-ds-border bg-ds-surface px-1.5 font-mono text-[10px] font-bold leading-none text-muted-foreground transition-colors group-aria-selected:border-ds-warning/40 group-aria-selected:bg-ds-brand-soft group-aria-selected:text-ds-brand">
                   {membersQuery.data?.members.length ?? 0}
                 </span>
               </TabsTrigger>
               <TabsTrigger value="pending" className="group gap-2">
                 Pending
-                <span className="inline-flex h-[18px] items-center rounded-full border border-ds-border bg-ds-surface px-1.5 font-mono text-[10px] font-bold leading-none text-muted-foreground transition-colors group-aria-selected:border-[#F0D9B0] group-aria-selected:bg-ds-brand-soft group-aria-selected:text-ds-brand">
+                <span className="inline-flex h-[18px] items-center rounded-full border border-ds-border bg-ds-surface px-1.5 font-mono text-[10px] font-bold leading-none text-muted-foreground transition-colors group-aria-selected:border-ds-warning/40 group-aria-selected:bg-ds-brand-soft group-aria-selected:text-ds-brand">
                   {MOCK_PENDING_INVITATION_COUNT}
                 </span>
               </TabsTrigger>

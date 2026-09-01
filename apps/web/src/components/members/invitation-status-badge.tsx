@@ -17,7 +17,7 @@ export const INVITATION_STATUS_STYLES: Record<
 > = {
   PENDING: {
     label: 'Pending',
-    className: 'border-[#F0D9B0] bg-ds-warning-soft text-ds-warning',
+    className: 'border-ds-warning/30 bg-ds-warning-soft text-ds-warning',
   },
   ACCEPTED: {
     label: 'Accepted',

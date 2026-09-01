@@ -21,7 +21,7 @@ const ROLE_BADGE_STYLES: Record<
   },
   ADMIN: {
     label: 'Admin',
-    className: 'border-[#C7D2FE] bg-ds-info-soft text-ds-info',
+    className: 'border-ds-info/30 bg-ds-info-soft text-ds-info',
   },
   MEMBER: {
     label: 'Member',

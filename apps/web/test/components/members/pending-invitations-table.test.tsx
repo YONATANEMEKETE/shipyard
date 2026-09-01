@@ -1,11 +1,51 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { InvitationCard } from '@shipyard/shared';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mockShowToast = vi.fn();
+let mockResendMutate = vi.fn();
+let mockRevokeMutate = vi.fn();
+let mockResendPending = false;
+let mockRevokePending = false;
+let mockResendVariables: { invitationId: string } | undefined;
+let mockRevokeVariables: { invitationId: string } | undefined;
+let mockResendOpts:
+  | { onSuccess?: (data: unknown) => void; onError?: (error: Error) => void }
+  | undefined;
+let mockRevokeOpts:
+  | { onSuccess?: (data: unknown) => void; onError?: (error: Error) => void }
+  | undefined;
+
+vi.mock('@/components/providers/toast-provider', () => ({
+  useToast: () => ({
+    showToast: mockShowToast,
+    dismissToast: vi.fn(),
+    updateToast: vi.fn(),
+  }),
+}));
+
+vi.mock('@/hooks/use-invitations', () => ({
+  useResendInvitation: (_slug: string, opts: unknown) => {
+    mockResendOpts = opts as typeof mockResendOpts;
+    return {
+      mutate: mockResendMutate,
+      isPending: mockResendPending,
+      variables: mockResendVariables,
+    };
+  },
+  useRevokeInvitation: (_slug: string, opts: unknown) => {
+    mockRevokeOpts = opts as typeof mockRevokeOpts;
+    return {
+      mutate: mockRevokeMutate,
+      isPending: mockRevokePending,
+      variables: mockRevokeVariables,
+    };
+  },
+}));
 
 import { PendingInvitationsTable } from '@/components/members/pending-invitations-table';
-import { ToastProvider } from '@/components/providers/toast-provider';
 
 function invitation(overrides: Partial<InvitationCard> = {}): InvitationCard {
   return {
@@ -42,14 +82,22 @@ function renderWithProviders(ui: React.ReactNode) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
-    <QueryClientProvider client={qc}>
-      <ToastProvider>{ui}</ToastProvider>
-    </QueryClientProvider>,
-  );
+  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
 }
 
 describe('PendingInvitationsTable — pending tab states', () => {
+  beforeEach(() => {
+    mockShowToast.mockClear();
+    mockResendMutate = vi.fn();
+    mockRevokeMutate = vi.fn();
+    mockResendPending = false;
+    mockRevokePending = false;
+    mockResendVariables = undefined;
+    mockRevokeVariables = undefined;
+    mockResendOpts = undefined;
+    mockRevokeOpts = undefined;
+  });
+
   it('renders invitation rows with email, invited note, role, status, expiry and actions', () => {
     renderWithProviders(
       <PendingInvitationsTable
@@ -199,5 +247,298 @@ describe('PendingInvitationsTable — pending tab states', () => {
     expect(
       screen.getByText(/showing 1 of 1 pending invitation/i),
     ).toBeInTheDocument();
+  });
+});
+
+describe('PendingInvitationsTable — revoke and resend behaviours', () => {
+  beforeEach(() => {
+    mockShowToast.mockClear();
+    mockResendMutate = vi.fn();
+    mockRevokeMutate = vi.fn();
+    mockResendPending = false;
+    mockRevokePending = false;
+    mockResendVariables = undefined;
+    mockRevokeVariables = undefined;
+    mockResendOpts = undefined;
+    mockRevokeOpts = undefined;
+  });
+
+  it('enables resend/revoke for PENDING and disables for revoked/accepted/declined/expired', () => {
+    renderWithProviders(
+      <PendingInvitationsTable
+        slug="harbor"
+        invitations={[
+          invitation({
+            id: 'p1',
+            email: 'pending@harbor.test',
+            status: 'PENDING',
+          }),
+          invitation({
+            id: 'r1',
+            email: 'revoked@harbor.test',
+            status: 'REVOKED',
+          }),
+          invitation({
+            id: 'a1',
+            email: 'accepted@harbor.test',
+            status: 'ACCEPTED',
+          }),
+          invitation({
+            id: 'd1',
+            email: 'declined@harbor.test',
+            status: 'DECLINED',
+          }),
+          invitation({
+            id: 'e1',
+            email: 'expired@harbor.test',
+            status: 'EXPIRED',
+          }),
+        ]}
+      />,
+    );
+
+    expect(
+      screen.getByRole('button', {
+        name: 'Resend invitation to pending@harbor.test',
+      }),
+    ).toBeEnabled();
+    expect(
+      screen.getByRole('button', {
+        name: 'Revoke invitation to pending@harbor.test',
+      }),
+    ).toBeEnabled();
+
+    for (const email of [
+      'revoked@harbor.test',
+      'accepted@harbor.test',
+      'declined@harbor.test',
+      'expired@harbor.test',
+    ]) {
+      expect(
+        screen.getByRole('button', { name: `Resend invitation to ${email}` }),
+      ).toBeDisabled();
+      expect(
+        screen.getByRole('button', { name: `Revoke invitation to ${email}` }),
+      ).toBeDisabled();
+    }
+  });
+
+  it('revoke is disabled when already REVOKED — matches spec revocation guard', () => {
+    renderWithProviders(
+      <PendingInvitationsTable
+        slug="harbor"
+        invitations={[
+          invitation({ status: 'REVOKED', email: 'alex@harbor.test' }),
+        ]}
+      />,
+    );
+    expect(
+      screen.getByRole('button', {
+        name: 'Revoke invitation to alex@harbor.test',
+      }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', {
+        name: 'Resend invitation to alex@harbor.test',
+      }),
+    ).toBeDisabled();
+  });
+
+  it('clicking resend calls mutate with invitationId and shows loader, disables revoke on same row', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PendingInvitationsTable
+        slug="harbor"
+        invitations={[invitation({ id: 'cm0inv0001' })]}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Resend invitation to alex@harbor.test',
+      }),
+    );
+
+    expect(mockResendMutate).toHaveBeenCalledWith({
+      invitationId: 'cm0inv0001',
+    });
+    expect(mockResendMutate).toHaveBeenCalledTimes(1);
+    expect(mockRevokeMutate).not.toHaveBeenCalled();
+  });
+
+  it('clicking revoke calls mutate with invitationId via StatefulButton', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PendingInvitationsTable
+        slug="harbor"
+        invitations={[invitation({ id: 'cm0inv0007' })]}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Revoke invitation to alex@harbor.test',
+      }),
+    );
+
+    expect(mockRevokeMutate).toHaveBeenCalledWith({
+      invitationId: 'cm0inv0007',
+    });
+    expect(mockResendMutate).not.toHaveBeenCalled();
+  });
+
+  it('shows loader on resending row and Revoking… on revoking row, other row stays idle', () => {
+    mockResendPending = true;
+    mockResendVariables = { invitationId: 'cm0inv0001' };
+
+    renderWithProviders(
+      <PendingInvitationsTable
+        slug="harbor"
+        invitations={[
+          invitation({ id: 'cm0inv0001', email: 'alex@harbor.test' }),
+          invitation({ id: 'cm0inv0002', email: 'jordan@harbor.test' }),
+        ]}
+      />,
+    );
+
+    const resendingBtn = screen.getByRole('button', {
+      name: 'Resend invitation to alex@harbor.test',
+    });
+    expect(resendingBtn).toBeDisabled();
+    expect(resendingBtn).toHaveAttribute(
+      'aria-label',
+      'Resend invitation to alex@harbor.test',
+    );
+
+    const otherResend = screen.getByRole('button', {
+      name: 'Resend invitation to jordan@harbor.test',
+    });
+    expect(otherResend).toBeEnabled();
+
+    const revokedBtn = screen.getByRole('button', {
+      name: 'Revoke invitation to alex@harbor.test',
+    });
+    expect(revokedBtn).toBeDisabled();
+  });
+
+  it('StatefulButton shows Revoking… when revoke is pending on that row only', () => {
+    mockRevokePending = true;
+    mockRevokeVariables = { invitationId: 'cm0inv0002' };
+
+    renderWithProviders(
+      <PendingInvitationsTable
+        slug="harbor"
+        invitations={[
+          invitation({ id: 'cm0inv0001', email: 'alex@harbor.test' }),
+          invitation({ id: 'cm0inv0002', email: 'jordan@harbor.test' }),
+        ]}
+      />,
+    );
+
+    expect(screen.getByText(/revoking/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', {
+        name: 'Revoke invitation to jordan@harbor.test',
+      }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', {
+        name: 'Revoke invitation to alex@harbor.test',
+      }),
+    ).toBeEnabled();
+  });
+
+  it('toasts success on resend and revoke', async () => {
+    renderWithProviders(
+      <PendingInvitationsTable slug="harbor" invitations={[invitation()]} />,
+    );
+
+    // resend success
+    mockResendOpts?.onSuccess?.({} as never);
+    await waitFor(() =>
+      expect(mockShowToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'success',
+          title: 'Invitation resent',
+        }),
+      ),
+    );
+
+    mockShowToast.mockClear();
+
+    // revoke success
+    mockRevokeOpts?.onSuccess?.({} as never);
+    await waitFor(() =>
+      expect(mockShowToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'success',
+          title: 'Invitation revoked',
+        }),
+      ),
+    );
+  });
+
+  it('toasts error on resend/revoke failure and keeps row visible', async () => {
+    renderWithProviders(
+      <PendingInvitationsTable slug="harbor" invitations={[invitation()]} />,
+    );
+
+    mockResendOpts?.onError?.(new Error('Invitation not usable'));
+    await waitFor(() =>
+      expect(mockShowToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'error',
+          title: 'Failed to resend invitation',
+          description: 'Invitation not usable',
+        }),
+      ),
+    );
+
+    mockShowToast.mockClear();
+
+    mockRevokeOpts?.onError?.(new Error('Already revoked'));
+    await waitFor(() =>
+      expect(mockShowToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'error',
+          title: 'Failed to revoke invitation',
+          description: 'Already revoked',
+        }),
+      ),
+    );
+
+    expect(screen.getByText('alex@harbor.test')).toBeInTheDocument();
+  });
+
+  it('per-row busy isolates — resending one invite does not block the other resend button', () => {
+    mockResendPending = true;
+    mockResendVariables = { invitationId: 'cm0inv0001' };
+
+    renderWithProviders(
+      <PendingInvitationsTable
+        slug="harbor"
+        invitations={[
+          invitation({ id: 'cm0inv0001', email: 'alex@harbor.test' }),
+          invitation({ id: 'cm0inv0002', email: 'jordan@harbor.test' }),
+          invitation({ id: 'cm0inv0003', email: 'casey@harbor.test' }),
+        ]}
+      />,
+    );
+
+    expect(
+      screen.getByRole('button', {
+        name: 'Resend invitation to alex@harbor.test',
+      }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', {
+        name: 'Resend invitation to jordan@harbor.test',
+      }),
+    ).toBeEnabled();
+    expect(
+      screen.getByRole('button', {
+        name: 'Resend invitation to casey@harbor.test',
+      }),
+    ).toBeEnabled();
   });
 });

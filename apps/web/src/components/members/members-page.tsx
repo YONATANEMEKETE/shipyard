@@ -1,11 +1,12 @@
 'use client';
 
-import { Filter, Search, UserPlus } from 'lucide-react';
+import { Filter, Search, SlidersHorizontal, UserPlus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { InviteMembersDialog } from '@/components/members/invite-members-dialog';
 import { MemberDirectory } from '@/components/members/member-directory';
 import { PendingInvitations } from '@/components/members/pending-invitations';
+import { MOCK_PENDING_INVITATION_COUNT } from '@/components/members/mock-pending-invitations';
 import { useMembers } from '@/hooks/use-members';
 import { useSession } from '@/hooks/use-session';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,11 @@ export function MembersPage({ slug }: { slug: string }) {
   const workspaceName = workspace?.name ?? 'Acme Studio';
   const [inviteOpen, setInviteOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [activeTab, setActiveTab] = useState('directory');
+  const [inviteSearch, setInviteSearch] = useState('');
+  const [inviteStatus, setInviteStatus] = useState<string | undefined>(
+    undefined,
+  );
 
   const membersQuery = useMembers(slug);
   const { data: session } = useSession();
@@ -82,6 +88,38 @@ export function MembersPage({ slug }: { slug: string }) {
           <SelectItem value="OWNER">Owner</SelectItem>
           <SelectItem value="ADMIN">Admin</SelectItem>
           <SelectItem value="MEMBER">Member</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
+  // The pending tab gets its own toolbar (shipyard.pen "Screen / Members —
+  // Pending Invitations"): search + status filter over invitations, while the
+  // directory tab searches members + filters by role. Swapped by active tab.
+  const invitationToolbar = (
+    <div className="flex items-center gap-2">
+      <Input
+        value={inviteSearch}
+        onChange={setInviteSearch}
+        placeholder="Search invitations…"
+        leftIcon={<Search className="size-[14px] text-muted-foreground" />}
+        classNames={{
+          field: 'h-[34px] w-[220px] rounded-lg border-ds-border bg-ds-surface',
+          input: 'text-xs',
+        }}
+      />
+      <Select value={inviteStatus} onValueChange={setInviteStatus}>
+        <SelectTrigger className="h-[34px] gap-1.5 border-ds-border bg-ds-surface px-3 text-xs text-muted-foreground hover:border-ds-border">
+          <SlidersHorizontal className="size-[14px]" />
+          <SelectValue placeholder="Status" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="ALL">All statuses</SelectItem>
+          <SelectItem value="PENDING">Pending</SelectItem>
+          <SelectItem value="ACCEPTED">Accepted</SelectItem>
+          <SelectItem value="REVOKED">Revoked</SelectItem>
+          <SelectItem value="DECLINED">Declined</SelectItem>
+          <SelectItem value="EXPIRED">Expired</SelectItem>
         </SelectContent>
       </Select>
     </div>
@@ -143,7 +181,8 @@ export function MembersPage({ slug }: { slug: string }) {
         </div>
       ) : (
         <Tabs
-          defaultValue="directory"
+          value={activeTab}
+          onValueChange={(details) => setActiveTab(details.value)}
           className="min-h-0 flex-1 flex-col gap-5"
         >
           <div className="flex w-full flex-wrap items-center justify-between gap-3">
@@ -157,19 +196,19 @@ export function MembersPage({ slug }: { slug: string }) {
               <TabsTrigger value="pending" className="group gap-2">
                 Pending
                 <span className="inline-flex h-[18px] items-center rounded-full border border-ds-border bg-ds-surface px-1.5 font-mono text-[10px] font-bold leading-none text-muted-foreground transition-colors group-aria-selected:border-[#F0D9B0] group-aria-selected:bg-ds-brand-soft group-aria-selected:text-ds-brand">
-                  0
+                  {MOCK_PENDING_INVITATION_COUNT}
                 </span>
               </TabsTrigger>
             </TabsList>
 
-            {toolbar}
+            {activeTab === 'directory' ? toolbar : invitationToolbar}
           </div>
 
           <TabsContent value="directory" className="min-h-0">
             {directory}
           </TabsContent>
           <TabsContent value="pending" className="min-h-0">
-            <PendingInvitations />
+            <PendingInvitations search={inviteSearch} status={inviteStatus} />
           </TabsContent>
         </Tabs>
       )}

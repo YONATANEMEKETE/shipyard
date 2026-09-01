@@ -4,6 +4,7 @@ import { Filter, Search, SlidersHorizontal, UserPlus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { InviteMembersDialog } from '@/components/members/invite-members-dialog';
+import { ChangeRoleDialog } from '@/components/members/change-role-dialog';
 import { MemberDetailsDialog } from '@/components/members/member-details-dialog';
 import { MemberDirectory } from '@/components/members/member-directory';
 import { PendingInvitations } from '@/components/members/pending-invitations';
@@ -50,9 +51,21 @@ export function MembersPage({ slug }: { slug: string }) {
   const { data: session } = useSession();
   const [roleFilter, setRoleFilter] = useState<string | undefined>(undefined);
   // Selected directory row — drives the member details dialog. Toggled by the
-  // row or its chevron click, cleared on dialog close.
+  // row or its chevron click.
   const [selectedMember, setSelectedMember] =
     useState<WorkspaceMemberCard | null>(null);
+  // Details vs confirmation visibility. Kept at page level (not inside the
+  // details dialog) so the change-role dialog survives the details dialog
+  // closing — the details modal is conditionally mounted, so its own state
+  // would be destroyed in the same render that closes it.
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [changeRoleOpen, setChangeRoleOpen] = useState(false);
+
+  const openMember = (member: WorkspaceMemberCard) => {
+    setSelectedMember(member);
+    setDetailsOpen(true);
+    setChangeRoleOpen(false);
+  };
 
   // Client-side filtering — the members API returns the full roster.
   const visibleMembers = useMemo(() => {
@@ -173,7 +186,7 @@ export function MembersPage({ slug }: { slug: string }) {
       error={membersQuery.isError}
       onRetry={membersQuery.refetch}
       currentUserId={session?.user.id}
-      onOpenMember={setSelectedMember}
+      onOpenMember={openMember}
       emptyTitle={hasActiveFilters ? 'No members match' : undefined}
       emptyDescription={
         hasActiveFilters
@@ -273,20 +286,32 @@ export function MembersPage({ slug }: { slug: string }) {
         workspaceName={workspaceName}
       />
 
-      {/* Member details — opens from any directory row (row click or chevron).
-          Actions are permission-aware and UI-only for now; the Change Role /
-          Transfer Ownership / Remove confirmations land next. */}
+      {/* Member details + confirmations — open from any directory row.
+          Change role lives at page level so it can take over when the details
+          modal closes (its subtree would otherwise unmount). */}
       {selectedMember ? (
-        <MemberDetailsDialog
-          member={selectedMember}
-          open
-          onOpenChange={(open) => {
-            if (!open) setSelectedMember(null);
-          }}
-          workspaceName={workspaceName}
-          viewerRole={workspace?.role}
-          currentUserId={session?.user.id}
-        />
+        <>
+          <MemberDetailsDialog
+            member={selectedMember}
+            open={detailsOpen}
+            onOpenChange={setDetailsOpen}
+            onChangeRole={() => {
+              setChangeRoleOpen(true);
+              setDetailsOpen(false);
+            }}
+            workspaceName={workspaceName}
+            viewerRole={workspace?.role}
+            currentUserId={session?.user.id}
+          />
+          {changeRoleOpen ? (
+            <ChangeRoleDialog
+              member={selectedMember}
+              slug={slug}
+              open
+              onOpenChange={setChangeRoleOpen}
+            />
+          ) : null}
+        </>
       ) : null}
     </div>
   );

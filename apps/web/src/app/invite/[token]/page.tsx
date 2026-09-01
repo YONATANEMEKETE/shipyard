@@ -25,15 +25,19 @@ type PageProps = { params: Promise<{ token: string }> };
 /**
  * Invitation preview / accept / decline — `/invite/:token` (token-gated).
  *
+ * The Next page reads `params` with `use()` and renders this flow; it's the
+ * exported entry for component tests too (plain `token` string, no `use()`).
+ *
  * Preview loads through useInvitationPreview (the API returns 200 with a
  * `status` even when the invitation is no longer usable, so the UI decides
  * between the live accept card and a terminal state without extra calls).
  *
  * States:
  *  - loading                → staggered skeleton card
- *  - UNAUTHENTICATED        → sign-in / create-account CTA (the token URL is
+ *  - UNAUTHORIZED           → sign-in / create-account CTA (the token URL is
  *                             preserved so the auth flow can resume to it)
  *  - other error            → ErrorState with retry
+ *  - isMember               → redirect straight into /w/:workspaceSlug
  *  - status !== PENDING     → terminal screen (Accepted / Revoked / Declined /
  *                             Expired) with the right guidance copy
  *  - PENDING                → live accept / decline via the real mutations
@@ -74,8 +78,12 @@ const TERMINAL_COPY: Record<
   },
 };
 
-export default function InviteTokenPage({ params }: PageProps) {
-  const { token } = use(params);
+/**
+ * The full invitation preview / accept / decline flow. Split out of the page
+ * component so tests can render it with a plain token string (React's
+ * `use(params)` never resumes on native promises in jsdom).
+ */
+export function InviteFlow({ token }: { token: string }) {
   const router = useRouter();
 
   const preview = useInvitationPreview(token);
@@ -426,4 +434,13 @@ function LiveInviteCard({
       </Stagger>
     </div>
   );
+}
+
+/**
+ * Next.js page entry — resolves the route param and renders the flow.
+ * (Separated from the flow so tests can render InviteFlow with a string.)
+ */
+export default function InviteTokenPage({ params }: PageProps) {
+  const { token } = use(params);
+  return <InviteFlow token={token} />;
 }

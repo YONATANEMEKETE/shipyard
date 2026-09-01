@@ -14,6 +14,7 @@ export function MemberDirectory({
   error = false,
   onRetry,
   currentUserId,
+  onOpenMember,
   emptyTitle,
   emptyDescription,
 }: {
@@ -22,6 +23,7 @@ export function MemberDirectory({
   error?: boolean;
   onRetry?: () => void;
   currentUserId?: string;
+  onOpenMember?: (member: WorkspaceMemberCard) => void;
   emptyTitle?: string;
   emptyDescription?: string;
 }) {
@@ -32,6 +34,7 @@ export function MemberDirectory({
       error={error}
       onRetry={onRetry}
       currentUserId={currentUserId}
+      onOpenMember={onOpenMember}
       emptyTitle={emptyTitle}
       emptyDescription={emptyDescription}
     />

@@ -498,13 +498,26 @@ export const membersService = {
     const expired = isExpired(inv.expiresAt);
     const status = expired && inv.status === 'PENDING' ? 'EXPIRED' : inv.status;
 
+    // Already a member? The accept card is pointless — the client redirects
+    // straight into the workspace (no new info leaked: the caller either is
+    // a member who already has access, or isn't).
+    const membership = callerUserId
+      ? await membersRepository.findMemberByUserAndWorkspace(
+          prisma,
+          inv.workspaceId,
+          callerUserId,
+        )
+      : null;
+
     return {
       workspaceName: inv.workspace.name,
       workspaceIcon: inv.workspace.icon,
+      workspaceSlug: inv.workspace.slug,
       role: inv.role,
       email: inv.email,
       expiresAt: inv.expiresAt.toISOString(),
       status: status,
+      isMember: membership !== null,
     };
   },
 

@@ -18,8 +18,18 @@ type VerifyState = 'verifying' | 'success' | 'error';
  * it flashes a brief confirmation and automatically continues into the
  * workspace (autoSignInAfterVerification has already set the session
  * cookie by then); there is no manual CTA.
+ *
+ * `next` is the resume path threaded from the invitation flow via the
+ * email's callbackURL (see nextFromCallbackURL) — verification lands the
+ * user back on `/invite/:token` instead of the app root.
  */
-export function VerifyEmailFlow({ token }: { token?: string }) {
+export function VerifyEmailFlow({
+  token,
+  next,
+}: {
+  token?: string;
+  next?: string;
+}) {
   const [state, setState] = useState<VerifyState>('verifying');
   const router = useRouter();
 
@@ -47,12 +57,12 @@ export function VerifyEmailFlow({ token }: { token?: string }) {
   }, [token]);
 
   // Success is transient: show the confirmation beat, then continue into
-  // the workspace automatically.
+  // the workspace automatically (or back to the invitation being accepted).
   useEffect(() => {
     if (state !== 'success') return;
-    const timer = setTimeout(() => router.replace('/'), 1400);
+    const timer = setTimeout(() => router.replace(next ?? '/'), 1400);
     return () => clearTimeout(timer);
-  }, [state, router]);
+  }, [state, router, next]);
 
   if (!token) {
     return (

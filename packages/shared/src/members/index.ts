@@ -100,10 +100,16 @@ export type InvitationCard = z.infer<typeof invitationCardSchema>;
 export const invitationPreviewSchema = z.object({
   workspaceName: z.string(),
   workspaceIcon: z.string().nullable(),
+  // lets the client navigate into the workspace (or redirect existing
+  // members straight there instead of showing an accept card)
+  workspaceSlug: z.string(),
   role: workspaceRoleSchema,
   email: z.string().email(),
   expiresAt: z.string().datetime(),
   status: invitationStatusSchema,
+  // true when the calling user already holds a membership in this workspace,
+  // so the UI can skip the accept card and go straight to the workspace
+  isMember: z.boolean(),
 });
 
 export type InvitationPreview = z.infer<typeof invitationPreviewSchema>;

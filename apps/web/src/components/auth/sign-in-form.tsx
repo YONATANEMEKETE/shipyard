@@ -24,6 +24,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { authClient } from '@/lib/auth-client';
+import { safeInternalPath, resumeHref } from '@/lib/auth/next-redirect';
 import { FormError } from '@/components/ui/form-error';
 import { SocialButtons } from '@/components/auth/social-buttons';
 
@@ -42,8 +43,11 @@ const GENERIC_SIGN_IN_ERROR = 'Unable to sign in. Please try again.';
  * and API enforce one contract. Submission goes through Better Auth's
  * sign-in endpoint; the API answers with the shared error envelope, whose
  * message is surfaced inline.
+ *
+ * `next` is the resume path from the invitation flow — after a successful
+ * login the user is bounced back there instead of the workspace dispatcher.
  */
-export function SignInForm() {
+export function SignInForm({ next }: { next?: string }) {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
 
@@ -92,14 +96,16 @@ export function SignInForm() {
       throw new Error(envelope?.message ?? GENERIC_SIGN_IN_ERROR);
     },
     onSuccess: () => {
-      router.replace('/w');
+      router.replace(safeInternalPath(next) ?? '/w');
     },
   });
 
   return (
     <AuthStagger className="flex flex-col gap-6">
       <AuthStaggerItem>
-        <SocialButtons />
+        {/* OAuth round-trip lands on the resume path (invitation flow) or the
+            workspace dispatcher when no invitation is pending. */}
+        <SocialButtons callbackURL={safeInternalPath(next) ?? '/w'} />
       </AuthStaggerItem>
 
       <AuthStaggerItem>
@@ -246,7 +252,7 @@ export function SignInForm() {
         <p className="text-center text-sm text-muted-foreground">
           Don&apos;t have an account?{' '}
           <Link
-            href="/sign-up"
+            href={next ? resumeHref('/sign-up', next) : '/sign-up'}
             className="font-medium text-foreground underline-offset-4 hover:underline"
           >
             Create one

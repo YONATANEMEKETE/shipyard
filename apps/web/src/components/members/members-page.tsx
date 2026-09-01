@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import { InviteMembersDialog } from '@/components/members/invite-members-dialog';
 import { ChangeRoleDialog } from '@/components/members/change-role-dialog';
 import { TransferOwnershipDialog } from '@/components/members/transfer-ownership-dialog';
+import { RemoveMemberDialog } from '@/components/members/remove-member-dialog';
 import { MemberDetailsDialog } from '@/components/members/member-details-dialog';
 import { MemberDirectory } from '@/components/members/member-directory';
 import { PendingInvitations } from '@/components/members/pending-invitations';
@@ -62,12 +63,14 @@ export function MembersPage({ slug }: { slug: string }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [changeRoleOpen, setChangeRoleOpen] = useState(false);
   const [transferOwnershipOpen, setTransferOwnershipOpen] = useState(false);
+  const [removeMemberOpen, setRemoveMemberOpen] = useState(false);
 
   const openMember = (member: WorkspaceMemberCard) => {
     setSelectedMember(member);
     setDetailsOpen(true);
     setChangeRoleOpen(false);
     setTransferOwnershipOpen(false);
+    setRemoveMemberOpen(false);
   };
 
   // Client-side filtering — the members API returns the full roster.
@@ -291,8 +294,8 @@ export function MembersPage({ slug }: { slug: string }) {
       />
 
       {/* Member details + confirmations — open from any directory row.
-          Change role / Transfer ownership live at page level so they survive
-          the details dialog closing (its subtree would otherwise unmount). */}
+          Change role / Transfer ownership / Remove member live at page level
+          so they survive the details dialog closing (its subtree would otherwise unmount). */}
       {selectedMember ? (
         <>
           <MemberDetailsDialog
@@ -305,6 +308,10 @@ export function MembersPage({ slug }: { slug: string }) {
             }}
             onTransferOwnership={() => {
               setTransferOwnershipOpen(true);
+              setDetailsOpen(false);
+            }}
+            onRemoveMember={() => {
+              setRemoveMemberOpen(true);
               setDetailsOpen(false);
             }}
             workspaceName={workspaceName}
@@ -325,6 +332,15 @@ export function MembersPage({ slug }: { slug: string }) {
               slug={slug}
               open
               onOpenChange={setTransferOwnershipOpen}
+            />
+          ) : null}
+          {removeMemberOpen ? (
+            <RemoveMemberDialog
+              member={selectedMember}
+              slug={slug}
+              workspaceName={workspaceName}
+              open
+              onOpenChange={setRemoveMemberOpen}
             />
           ) : null}
         </>

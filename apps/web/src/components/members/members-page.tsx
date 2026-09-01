@@ -4,6 +4,7 @@ import { Filter, Search, SlidersHorizontal, UserPlus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { InviteMembersDialog } from '@/components/members/invite-members-dialog';
+import { MemberDetailsDialog } from '@/components/members/member-details-dialog';
 import { MemberDirectory } from '@/components/members/member-directory';
 import { PendingInvitations } from '@/components/members/pending-invitations';
 import { useInvitations } from '@/hooks/use-invitations';
@@ -18,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/motion/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import type { WorkspaceMemberCard } from '@shipyard/shared';
 import { Input } from '@/components/ui/input';
 import { useWorkspace } from '@/hooks/use-workspaces';
 
@@ -47,6 +49,10 @@ export function MembersPage({ slug }: { slug: string }) {
   });
   const { data: session } = useSession();
   const [roleFilter, setRoleFilter] = useState<string | undefined>(undefined);
+  // Selected directory row — drives the member details dialog. Toggled by the
+  // row or its chevron click, cleared on dialog close.
+  const [selectedMember, setSelectedMember] =
+    useState<WorkspaceMemberCard | null>(null);
 
   // Client-side filtering — the members API returns the full roster.
   const visibleMembers = useMemo(() => {
@@ -167,6 +173,7 @@ export function MembersPage({ slug }: { slug: string }) {
       error={membersQuery.isError}
       onRetry={membersQuery.refetch}
       currentUserId={session?.user.id}
+      onOpenMember={setSelectedMember}
       emptyTitle={hasActiveFilters ? 'No members match' : undefined}
       emptyDescription={
         hasActiveFilters
@@ -265,6 +272,22 @@ export function MembersPage({ slug }: { slug: string }) {
         slug={slug}
         workspaceName={workspaceName}
       />
+
+      {/* Member details — opens from any directory row (row click or chevron).
+          Actions are permission-aware and UI-only for now; the Change Role /
+          Transfer Ownership / Remove confirmations land next. */}
+      {selectedMember ? (
+        <MemberDetailsDialog
+          member={selectedMember}
+          open
+          onOpenChange={(open) => {
+            if (!open) setSelectedMember(null);
+          }}
+          workspaceName={workspaceName}
+          viewerRole={workspace?.role}
+          currentUserId={session?.user.id}
+        />
+      ) : null}
     </div>
   );
 }

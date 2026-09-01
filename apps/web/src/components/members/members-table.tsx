@@ -76,9 +76,11 @@ function MemberRowSkeleton() {
 function MemberRow({
   member,
   isCurrentUser,
+  onOpen,
 }: {
   member: WorkspaceMemberCard;
   isCurrentUser: boolean;
+  onOpen: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
 
@@ -86,7 +88,8 @@ function MemberRow({
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="flex h-12 items-center gap-3 border-b border-ds-border/70 px-4 transition-colors hover:bg-ds-bg last:border-b-0"
+      onClick={onOpen}
+      className="flex h-12 cursor-pointer items-center gap-3 border-b border-ds-border/70 px-4 transition-colors hover:bg-ds-bg last:border-b-0"
     >
       {/* Identity — avatar + name/email */}
       <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -134,11 +137,12 @@ function MemberRow({
         {formatJoined(member.createdAt)}
       </span>
 
-      {/* Row action — member details drawer lands here later */}
+      {/* Row action — opens the member details dialog */}
       <button
         type="button"
         aria-label={`Open ${member.name}`}
-        className="grid size-[26px] shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-ds-bg hover:text-foreground"
+        onClick={onOpen}
+        className="grid size-[26px] shrink-0 cursor-pointer place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-ds-bg hover:text-foreground"
       >
         <motion.span
           initial={false}
@@ -159,6 +163,7 @@ export function MembersTable({
   error = false,
   onRetry,
   currentUserId,
+  onOpenMember,
   emptyTitle,
   emptyDescription,
 }: {
@@ -167,6 +172,8 @@ export function MembersTable({
   error?: boolean;
   onRetry?: () => void;
   currentUserId?: string;
+  /** Open the member details dialog for a row — row and chevron both trigger it. */
+  onOpenMember?: (member: WorkspaceMemberCard) => void;
   /** Customize the empty state copy — e.g. "no matches" when filters are active. */
   emptyTitle?: string;
   emptyDescription?: string;
@@ -234,6 +241,9 @@ export function MembersTable({
               key={member.id}
               member={member}
               isCurrentUser={member.userId === currentUserId}
+              onOpen={
+                onOpenMember ? () => onOpenMember(member) : () => undefined
+              }
             />
           ))
         )}

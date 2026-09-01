@@ -186,10 +186,34 @@ describe('InviteTokenPage — invitation preview flow states', () => {
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
+  it('shows This invitation no longer exists when token is unknown (404)', async () => {
+    useInvitationPreview.mockReturnValue({
+      data: undefined,
+      isPending: false,
+      isError: true,
+      error: new InvitationsApiError({
+        code: 'INVITATION_NOT_FOUND',
+        message: 'Invitation not found',
+        status: 404,
+      }),
+      refetch: vi.fn(),
+    });
+
+    renderPage();
+
+    expect(
+      await screen.findByText('This invitation no longer exists'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /go to your workspaces/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /try again/i })).toBeNull();
+  });
+
   it.each([
     ['ACCEPTED', "You're already a member"],
-    ['REVOKED', 'Invitation revoked'],
-    ['DECLINED', 'Invitation declined'],
+    ['REVOKED', 'This invitation no longer exists'],
+    ['DECLINED', 'This invitation no longer exists'],
     ['EXPIRED', 'Invitation expired'],
   ])(
     'renders the terminal screen for %s without an accept card',
@@ -278,13 +302,11 @@ describe('InviteTokenPage — accept / decline actions', () => {
     expect(urlReplace).toHaveBeenCalledWith('/w/harbor-labs');
   });
 
-  it('declines, shows the declined confirmation beat and refetches the preview', async () => {
+  it('declines and navigates to /w (dispatcher handles next destination)', async () => {
     const user = userEvent.setup();
-    const refetch = vi.fn().mockResolvedValue(undefined);
-    useInvitationPreview.mockReturnValue({
-      ...idlePreviewResult({ status: 'PENDING' }),
-      refetch,
-    });
+    useInvitationPreview.mockReturnValue(
+      idlePreviewResult({ status: 'PENDING' }),
+    );
     useDeclineInvitation.mockImplementation((opts) => ({
       isError: false,
       error: null,
@@ -296,10 +318,7 @@ describe('InviteTokenPage — accept / decline actions', () => {
     renderPage();
 
     await user.click(await screen.findByRole('button', { name: 'Decline' }));
-    expect(
-      screen.getByRole('button', { name: 'Declined' }),
-    ).toBeInTheDocument();
-    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(urlReplace).toHaveBeenCalledWith('/w');
   });
 
   it('surfaces an unverified-email error with the verify link on accept', async () => {

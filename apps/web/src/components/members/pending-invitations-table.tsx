@@ -145,7 +145,7 @@ function InvitationRow({
           icon={<X className="size-[13px]" aria-hidden />}
           disabled={!canAct || isBusy}
           onClick={onRevoke}
-          className="h-[30px] rounded-md border border-ds-border bg-ds-surface px-3 text-[11px] font-medium text-muted-foreground transition-colors hover:border-ds-border-strong hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-[30px] rounded-md border border-ds-border bg-ds-surface px-3 text-[11px] font-medium text-muted-foreground transition-colors hover:border-ds-danger/30 hover:bg-ds-danger-soft hover:text-ds-danger disabled:cursor-not-allowed disabled:opacity-50"
         >
           Revoke
         </StatefulButton>

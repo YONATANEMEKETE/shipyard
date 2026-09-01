@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 
 import { InviteMembersDialog } from '@/components/members/invite-members-dialog';
 import { ChangeRoleDialog } from '@/components/members/change-role-dialog';
+import { TransferOwnershipDialog } from '@/components/members/transfer-ownership-dialog';
 import { MemberDetailsDialog } from '@/components/members/member-details-dialog';
 import { MemberDirectory } from '@/components/members/member-directory';
 import { PendingInvitations } from '@/components/members/pending-invitations';
@@ -60,11 +61,13 @@ export function MembersPage({ slug }: { slug: string }) {
   // would be destroyed in the same render that closes it.
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [changeRoleOpen, setChangeRoleOpen] = useState(false);
+  const [transferOwnershipOpen, setTransferOwnershipOpen] = useState(false);
 
   const openMember = (member: WorkspaceMemberCard) => {
     setSelectedMember(member);
     setDetailsOpen(true);
     setChangeRoleOpen(false);
+    setTransferOwnershipOpen(false);
   };
 
   // Client-side filtering — the members API returns the full roster.
@@ -264,6 +267,7 @@ export function MembersPage({ slug }: { slug: string }) {
           </TabsContent>
           <TabsContent value="pending" className="min-h-0">
             <PendingInvitations
+              slug={slug}
               invitations={visibleInvitations}
               loading={invitationsQuery.isPending}
               error={invitationsQuery.isError}
@@ -287,8 +291,8 @@ export function MembersPage({ slug }: { slug: string }) {
       />
 
       {/* Member details + confirmations — open from any directory row.
-          Change role lives at page level so it can take over when the details
-          modal closes (its subtree would otherwise unmount). */}
+          Change role / Transfer ownership live at page level so they survive
+          the details dialog closing (its subtree would otherwise unmount). */}
       {selectedMember ? (
         <>
           <MemberDetailsDialog
@@ -297,6 +301,10 @@ export function MembersPage({ slug }: { slug: string }) {
             onOpenChange={setDetailsOpen}
             onChangeRole={() => {
               setChangeRoleOpen(true);
+              setDetailsOpen(false);
+            }}
+            onTransferOwnership={() => {
+              setTransferOwnershipOpen(true);
               setDetailsOpen(false);
             }}
             workspaceName={workspaceName}
@@ -309,6 +317,14 @@ export function MembersPage({ slug }: { slug: string }) {
               slug={slug}
               open
               onOpenChange={setChangeRoleOpen}
+            />
+          ) : null}
+          {transferOwnershipOpen ? (
+            <TransferOwnershipDialog
+              member={selectedMember}
+              slug={slug}
+              open
+              onOpenChange={setTransferOwnershipOpen}
             />
           ) : null}
         </>

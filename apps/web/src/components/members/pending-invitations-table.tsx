@@ -1,9 +1,18 @@
+'use client';
+
 import { Send, X } from 'lucide-react';
 import { ChevronLeft, ChevronRight, MailPlus, RotateCw } from 'lucide-react';
 import type { InvitationCard } from '@shipyard/shared';
 
 import { InvitationStatusBadge } from '@/components/members/invitation-status-badge';
 import { MemberBadge } from '@/components/members/member-badge';
+import { Loader } from '@/components/motion/loader';
+import { StatefulButton } from '@/components/motion/button/stateful';
+import { useToast } from '@/components/providers/toast-provider';
+import {
+  useResendInvitation,
+  useRevokeInvitation,
+} from '@/hooks/use-invitations';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { Button } from '@/components/ui/button';
@@ -67,7 +76,22 @@ function InvitationRowSkeleton() {
   );
 }
 
-function InvitationRow({ invitation }: { invitation: InvitationCard }) {
+function InvitationRow({
+  invitation,
+  isResending,
+  isRevoking,
+  onResend,
+  onRevoke,
+}: {
+  invitation: InvitationCard;
+  isResending: boolean;
+  isRevoking: boolean;
+  onResend: () => void;
+  onRevoke: () => void;
+}) {
+  const canAct = invitation.status === 'PENDING';
+  const isBusy = isResending || isRevoking;
+
   return (
     <div className="flex h-12 items-center gap-3 border-b border-ds-border/70 px-4 transition-colors hover:bg-ds-bg last:border-b-0">
       {/* Invitee — email + invited note */}
@@ -102,25 +126,36 @@ function InvitationRow({ invitation }: { invitation: InvitationCard }) {
         <button
           type="button"
           aria-label={`Resend invitation to ${invitation.email}`}
-          className="flex h-[30px] items-center gap-1.5 rounded-md border border-ds-border bg-ds-surface px-3 text-[11px] font-medium text-ds-brand transition-colors hover:border-ds-brand/50 hover:bg-ds-bg"
+          disabled={!canAct || isBusy}
+          onClick={onResend}
+          className="flex h-[30px] items-center gap-1.5 rounded-md border border-ds-border bg-ds-surface px-3 text-[11px] font-medium text-ds-brand transition-colors hover:border-ds-brand/50 hover:bg-ds-bg disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <Send className="size-[13px]" aria-hidden />
+          {isResending ? (
+            <Loader size={13} variant="spinner" label="Resending" />
+          ) : (
+            <Send className="size-[13px]" aria-hidden />
+          )}
           Resend
         </button>
-        <button
+        <StatefulButton
           type="button"
           aria-label={`Revoke invitation to ${invitation.email}`}
-          className="flex h-[30px] items-center gap-1.5 rounded-md border border-ds-border bg-ds-surface px-3 text-[11px] font-medium text-muted-foreground transition-colors hover:border-ds-border-strong hover:text-foreground"
+          state={isRevoking ? 'loading' : 'idle'}
+          loadingText="Revoking…"
+          icon={<X className="size-[13px]" aria-hidden />}
+          disabled={!canAct || isBusy}
+          onClick={onRevoke}
+          className="h-[30px] rounded-md border border-ds-border bg-ds-surface px-3 text-[11px] font-medium text-muted-foreground transition-colors hover:border-ds-border-strong hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <X className="size-[13px]" aria-hidden />
           Revoke
-        </button>
+        </StatefulButton>
       </div>
     </div>
   );
 }
 
 export function PendingInvitationsTable({
+  slug = '',
   invitations,
   loading = false,
   error = false,
@@ -128,6 +163,7 @@ export function PendingInvitationsTable({
   emptyTitle,
   emptyDescription,
 }: {
+  slug?: string;
   invitations: InvitationCard[];
   loading?: boolean;
   error?: boolean;
@@ -136,6 +172,42 @@ export function PendingInvitationsTable({
   emptyTitle?: string;
   emptyDescription?: string;
 }) {
+  const { showToast } = useToast();
+
+  const resendMutation = useResendInvitation(slug, {
+    onSuccess: () => {
+      showToast({
+        status: 'success',
+        title: 'Invitation resent',
+        description: 'The invite link has been resent.',
+      });
+    },
+    onError: (err) => {
+      showToast({
+        status: 'error',
+        title: 'Failed to resend invitation',
+        description: err.message,
+      });
+    },
+  });
+
+  const revokeMutation = useRevokeInvitation(slug, {
+    onSuccess: () => {
+      showToast({
+        status: 'success',
+        title: 'Invitation revoked',
+        description: 'The invitation has been revoked.',
+      });
+    },
+    onError: (err) => {
+      showToast({
+        status: 'error',
+        title: 'Failed to revoke invitation',
+        description: err.message,
+      });
+    },
+  });
+
   const showEmpty = !loading && !error && invitations.length === 0;
   const centered = (showEmpty || error) && !loading;
 
@@ -199,9 +271,30 @@ export function PendingInvitationsTable({
             }
           />
         ) : (
-          invitations.map((invitation) => (
-            <InvitationRow key={invitation.id} invitation={invitation} />
-          ))
+          invitations.map((invitation) => {
+            const isResending =
+              resendMutation.isPending &&
+              (resendMutation.variables as { invitationId: string } | undefined)
+                ?.invitationId === invitation.id;
+            const isRevoking =
+              revokeMutation.isPending &&
+              (revokeMutation.variables as { invitationId: string } | undefined)
+                ?.invitationId === invitation.id;
+            return (
+              <InvitationRow
+                key={invitation.id}
+                invitation={invitation}
+                isResending={Boolean(isResending)}
+                isRevoking={Boolean(isRevoking)}
+                onResend={() =>
+                  resendMutation.mutate({ invitationId: invitation.id })
+                }
+                onRevoke={() =>
+                  revokeMutation.mutate({ invitationId: invitation.id })
+                }
+              />
+            );
+          })
         )}
         {/* Bottom fade — lets the last rows dissolve into the surface before the footer */}
         <div

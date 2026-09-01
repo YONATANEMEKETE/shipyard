@@ -34,6 +34,7 @@ function renderDetails({
 } = {}) {
   const onChangeRole = vi.fn();
   const onTransferOwnership = vi.fn();
+  const onRemoveMember = vi.fn();
   const onOpenChange = vi.fn();
   const utils = render(
     <MemberDetailsDialog
@@ -42,12 +43,13 @@ function renderDetails({
       onOpenChange={onOpenChange}
       onChangeRole={onChangeRole}
       onTransferOwnership={onTransferOwnership}
+      onRemoveMember={onRemoveMember}
       workspaceName="Harbor Labs"
       viewerRole={viewerRole}
       currentUserId={currentUserId}
     />,
   );
-  return { onChangeRole, onTransferOwnership, onOpenChange, ...utils };
+  return { onChangeRole, onTransferOwnership, onRemoveMember, onOpenChange, ...utils };
 }
 
 const buttons = {

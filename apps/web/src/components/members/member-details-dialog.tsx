@@ -59,6 +59,7 @@ interface MemberDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
   onChangeRole: () => void;
   onTransferOwnership: () => void;
+  onRemoveMember: () => void;
   workspaceName: string;
   /** Viewer's role on this workspace — drives which action sections render. */
   viewerRole?: WorkspaceRole;
@@ -73,6 +74,7 @@ export function MemberDetailsDialog({
   onOpenChange,
   onChangeRole,
   onTransferOwnership,
+  onRemoveMember,
   workspaceName,
   viewerRole,
   currentUserId,
@@ -242,6 +244,7 @@ export function MemberDetailsDialog({
               </span>
               <button
                 type="button"
+                onClick={onRemoveMember}
                 className="flex h-11 w-full items-center gap-3 rounded-lg border border-ds-danger/30 bg-ds-danger-soft px-3 text-left transition-colors hover:border-ds-danger/60"
               >
                 <UserX

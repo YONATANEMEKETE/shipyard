@@ -11,6 +11,7 @@ import { Eye, EyeOff, Mail, MailCheck, User } from 'lucide-react';
 import { AuthStagger, AuthStaggerItem } from '@/components/auth/auth-anim';
 import { ResendVerificationButton } from '@/components/auth/resend-verification-button';
 import { SocialButtons } from '@/components/auth/social-buttons';
+import { resumeHref, safeInternalPath } from '@/lib/auth/next-redirect';
 import { FormError } from '@/components/ui/form-error';
 import { authClient } from '@/lib/auth-client';
 import { StatefulButton } from '@/components/motion/button/stateful';
@@ -36,10 +37,22 @@ const GENERIC_ERROR = 'Unable to create your account. Please try again.';
  * and API enforce one contract. On success the form swaps in place to the
  * "check your email" variant — with requireEmailVerification enabled and
  * autoSignIn disabled, no session exists until the user clicks the link.
+ *
+ * `next` is the resume path from the invitation flow. It is baked into the
+ * verification email callback URL (`/verify-email?next=…`) for both the
+ * initial email and resends, so verification auto-signs the user in and
+ * lands them back on the invitation they were accepting.
  */
-export function SignUpForm() {
+export function SignUpForm({ next }: { next?: string }) {
   const [sentEmail, setSentEmail] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Better Auth appends this to the verification link as `?callbackURL=…`;
+  // the API rewrites the link to the web verify page and keeps the query,
+  // where the flow reads `next` back out (nextFromCallbackURL).
+  const verificationCallbackURL = next
+    ? `/verify-email?next=${encodeURIComponent(next)}`
+    : '/verify-email';
 
   const form = useForm<SignUpFormValues>({
     resolver: zodResolver(signUpRequestSchema),
@@ -58,6 +71,7 @@ export function SignUpForm() {
         name: values.name,
         email: values.email,
         password: values.password,
+        callbackURL: verificationCallbackURL,
       });
       if (error) {
         throw new Error(error.message || GENERIC_ERROR);
@@ -96,7 +110,7 @@ export function SignUpForm() {
                 authClient
                   .sendVerificationEmail({
                     email: sentEmail,
-                    callbackURL: '/verify-email',
+                    callbackURL: verificationCallbackURL,
                   })
                   .then((r) => {
                     if (r.error) throw new Error(r.error.message);
@@ -107,7 +121,7 @@ export function SignUpForm() {
             <p className="text-sm text-muted-foreground">
               Verified already?{' '}
               <Link
-                href="/sign-in"
+                href={next ? resumeHref('/sign-in', next) : '/sign-in'}
                 className="font-medium text-foreground underline-offset-4 hover:underline"
               >
                 Sign in
@@ -135,7 +149,7 @@ export function SignUpForm() {
       <AuthStaggerItem>
         <AuthStagger className="flex flex-col gap-6">
           <AuthStaggerItem>
-            <SocialButtons />
+            <SocialButtons callbackURL={safeInternalPath(next) ?? '/w'} />
           </AuthStaggerItem>
 
           <AuthStaggerItem>
@@ -281,7 +295,7 @@ export function SignUpForm() {
             <p className="text-center text-sm text-muted-foreground">
               Already have an account?{' '}
               <Link
-                href="/sign-in"
+                href={next ? resumeHref('/sign-in', next) : '/sign-in'}
                 className="font-medium text-foreground underline-offset-4 hover:underline"
               >
                 Sign in

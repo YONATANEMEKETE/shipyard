@@ -111,10 +111,12 @@ interface InvitationCard {
 interface InvitationPreview {
   workspaceName: string;
   workspaceIcon: string | null;
+  workspaceSlug: string;
   role: string;
   email: string;
   expiresAt: string;
   status: string;
+  isMember: boolean;
 }
 
 describe('members lifecycle (integration)', () => {
@@ -542,9 +544,39 @@ describe('members lifecycle (integration)', () => {
     expect(res.status).toBe(200);
     const preview = dataOf<InvitationPreview>(res);
     expect(preview.workspaceName).toBe('Shipyard Team');
+    expect(preview.workspaceSlug).toBe(ws.slug);
     expect(preview.role).toBe('ADMIN');
     expect(preview.email).toBe(email.toLowerCase());
     expect(preview.status).toBe('PENDING');
+    // A non-member sees the invite as usable.
+    expect(preview.isMember).toBe(false);
+  });
+
+  it('preview flags isMember when the caller already belongs to the workspace', async () => {
+    const email = uniqueEmail('preview-member2');
+    const invRes = await request
+      .post(`/api/v1/workspaces/${ws.slug}/invitations`)
+      .set('Cookie', owner.cookies)
+      .send({ emails: [email], role: 'MEMBER' });
+    const token = dataOf<{ invitations: InvitationCard[] }>(invRes)
+      .invitations[0]!.token;
+
+    const member = await registerVerifiedUser(createTestApp(), email);
+    // Accepting makes them a member; a replayed preview link then reports
+    // isMember so the client can skip the accept card and redirect instead.
+    const accept = await createTestApp()
+      .post(`/api/v1/invitations/${token}/accept`)
+      .set('Cookie', member.cookies)
+      .send({});
+    expect(accept.status).toBe(201);
+
+    const res = await createTestApp()
+      .get(`/api/v1/invitations/${token}`)
+      .set('Cookie', member.cookies);
+    expect(res.status).toBe(200);
+    const preview = dataOf<InvitationPreview>(res);
+    expect(preview.isMember).toBe(true);
+    expect(preview.workspaceSlug).toBe(ws.slug);
   });
 
   it('preview unknown token is 404', async () => {

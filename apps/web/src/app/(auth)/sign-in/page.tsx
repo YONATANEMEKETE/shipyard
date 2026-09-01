@@ -5,7 +5,17 @@ import { AuthStagger, AuthStaggerItem } from '@/components/auth/auth-anim';
 
 export const metadata: Metadata = { title: 'Sign in' };
 
-export default function SignInPage() {
+interface SignInPageProps {
+  searchParams: Promise<{ next?: string }>;
+}
+
+/**
+ * `?next=` carries the resume path (e.g. `/invite/:token` from the
+ * invitation flow); the form bounces back there after a successful login.
+ */
+export default async function SignInPage({ searchParams }: SignInPageProps) {
+  const { next } = await searchParams;
+
   return (
     <AuthStagger className="flex flex-col gap-8">
       <AuthStaggerItem>
@@ -20,7 +30,7 @@ export default function SignInPage() {
       </AuthStaggerItem>
 
       <AuthStaggerItem>
-        <SignInForm />
+        <SignInForm next={next} />
       </AuthStaggerItem>
     </AuthStagger>
   );

@@ -204,7 +204,33 @@ describe('SignUpForm — user behaviour (isolated)', () => {
       name: 'Ada',
       email: 'ada@example.com',
       password: 'sup3r-secret-pass',
+      // default callbackURL when no resume path is provided
+      callbackURL: '/verify-email',
     });
+  });
+
+  it('threads the resume path into the verification callbackURL and footer link', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SignUpForm next="/invite/some-token" />);
+
+    await user.type(screen.getByLabelText(/^name$/i), 'Ada');
+    await user.type(screen.getByLabelText(/^email$/i), 'ada@example.com');
+    await user.type(screen.getByLabelText(/^password$/i), 'sup3r-secret-pass');
+    await user.click(screen.getByRole('button', { name: /create account/i }));
+
+    await screen.findByRole('heading', { name: /check your email/i });
+    expect(mockSignUpEmail).toHaveBeenCalledWith({
+      name: 'Ada',
+      email: 'ada@example.com',
+      password: 'sup3r-secret-pass',
+      callbackURL:
+        '/verify-email?next=' + encodeURIComponent('/invite/some-token'),
+    });
+    // Footer sign-in keeps the resume path.
+    expect(screen.getByRole('link', { name: /sign in/i })).toHaveAttribute(
+      'href',
+      '/sign-in?next=' + encodeURIComponent('/invite/some-token'),
+    );
   });
 
   it('resend verification shows sending then sent confirmation', async () => {

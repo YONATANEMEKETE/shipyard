@@ -7,6 +7,7 @@ import {
   Calendar,
   CircleCheck,
   Folder,
+  LogOut,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
@@ -23,6 +24,7 @@ import { BloomMenu } from '@/components/motion/bloom-menu';
 import { Float } from '@/components/ui/float';
 import { Input } from '@/components/ui/input';
 import { CreateWorkspaceDialog } from '@/components/workspace/create-workspace-dialog';
+import { LeaveWorkspaceDialog } from '@/components/members/leave-workspace-dialog';
 import { useWorkspace } from '@/hooks/use-workspaces';
 import { isArchived } from '@/lib/workspace/is-archived';
 import { useMemo } from 'react';
@@ -61,6 +63,7 @@ export function WorkspaceHeader({
   onToggleSidebar: () => void;
 }) {
   const [createOpen, setCreateOpen] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
   const label = usePageContext(slug);
   const { data: workspace } = useWorkspace(slug);
   const archived = isArchived(workspace);
@@ -160,6 +163,16 @@ export function WorkspaceHeader({
         />
       </div>
 
+      {/* Leave workspace — always available, Owner sees transfer variant */}
+      <button
+        type="button"
+        aria-label="Leave workspace"
+        onClick={() => setLeaveOpen(true)}
+        className="grid size-8 shrink-0 place-items-center rounded-lg border border-ds-border bg-ds-surface text-muted-foreground transition-colors hover:border-ds-border-strong hover:text-foreground sm:size-9"
+      >
+        <LogOut className="h-4 w-4 sm:h-[17px] sm:w-[17px]" />
+      </button>
+
       {/* Create — disabled while archived; filtered by role */}
       <div className="shrink-0">
         <BloomMenu
@@ -172,6 +185,13 @@ export function WorkspaceHeader({
         />
       </div>
       <CreateWorkspaceDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <LeaveWorkspaceDialog
+        slug={slug}
+        workspaceName={workspace?.name ?? 'this workspace'}
+        workspaceRole={workspace?.role}
+        open={leaveOpen}
+        onOpenChange={setLeaveOpen}
+      />
     </header>
   );
 }

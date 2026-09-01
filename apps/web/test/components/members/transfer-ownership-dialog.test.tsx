@@ -70,7 +70,12 @@ function renderDialog(target: WorkspaceMemberCard) {
   });
   return render(
     <QueryClientProvider client={qc}>
-      <TransferOwnershipDialog member={target} slug="harbor" open onOpenChange={mockOnOpenChange} />
+      <TransferOwnershipDialog
+        member={target}
+        slug="harbor"
+        open
+        onOpenChange={mockOnOpenChange}
+      />
     </QueryClientProvider>,
   );
 }
@@ -96,7 +101,9 @@ describe('TransferOwnershipDialog — owner swap confirmation', () => {
   it('renders title, body and pre-selected target Member', () => {
     renderDialog(member('MEMBER'));
 
-    expect(screen.getByText('Transfer workspace ownership?')).toBeInTheDocument();
+    expect(
+      screen.getByText('Transfer workspace ownership?'),
+    ).toBeInTheDocument();
     expect(screen.getByText(/you’ll become an admin/i)).toBeInTheDocument();
     expect(screen.getByText('Transfer ownership to')).toBeInTheDocument();
     expect(screen.getAllByText('Alex Rivera').length).toBeGreaterThanOrEqual(2);
@@ -122,13 +129,21 @@ describe('TransferOwnershipDialog — owner swap confirmation', () => {
 
   it('renders avatar images when present on tiny swap cards', () => {
     mockSessionData.user.image = 'https://example.com/yonatane.jpg';
-    const withImages = member('MEMBER', { image: 'https://example.com/alex.jpg' });
+    const withImages = member('MEMBER', {
+      image: 'https://example.com/alex.jpg',
+    });
     renderDialog(withImages);
     const imgs = document.body.querySelectorAll('img');
     // Who group + two swap cards = at least 2 images (target in Who + You + Recipient share same src)
     expect(imgs.length).toBeGreaterThanOrEqual(2);
-    expect(document.body.querySelector('img[src="https://example.com/alex.jpg"]')).not.toBeNull();
-    expect(document.body.querySelector('img[src="https://example.com/yonatane.jpg"]')).not.toBeNull();
+    expect(
+      document.body.querySelector('img[src="https://example.com/alex.jpg"]'),
+    ).not.toBeNull();
+    expect(
+      document.body.querySelector(
+        'img[src="https://example.com/yonatane.jpg"]',
+      ),
+    ).not.toBeNull();
   });
 
   it('You card shows caller name from session', () => {
@@ -140,7 +155,9 @@ describe('TransferOwnershipDialog — owner swap confirmation', () => {
     const user = userEvent.setup();
     renderDialog(member('MEMBER'));
 
-    await user.click(screen.getByRole('button', { name: /transfer ownership/i }));
+    await user.click(
+      screen.getByRole('button', { name: /transfer ownership/i }),
+    );
 
     expect(mockMutate).toHaveBeenCalledWith({ targetMemberId: 'cm0mem0001' });
 
@@ -148,7 +165,8 @@ describe('TransferOwnershipDialog — owner swap confirmation', () => {
     expect(mockShowToast).toHaveBeenCalledWith({
       status: 'success',
       title: 'Ownership transferred',
-      description: 'Alex Rivera is now the Workspace Owner. You are now an Admin.',
+      description:
+        'Alex Rivera is now the Workspace Owner. You are now an Admin.',
     });
     expect(mockOnOpenChange).toHaveBeenCalledWith(false);
   });
@@ -157,7 +175,9 @@ describe('TransferOwnershipDialog — owner swap confirmation', () => {
     const user = userEvent.setup();
     renderDialog(member('ADMIN'));
 
-    await user.click(screen.getByRole('button', { name: /transfer ownership/i }));
+    await user.click(
+      screen.getByRole('button', { name: /transfer ownership/i }),
+    );
     expect(mockMutate).toHaveBeenCalledWith({ targetMemberId: 'cm0mem0001' });
 
     mockTransferOptions?.onError?.(new Error('Cannot transfer to yourself'));

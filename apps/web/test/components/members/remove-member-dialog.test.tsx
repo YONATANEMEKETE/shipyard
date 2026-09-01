@@ -12,7 +12,10 @@ const mockOnOpenChange = vi.fn();
 let mockIsPending = false;
 let mockRemoveOptions:
   | {
-      onSuccess?: (data: { removedMemberId: string; transferredProjects: number }) => void;
+      onSuccess?: (data: {
+        removedMemberId: string;
+        transferredProjects: number;
+      }) => void;
       onError?: (error: Error) => void;
     }
   | undefined;
@@ -30,7 +33,9 @@ vi.mock('@/hooks/use-members', () => ({
 
 import { RemoveMemberDialog } from '@/components/members/remove-member-dialog';
 
-function member(overrides: Partial<WorkspaceMemberCard> = {}): WorkspaceMemberCard {
+function member(
+  overrides: Partial<WorkspaceMemberCard> = {},
+): WorkspaceMemberCard {
   return {
     id: 'cm0mem0001',
     userId: 'usr_2',
@@ -44,11 +49,24 @@ function member(overrides: Partial<WorkspaceMemberCard> = {}): WorkspaceMemberCa
   };
 }
 
-function renderDialog(target: WorkspaceMemberCard, workspaceName = 'Harbor Labs', stats?: { projectsOwned?: number }) {
-  const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+function renderDialog(
+  target: WorkspaceMemberCard,
+  workspaceName = 'Harbor Labs',
+  stats?: { projectsOwned?: number },
+) {
+  const qc = new QueryClient({
+    defaultOptions: { mutations: { retry: false } },
+  });
   return render(
     <QueryClientProvider client={qc}>
-      <RemoveMemberDialog member={target} slug="harbor" workspaceName={workspaceName} open onOpenChange={mockOnOpenChange} stats={stats} />
+      <RemoveMemberDialog
+        member={target}
+        slug="harbor"
+        workspaceName={workspaceName}
+        open
+        onOpenChange={mockOnOpenChange}
+        stats={stats}
+      />
     </QueryClientProvider>,
   );
 }
@@ -67,11 +85,17 @@ describe('RemoveMemberDialog — danger confirmation', () => {
 
     expect(screen.getByText('Remove member?')).toBeInTheDocument();
     expect(screen.getByText('Removes access immediately')).toBeInTheDocument();
-    expect(screen.getByText(/will lose access to Harbor Labs immediately/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/will lose access to Harbor Labs immediately/i),
+    ).toBeInTheDocument();
     expect(screen.getByText('Alex Rivera')).toBeInTheDocument();
     expect(screen.getByText(/alex@harbor.test.*member/i)).toBeInTheDocument();
-    expect(screen.getByText(/projects will transfer to owner if any/i)).toBeInTheDocument();
-    expect(screen.getByText(/ownership moves to the workspace owner/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/projects will transfer to owner if any/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/ownership moves to the workspace owner/i),
+    ).toBeInTheDocument();
   });
 
   it('shows initials when no avatar image', () => {
@@ -81,20 +105,25 @@ describe('RemoveMemberDialog — danger confirmation', () => {
 
   it('renders avatar image when member has image', () => {
     const withImage = member({ image: 'https://example.com/alex.jpg' });
-    const { container: _c } = renderDialog(withImage);
-    // portal renders to body
-    expect(document.body.querySelector('img[src="https://example.com/alex.jpg"]')).not.toBeNull();
+    renderDialog(withImage);
+    expect(
+      document.body.querySelector('img[src="https://example.com/alex.jpg"]'),
+    ).not.toBeNull();
   });
 
   it('transfer note shows owned project count when provided', () => {
     renderDialog(member(), 'Harbor Labs', { projectsOwned: 3 });
-    expect(screen.getByText('3 owned projects will transfer')).toBeInTheDocument();
+    expect(
+      screen.getByText('3 owned projects will transfer'),
+    ).toBeInTheDocument();
 
     // singular
     renderDialog(member(), 'Harbor Labs', { projectsOwned: 1 });
     // need to clean second render? use find, but previous portal still exists — check last call
     // at least one singular text exists
-    expect(screen.getAllByText(/1 owned project will transfer/).length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByText(/1 owned project will transfer/).length,
+    ).toBeGreaterThanOrEqual(1);
   });
 
   it('confirm posts memberId and closes with success toast (no transfers)', async () => {
@@ -105,7 +134,10 @@ describe('RemoveMemberDialog — danger confirmation', () => {
 
     expect(mockMutate).toHaveBeenCalledWith({ memberId: 'cm0mem0001' });
 
-    mockRemoveOptions?.onSuccess?.({ removedMemberId: 'cm0mem0001', transferredProjects: 0 });
+    mockRemoveOptions?.onSuccess?.({
+      removedMemberId: 'cm0mem0001',
+      transferredProjects: 0,
+    });
     expect(mockShowToast).toHaveBeenCalledWith({
       status: 'success',
       title: 'Member removed',
@@ -120,11 +152,15 @@ describe('RemoveMemberDialog — danger confirmation', () => {
 
     await user.click(screen.getByRole('button', { name: /^remove member$/i }));
 
-    mockRemoveOptions?.onSuccess?.({ removedMemberId: 'cm0mem0001', transferredProjects: 3 });
+    mockRemoveOptions?.onSuccess?.({
+      removedMemberId: 'cm0mem0001',
+      transferredProjects: 3,
+    });
     expect(mockShowToast).toHaveBeenCalledWith({
       status: 'success',
       title: 'Member removed',
-      description: 'Alex Rivera removed. 3 projects transferred to the Workspace Owner.',
+      description:
+        'Alex Rivera removed. 3 projects transferred to the Workspace Owner.',
     });
   });
 

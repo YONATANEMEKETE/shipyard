@@ -28,7 +28,7 @@ function initialsOf(name: string): string {
 
 const AVATAR_TONE: Record<WorkspaceRole, string> = {
   OWNER: 'bg-ds-brand text-white',
-  ADMIN: 'border border-[#C9DAFF] bg-ds-info-soft text-ds-info',
+  ADMIN: 'border border-ds-info/30 bg-ds-info-soft text-ds-info',
   MEMBER: 'border border-ds-border bg-ds-surface-subtle text-muted-foreground',
 };
 

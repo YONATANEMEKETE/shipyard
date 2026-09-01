@@ -32,6 +32,61 @@ export const auth = betterAuth({
     provider: 'postgresql',
   }),
 
+  // Business-event logging for the core auth lifecycle. Better Auth fires
+  // these hooks after the underlying DB write commits, so we capture the
+  // real outcome (not the intent) of sign-in / sign-up / sign-out regardless
+  // of which flow produced it (credential, OAuth, or auto-sign-in). The
+  // `context` carries the endpoint path so we can tag the specific event.
+  databaseHooks: {
+    user: {
+      create: {
+        // eslint-disable-next-line @typescript-eslint/require-await -- sync logging; must return Promise per Better Auth hook contract
+        after: async (user, context) => {
+          const path = context?.path ?? '';
+          logger.info(
+            {
+              userId: user.id,
+              email: user.email,
+              provider: path.startsWith('/callback') ? 'oauth' : 'credential',
+            },
+            'auth.user.created',
+          );
+        },
+      },
+    },
+    session: {
+      create: {
+        // eslint-disable-next-line @typescript-eslint/require-await -- sync logging; must return Promise per Better Auth hook contract
+        after: async (session, context) => {
+          const path = context?.path ?? '';
+          let event = 'auth.session.created';
+          if (path.startsWith('/callback')) {
+            event = 'auth.oauth.sign_in';
+          } else if (path.startsWith('/sign-up')) {
+            event = 'auth.sign_up';
+          } else if (path.startsWith('/sign-in')) {
+            event = 'auth.sign_in';
+          } else if (path.startsWith('/verify-email')) {
+            event = 'auth.verified_auto_sign_in';
+          }
+          logger.info(
+            { userId: session.userId, sessionId: session.id, path },
+            event,
+          );
+        },
+      },
+      delete: {
+        // eslint-disable-next-line @typescript-eslint/require-await -- sync logging; must return Promise per Better Auth hook contract
+        after: async (session) => {
+          logger.info(
+            { userId: session.userId, sessionId: session.id },
+            'auth.sign_out',
+          );
+        },
+      },
+    },
+  },
+
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,
@@ -39,6 +94,10 @@ export const auth = betterAuth({
     minPasswordLength: 8,
     maxPasswordLength: 128,
     sendResetPassword: async ({ user, url }) => {
+      logger.info(
+        { userId: user.id, email: user.email },
+        'auth.password_reset_requested',
+      );
       // v1.7 link shape: {webOrigin}/api/v1/auth/reset-password/{token}
       // ?callbackURL=… — an API endpoint that validates the token and then
       // redirects to the callback URL with a fresh ?token= for the
@@ -61,7 +120,7 @@ export const auth = betterAuth({
     onPasswordReset: ({ user }) => {
       logger.info(
         { userId: user.id, email: user.email },
-        'Password reset completed',
+        'auth.password_reset_completed',
       );
       return Promise.resolve();
     },
@@ -73,6 +132,10 @@ export const auth = betterAuth({
     autoSignInAfterVerification: true,
     expiresIn: 60 * 60, // 1h
     sendVerificationEmail: async ({ user, url }) => {
+      logger.info(
+        { userId: user.id, email: user.email },
+        'auth.verification_email_sent',
+      );
       // The generated url targets the API's verify-email endpoint; rewrite
       // it to the web page that owns the post-click experience. The page
       // reads ?token= and performs the verification client-side.
@@ -92,7 +155,10 @@ export const auth = betterAuth({
       });
     },
     afterEmailVerification: (user) => {
-      logger.info({ userId: user.id, email: user.email }, 'Email verified');
+      logger.info(
+        { userId: user.id, email: user.email },
+        'auth.email_verified',
+      );
       return Promise.resolve();
     },
   },

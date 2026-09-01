@@ -139,6 +139,17 @@ export const membersService = {
       memberId,
       body.role,
     );
+    logger.info(
+      {
+        workspaceId: context.workspaceId,
+        workspaceSlug: context.slug,
+        memberId,
+        newRole: body.role,
+        actorMemberId: context.memberId,
+        actorRole: context.role,
+      },
+      'member.role_changed',
+    );
     return toMemberCard(updated);
   },
 
@@ -175,6 +186,18 @@ export const membersService = {
       await membersRepository.deleteMember(tx, memberId);
     });
 
+    logger.info(
+      {
+        workspaceId: context.workspaceId,
+        workspaceSlug: context.slug,
+        removedMemberId: memberId,
+        actorMemberId: context.memberId,
+        actorRole: context.role,
+        transferredProjects: 0,
+      },
+      'member.removed',
+    );
+
     return { removedMemberId: memberId, transferredProjects: 0 };
   },
 
@@ -194,6 +217,15 @@ export const membersService = {
     await prisma.$transaction(async (tx) => {
       await membersRepository.deleteMember(tx, context.memberId);
     });
+
+    logger.info(
+      {
+        workspaceId: context.workspaceId,
+        workspaceSlug: context.slug,
+        memberId: context.memberId,
+      },
+      'member.left_workspace',
+    );
 
     return { transferredProjects: 0 };
   },
@@ -257,6 +289,16 @@ export const membersService = {
       });
       return rows;
     });
+
+    logger.info(
+      {
+        workspaceId: context.workspaceId,
+        workspaceSlug: context.slug,
+        previousOwnerMemberId: context.memberId,
+        newOwnerMemberId: targetMemberId,
+      },
+      'member.ownership_transferred',
+    );
 
     return updated.map((r) =>
       toMemberCard(r as Parameters<typeof toMemberCard>[0]),
@@ -370,6 +412,20 @@ export const membersService = {
 
     await Promise.allSettled(created.map(dispatchInvitationEmail));
 
+    for (const card of created) {
+      logger.info(
+        {
+          workspaceId: context.workspaceId,
+          workspaceSlug: context.slug,
+          invitationId: card.id,
+          email: card.email,
+          role: card.role,
+          invitedByUserId: callerUserId,
+        },
+        'member.invited',
+      );
+    }
+
     return created;
   },
 
@@ -449,6 +505,17 @@ export const membersService = {
       );
     });
 
+    logger.info(
+      {
+        workspaceId: context.workspaceId,
+        workspaceSlug: context.slug,
+        invitationId,
+        email: inv.email,
+        role: inv.role,
+      },
+      'member.invitation_resent',
+    );
+
     return toInvitationCard(touched);
   },
 
@@ -479,6 +546,18 @@ export const membersService = {
       prisma,
       invitationId,
       'REVOKED',
+    );
+    logger.info(
+      {
+        workspaceId: context.workspaceId,
+        workspaceSlug: context.slug,
+        invitationId,
+        email: revoked.email,
+        role: revoked.role,
+        actorMemberId: context.memberId,
+        actorRole: context.role,
+      },
+      'member.invitation_revoked',
     );
     return toInvitationCard(revoked);
   },
@@ -561,6 +640,19 @@ export const membersService = {
 
       await membersRepository.updateInvitationStatus(tx, inv.id, 'ACCEPTED');
 
+      logger.info(
+        {
+          workspaceId: inv.workspaceId,
+          workspaceSlug: inv.workspace.slug,
+          invitationId: inv.id,
+          email: inv.email,
+          role: inv.role,
+          userId: callerUserId,
+          memberId: created.id,
+        },
+        'member.invitation_accepted',
+      );
+
       return {
         member: toMemberCard(created),
         workspaceSlug: inv.workspace.slug,
@@ -585,6 +677,17 @@ export const membersService = {
       prisma,
       inv.id,
       'DECLINED',
+    );
+    logger.info(
+      {
+        workspaceId: inv.workspaceId,
+        workspaceSlug: inv.workspace.slug,
+        invitationId: inv.id,
+        email: inv.email,
+        role: inv.role,
+        userId: callerUserId,
+      },
+      'member.invitation_declined',
     );
     return toInvitationCard(declined);
   },

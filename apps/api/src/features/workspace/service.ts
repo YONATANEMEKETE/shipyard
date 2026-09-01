@@ -7,6 +7,7 @@ import type {
   WorkspaceRole,
 } from '@shipyard/shared';
 import { InternalServerError } from '../../common/errors/httpErrors.js';
+import { logger } from '../../common/logger/index.js';
 import {
   workspaceRepository,
   type WorkspaceRow,
@@ -106,6 +107,16 @@ export const workspaceService = {
       throw new InternalServerError('Failed to create the workspace');
     }
 
+    logger.info(
+      {
+        userId,
+        workspaceId: created.id,
+        slug: created.slug,
+        name: created.name,
+      },
+      'workspace.created',
+    );
+
     // Creator just became the Owner of a brand-new workspace: exactly 1 member.
     return toDetail({ ...created, _count: { members: 1 } }, 'OWNER');
   },
@@ -138,6 +149,15 @@ export const workspaceService = {
         ...(input.icon !== undefined ? { icon: input.icon } : {}),
       }),
     );
+    logger.info(
+      {
+        workspaceId,
+        name: row.name,
+        slug: row.slug,
+        updatedFields: Object.keys(input),
+      },
+      'workspace.updated',
+    );
     return toDetail(row, role);
   },
 
@@ -158,6 +178,10 @@ export const workspaceService = {
     const row = requireDetail(
       await workspaceRepository.setArchived(workspaceId),
     );
+    logger.info(
+      { workspaceId, slug: row.slug, name: row.name, actorRole: role },
+      'workspace.archived',
+    );
     return toDetail(row, role);
   },
 
@@ -176,6 +200,10 @@ export const workspaceService = {
     }
 
     const row = requireDetail(await workspaceRepository.restore(workspaceId));
+    logger.info(
+      { workspaceId, slug: row.slug, name: row.name, actorRole: role },
+      'workspace.restored',
+    );
     return toDetail(row, role);
   },
 
@@ -195,5 +223,9 @@ export const workspaceService = {
     }
 
     await workspaceRepository.deleteWithCascade(workspaceId);
+    logger.info(
+      { workspaceId, name: current.name, slug: current.slug },
+      'workspace.deleted',
+    );
   },
 };

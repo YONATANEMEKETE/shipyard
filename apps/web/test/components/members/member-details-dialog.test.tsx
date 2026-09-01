@@ -49,7 +49,13 @@ function renderDetails({
       currentUserId={currentUserId}
     />,
   );
-  return { onChangeRole, onTransferOwnership, onRemoveMember, onOpenChange, ...utils };
+  return {
+    onChangeRole,
+    onTransferOwnership,
+    onRemoveMember,
+    onOpenChange,
+    ...utils,
+  };
 }
 
 const buttons = {

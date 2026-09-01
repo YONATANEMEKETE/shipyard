@@ -137,15 +137,20 @@ function RemoveMemberDialogContent({
 
         {/* Body message */}
         <p className="text-[13px] leading-[1.6] text-muted-foreground">
-          {member.name} will lose access to {workspaceName} immediately. Any projects they own transfer
-          automatically to the Workspace Owner — you can’t choose a different recipient.
+          {member.name} will lose access to {workspaceName} immediately. Any
+          projects they own transfer automatically to the Workspace Owner — you
+          can’t choose a different recipient.
         </p>
 
         {/* Target member row — avatar uses image when available, fallback initials danger-soft */}
         <div className="flex w-full items-center gap-3 rounded-[10px] border border-ds-border bg-ds-bg px-3 py-2.5">
           {member.image ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={member.image} alt="" className="size-9 shrink-0 rounded-full border object-cover" />
+            <img
+              src={member.image}
+              alt=""
+              className="size-9 shrink-0 rounded-full border object-cover"
+            />
           ) : (
             <span className="grid size-9 shrink-0 place-items-center rounded-full border border-[#F1C9C2] bg-ds-danger-soft font-mono text-xs font-bold text-ds-danger">
               {initialsOf(member.name)}
@@ -156,20 +161,32 @@ function RemoveMemberDialogContent({
               {member.name}
             </span>
             <span className="truncate text-[11px] leading-none text-muted-foreground">
-              {member.email} · {member.role === 'ADMIN' ? 'Admin' : member.role === 'OWNER' ? 'Owner' : 'Member'}
+              {member.email} ·{' '}
+              {member.role === 'ADMIN'
+                ? 'Admin'
+                : member.role === 'OWNER'
+                  ? 'Owner'
+                  : 'Member'}
             </span>
           </div>
           <span className="inline-flex h-6 shrink-0 items-center gap-1.5 rounded-full border border-ds-border bg-ds-surface px-2.5">
             <User className="size-3 text-muted-foreground" aria-hidden />
             <span className="text-[11px] font-semibold leading-none text-muted-foreground">
-              {member.role === 'OWNER' ? 'Owner' : member.role === 'ADMIN' ? 'Admin' : 'Member'}
+              {member.role === 'OWNER'
+                ? 'Owner'
+                : member.role === 'ADMIN'
+                  ? 'Admin'
+                  : 'Member'}
             </span>
           </span>
         </div>
 
         {/* Transfer note — warning-soft */}
         <div className="flex w-full items-center gap-2 rounded-lg border border-[#EDD9A8] bg-ds-warning-soft px-3 py-2.5">
-          <ShieldAlert className="size-[13px] shrink-0 text-ds-warning" aria-hidden />
+          <ShieldAlert
+            className="size-[13px] shrink-0 text-ds-warning"
+            aria-hidden
+          />
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <span className="text-xs font-semibold leading-none text-foreground">
               {projectsOwned > 0
@@ -177,7 +194,8 @@ function RemoveMemberDialogContent({
                 : 'Projects will transfer to Owner if any'}
             </span>
             <span className="text-[10.5px] leading-none text-muted-foreground">
-              Ownership moves to the Workspace Owner, including archived projects.
+              Ownership moves to the Workspace Owner, including archived
+              projects.
             </span>
           </div>
         </div>

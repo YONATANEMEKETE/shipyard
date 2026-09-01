@@ -12,6 +12,7 @@ import { PendingInvitationsTable } from '@/components/members/pending-invitation
  * MembersPage (exact mirror of the directory tab).
  */
 export function PendingInvitations({
+  slug = '',
   invitations,
   loading = false,
   error = false,
@@ -19,6 +20,7 @@ export function PendingInvitations({
   emptyTitle,
   emptyDescription,
 }: {
+  slug?: string;
   invitations: InvitationCard[];
   loading?: boolean;
   error?: boolean;
@@ -29,6 +31,7 @@ export function PendingInvitations({
 }) {
   return (
     <PendingInvitationsTable
+      slug={slug}
       invitations={invitations}
       loading={loading}
       error={error}

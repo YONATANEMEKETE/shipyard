@@ -33,6 +33,7 @@ function renderDetails({
   currentUserId?: string;
 } = {}) {
   const onChangeRole = vi.fn();
+  const onTransferOwnership = vi.fn();
   const onOpenChange = vi.fn();
   const utils = render(
     <MemberDetailsDialog
@@ -40,12 +41,13 @@ function renderDetails({
       open
       onOpenChange={onOpenChange}
       onChangeRole={onChangeRole}
+      onTransferOwnership={onTransferOwnership}
       workspaceName="Harbor Labs"
       viewerRole={viewerRole}
       currentUserId={currentUserId}
     />,
   );
-  return { onChangeRole, onOpenChange, ...utils };
+  return { onChangeRole, onTransferOwnership, onOpenChange, ...utils };
 }
 
 const buttons = {

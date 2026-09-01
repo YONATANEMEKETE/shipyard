@@ -58,6 +58,7 @@ interface MemberDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onChangeRole: () => void;
+  onTransferOwnership: () => void;
   workspaceName: string;
   /** Viewer's role on this workspace — drives which action sections render. */
   viewerRole?: WorkspaceRole;
@@ -71,6 +72,7 @@ export function MemberDetailsDialog({
   open,
   onOpenChange,
   onChangeRole,
+  onTransferOwnership,
   workspaceName,
   viewerRole,
   currentUserId,
@@ -214,6 +216,7 @@ export function MemberDetailsDialog({
               </button>
               <button
                 type="button"
+                onClick={onTransferOwnership}
                 className="flex h-11 w-full items-center gap-3 rounded-lg border border-ds-border bg-ds-bg px-3 text-left transition-colors hover:border-ds-border-strong"
               >
                 <Shield

@@ -1,9 +1,11 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { InvitationCard } from '@shipyard/shared';
 import { describe, expect, it, vi } from 'vitest';
 
 import { PendingInvitationsTable } from '@/components/members/pending-invitations-table';
+import { ToastProvider } from '@/components/providers/toast-provider';
 
 function invitation(overrides: Partial<InvitationCard> = {}): InvitationCard {
   return {
@@ -36,9 +38,20 @@ function fullDate(iso: string): string {
   });
 }
 
+function renderWithProviders(ui: React.ReactNode) {
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={qc}>
+      <ToastProvider>{ui}</ToastProvider>
+    </QueryClientProvider>,
+  );
+}
+
 describe('PendingInvitationsTable — pending tab states', () => {
   it('renders invitation rows with email, invited note, role, status, expiry and actions', () => {
-    render(
+    renderWithProviders(
       <PendingInvitationsTable
         invitations={[
           invitation(),
@@ -104,7 +117,7 @@ describe('PendingInvitationsTable — pending tab states', () => {
   });
 
   it('renders a distinct status pill for every resolved status', () => {
-    render(
+    renderWithProviders(
       <PendingInvitationsTable
         invitations={[
           invitation({ id: 'cm0inv0001', status: 'ACCEPTED' }),
@@ -122,7 +135,7 @@ describe('PendingInvitationsTable — pending tab states', () => {
   });
 
   it('renders row skeletons while loading and no invitation rows', () => {
-    render(<PendingInvitationsTable invitations={[]} loading />);
+    renderWithProviders(<PendingInvitationsTable invitations={[]} loading />);
 
     expect(screen.getAllByTestId('invitation-row-skeleton')).toHaveLength(8);
     expect(screen.queryByText('alex@harbor.test')).not.toBeInTheDocument();
@@ -130,7 +143,7 @@ describe('PendingInvitationsTable — pending tab states', () => {
   });
 
   it('renders the empty state when the list is empty', () => {
-    render(<PendingInvitationsTable invitations={[]} />);
+    renderWithProviders(<PendingInvitationsTable invitations={[]} />);
 
     expect(screen.getByText('No invitations yet')).toBeInTheDocument();
     expect(
@@ -144,7 +157,7 @@ describe('PendingInvitationsTable — pending tab states', () => {
   });
 
   it('honours custom empty copy when filters are active', () => {
-    render(
+    renderWithProviders(
       <PendingInvitationsTable
         invitations={[]}
         emptyTitle="No invitations match"
@@ -163,7 +176,7 @@ describe('PendingInvitationsTable — pending tab states', () => {
     const user = userEvent.setup();
     const onRetry = vi.fn();
 
-    render(
+    renderWithProviders(
       <PendingInvitationsTable invitations={[]} error onRetry={onRetry} />,
     );
 
@@ -174,12 +187,14 @@ describe('PendingInvitationsTable — pending tab states', () => {
   });
 
   it('shows no retry button when onRetry is not provided', () => {
-    render(<PendingInvitationsTable invitations={[]} error />);
+    renderWithProviders(<PendingInvitationsTable invitations={[]} error />);
     expect(screen.queryByRole('button', { name: /try again/i })).toBeNull();
   });
 
   it('pluralises the footer for a single pending invitation', () => {
-    render(<PendingInvitationsTable invitations={[invitation()]} />);
+    renderWithProviders(
+      <PendingInvitationsTable invitations={[invitation()]} />,
+    );
 
     expect(
       screen.getByText(/showing 1 of 1 pending invitation/i),

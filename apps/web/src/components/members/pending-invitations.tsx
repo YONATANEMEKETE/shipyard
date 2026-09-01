@@ -1,50 +1,40 @@
 'use client';
 
-import { useMemo } from 'react';
+import type { InvitationCard } from '@shipyard/shared';
 
 import { PendingInvitationsTable } from '@/components/members/pending-invitations-table';
-import { MOCK_PENDING_INVITATIONS } from '@/components/members/mock-pending-invitations';
 
 /**
- * Pending tab content — the invitations table fed by mock rows today
- * (mock-pending-invitations.ts). The toolbar (search + status filter) lives
- * in MembersPage's "Tabs + Toolbar Row" per shipyard.pen; this component only
- * filters the roster and renders the card, mirroring MemberDirectory's shape
- * so the swap to useInvitations later touches one file.
+ * Pending tab content — thin renderer mirroring MemberDirectory. The table
+ * resolves its own states: `loading` drives the row skeletons, `error`
+ * renders the ErrorState with retry, an empty list renders the EmptyState,
+ * otherwise the invitation rows. Data + search/status filtering live in
+ * MembersPage (exact mirror of the directory tab).
  */
 export function PendingInvitations({
-  search = '',
-  status,
+  invitations,
+  loading = false,
+  error = false,
+  onRetry,
+  emptyTitle,
+  emptyDescription,
 }: {
-  search?: string;
-  status?: string | undefined;
+  invitations: InvitationCard[];
+  loading?: boolean;
+  error?: boolean;
+  onRetry?: () => void;
+  /** Customize the empty state copy — e.g. "no matches" when filters are active. */
+  emptyTitle?: string;
+  emptyDescription?: string;
 }) {
-  // Client-side filtering — same shape as MembersPage's directory filtering.
-  const visibleInvitations = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return MOCK_PENDING_INVITATIONS.filter((invitation) => {
-      const matchesSearch =
-        query === '' || invitation.email.toLowerCase().includes(query);
-      const matchesStatus =
-        status === undefined ||
-        status === 'ALL' ||
-        invitation.status === status;
-      return matchesSearch && matchesStatus;
-    });
-  }, [search, status]);
-
-  const hasActiveFilters =
-    search.trim() !== '' || (status !== undefined && status !== 'ALL');
-
   return (
     <PendingInvitationsTable
-      invitations={visibleInvitations}
-      emptyTitle={hasActiveFilters ? 'No invitations match' : undefined}
-      emptyDescription={
-        hasActiveFilters
-          ? 'Try a different email or status — or clear the filters.'
-          : undefined
-      }
+      invitations={invitations}
+      loading={loading}
+      error={error}
+      onRetry={onRetry}
+      emptyTitle={emptyTitle}
+      emptyDescription={emptyDescription}
     />
   );
 }

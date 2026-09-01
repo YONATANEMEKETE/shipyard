@@ -6,7 +6,7 @@ import { useMemo, useState } from 'react';
 import { InviteMembersDialog } from '@/components/members/invite-members-dialog';
 import { MemberDirectory } from '@/components/members/member-directory';
 import { PendingInvitations } from '@/components/members/pending-invitations';
-import { MOCK_PENDING_INVITATION_COUNT } from '@/components/members/mock-pending-invitations';
+import { useInvitations } from '@/hooks/use-invitations';
 import { useMembers } from '@/hooks/use-members';
 import { useSession } from '@/hooks/use-session';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,12 @@ export function MembersPage({ slug }: { slug: string }) {
   );
 
   const membersQuery = useMembers(slug);
+  // Invitations list — an OWNER/ADMIN-only endpoint (server 403s MEMBER).
+  // Gated so the member view never fires a doomed request: those pages have
+  // no tabs, so the pending surface (and its query) stays inert there.
+  const invitationsQuery = useInvitations(slug, undefined, {
+    enabled: workspace?.role !== 'MEMBER',
+  });
   const { data: session } = useSession();
   const [roleFilter, setRoleFilter] = useState<string | undefined>(undefined);
 
@@ -57,6 +63,35 @@ export function MembersPage({ slug }: { slug: string }) {
       return matchesSearch && matchesRole;
     });
   }, [membersQuery.data, search, roleFilter]);
+
+  // Client-side filtering — exact mirror of visibleMembers. The invitations
+  // API returns the full list; search + status are local state, so the tab
+  // filters in the page the way the directory does.
+  const visibleInvitations = useMemo(() => {
+    const query = inviteSearch.trim().toLowerCase();
+    return (invitationsQuery.data?.invitations ?? []).filter((invitation) => {
+      const matchesSearch =
+        query === '' || invitation.email.toLowerCase().includes(query);
+      const matchesStatus =
+        inviteStatus === undefined ||
+        inviteStatus === 'ALL' ||
+        invitation.status === inviteStatus;
+      return matchesSearch && matchesStatus;
+    });
+  }, [invitationsQuery.data, inviteSearch, inviteStatus]);
+
+  const hasInviteFilters =
+    inviteSearch.trim() !== '' ||
+    (inviteStatus !== undefined && inviteStatus !== 'ALL');
+
+  // Tab count badge — pending invitations only, matching the tab's name.
+  const pendingInvitationCount = useMemo(
+    () =>
+      (invitationsQuery.data?.invitations ?? []).filter(
+        (invitation) => invitation.status === 'PENDING',
+      ).length,
+    [invitationsQuery.data],
+  );
 
   const hasActiveFilters =
     search.trim() !== '' || (roleFilter !== undefined && roleFilter !== 'ALL');
@@ -196,7 +231,7 @@ export function MembersPage({ slug }: { slug: string }) {
               <TabsTrigger value="pending" className="group gap-2">
                 Pending
                 <span className="inline-flex h-[18px] items-center rounded-full border border-ds-border bg-ds-surface px-1.5 font-mono text-[10px] font-bold leading-none text-muted-foreground transition-colors group-aria-selected:border-ds-warning/40 group-aria-selected:bg-ds-brand-soft group-aria-selected:text-ds-brand">
-                  {MOCK_PENDING_INVITATION_COUNT}
+                  {pendingInvitationCount}
                 </span>
               </TabsTrigger>
             </TabsList>
@@ -208,7 +243,18 @@ export function MembersPage({ slug }: { slug: string }) {
             {directory}
           </TabsContent>
           <TabsContent value="pending" className="min-h-0">
-            <PendingInvitations search={inviteSearch} status={inviteStatus} />
+            <PendingInvitations
+              invitations={visibleInvitations}
+              loading={invitationsQuery.isPending}
+              error={invitationsQuery.isError}
+              onRetry={invitationsQuery.refetch}
+              emptyTitle={hasInviteFilters ? 'No invitations match' : undefined}
+              emptyDescription={
+                hasInviteFilters
+                  ? 'Try a different email or status — or clear the filters.'
+                  : undefined
+              }
+            />
           </TabsContent>
         </Tabs>
       )}

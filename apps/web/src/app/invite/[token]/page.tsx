@@ -60,13 +60,13 @@ const TERMINAL_COPY: Record<
   },
   REVOKED: {
     icon: Ban,
-    title: 'Invitation revoked',
+    title: 'This invitation no longer exists',
     description:
-      'A workspace admin revoked this invitation before it was accepted. Contact the workspace owner to request access.',
+      'This invitation was revoked by a workspace admin and can no longer be accepted. Contact the workspace owner to request a new one.',
   },
   DECLINED: {
     icon: X,
-    title: 'Invitation declined',
+    title: 'This invitation no longer exists',
     description:
       'You declined this invitation, so it can no longer be accepted. Ask the workspace owner to send a new one if you changed your mind.',
   },
@@ -76,6 +76,13 @@ const TERMINAL_COPY: Record<
     description:
       'This invitation link has expired — invitations last 7 days. Ask the workspace owner to send a new one.',
   },
+};
+
+const NOT_FOUND_COPY = {
+  icon: Ban,
+  title: 'This invitation no longer exists',
+  description:
+    'This invitation link is invalid or no longer exists. Check the link or ask the workspace owner to send a new one.',
 };
 
 /**
@@ -105,6 +112,11 @@ export function InviteFlow({ token }: { token: string }) {
     // kept as a defensive alias in case a future path uses it.
     (preview.error.code === 'UNAUTHORIZED' ||
       preview.error.code === 'UNAUTHENTICATED');
+
+  const notFound =
+    preview.isError &&
+    preview.error instanceof InvitationsApiError &&
+    preview.error.code === 'INVITATION_NOT_FOUND';
 
   // ── Skeleton (loading, or redirecting into a workspace the user is
   //    already a member of) ─────────────────────────────────────────────
@@ -180,6 +192,28 @@ export function InviteFlow({ token }: { token: string }) {
                   Create an account
                 </Link>
               </div>
+            </StaggerItem>
+          ) : notFound ? (
+            <StaggerItem className="flex w-full flex-col items-center gap-2.5">
+              <span
+                aria-hidden
+                className="inline-grid size-12 place-items-center rounded-xl border border-ds-border bg-ds-surface"
+              >
+                <Ban className="size-5 text-ds-text-muted" aria-hidden />
+              </span>
+              <h1 className="text-balance text-center text-[34px] font-bold leading-[1.12] tracking-[-1.1px] text-ds-text">
+                {NOT_FOUND_COPY.title}
+              </h1>
+              <p className="text-balance w-full text-center text-[13px] font-normal leading-[1.5] text-ds-text-muted">
+                {NOT_FOUND_COPY.description}
+              </p>
+              <Button
+                type="button"
+                onClick={() => router.replace('/select-workspace')}
+                className="mt-2 h-9 gap-2 rounded-md bg-ds-brand px-4 text-sm font-semibold text-white hover:bg-ds-brand/90"
+              >
+                Go to your workspaces
+              </Button>
             </StaggerItem>
           ) : (
             <ErrorState
@@ -283,8 +317,7 @@ function LiveInviteCard({
   const declineMutation = useDeclineInvitation({
     onSuccess: () => {
       setDeclineState('success');
-      // Server flips the invitation to DECLINED — refetch renders the fallthrough.
-      refreshAfterConflict();
+      router.replace('/w');
     },
     onError: (error) => {
       setDeclineState('error');

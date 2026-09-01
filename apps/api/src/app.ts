@@ -24,6 +24,10 @@ import {
   workspaceMembersRouter,
 } from './features/members/routes.js';
 import { testRouter } from './features/test/routes.js';
+import {
+  workspaceProjectsRouter,
+  workspaceViewPreferencesRouter,
+} from './features/projects/routes.js';
 
 export interface CreateAppOptions {
   /**
@@ -94,6 +98,15 @@ export function createApp(options: CreateAppOptions = {}): express.Express {
   app.use('/api/v1/workspaces/:slug/invitations', workspaceInvitationsRouter);
   app.use('/api/v1/workspaces/:slug', workspaceExtrasRouter);
   app.use('/api/v1/invitations', invitationTokenRouter);
+
+  // Projects module (F4)
+  //  - /workspaces/:slug/projects                 (CRUD + lifecycle)
+  //  - /workspaces/:slug/view-preferences/:scope  (per-user view choice)
+  app.use('/api/v1/workspaces/:slug/projects', workspaceProjectsRouter);
+  app.use(
+    '/api/v1/workspaces/:slug/view-preferences',
+    workspaceViewPreferencesRouter,
+  );
   if (env.NODE_ENV !== 'production') {
     app.use('/api/v1/test', testRouter);
   }

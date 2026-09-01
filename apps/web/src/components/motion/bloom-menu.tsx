@@ -75,8 +75,8 @@ export function BloomMenu({
 
   const morph = reduce ? { duration: 0.15 } : SPRING_FOLDER;
 
-  // Square-ish grid: 2x2 for four items, 3-wide otherwise.
-  const cols = items.length === 4 ? 2 : 3;
+  // Square-ish grid: 2x2 for four items, 2-wide for two (member), 3-wide otherwise.
+  const cols = items.length === 2 ? 2 : items.length === 4 ? 2 : 3;
   const rows = Math.ceil(items.length / cols);
 
   return (

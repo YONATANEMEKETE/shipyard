@@ -22,6 +22,12 @@ interface WorkspaceOption {
   status: string;
 }
 
+function roleLabel(role: string): string {
+  if (role === 'OWNER') return 'Owner';
+  if (role === 'ADMIN') return 'Admin';
+  return 'Member';
+}
+
 function SwitcherSkeleton({ collapsed }: { collapsed: boolean }) {
   if (collapsed) {
     return (
@@ -139,12 +145,10 @@ export function WorkspaceSwitcher({
             {archived ? (
               <>
                 <Archive className="h-3 w-3 shrink-0" />
-                Archived · {workspace.role === 'OWNER' ? 'Owner' : 'Member'}
+                Archived · {roleLabel(workspace.role)}
               </>
-            ) : workspace.role === 'OWNER' ? (
-              'Owner'
             ) : (
-              'Member'
+              roleLabel(workspace.role)
             )}
           </span>
         </span>
@@ -206,11 +210,7 @@ export function WorkspaceSwitcher({
                   Archived
                 </>
               ) : current ? (
-                current.role === 'OWNER' ? (
-                  'Owner'
-                ) : (
-                  'Member'
-                )
+                roleLabel(current.role)
               ) : (
                 'Pick a workspace'
               )}

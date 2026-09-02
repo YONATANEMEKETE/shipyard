@@ -4,7 +4,7 @@ import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useWorkspace } from '@/hooks/use-workspaces';
-import { useViewPreference } from '@/hooks/use-projects';
+import { useProjects, useViewPreference } from '@/hooks/use-projects';
 import { CreateProjectDialog } from '@/components/projects/create-project-dialog';
 import { ProjectListView } from '@/components/projects/project-list-view';
 import {
@@ -14,15 +14,11 @@ import {
 
 /**
  * Projects page — header + toolbar + list view.
- * Mirrors Screen / Projects - List in shipyard.pen:
- *  - Title 24px / 700 / -0.5 tracking, subtitle 13px muted
- *  - Primary "New project" button (Button / Primary, plus icon, 12px 600)
- *  - Toolbar row: search left, List/Kanban view switch + filter/sort controls right
- *  - Projects list table, driven by mock data until the live query is wired in
- *  - Permission-gated: MEMBER cannot create (api-design #3)
- * Filter/view state is lifted here so the list/board view can consume it; the
- * toolbar persists the view choice server-side, and the page renders the list
- * view when LIST is active.
+ * Mirrors Screen / Projects - List in shipyard.pen.
+ * Fetches the project list from the API in this parent component so both the
+ * List view (now) and the Kanban view (next) can consume the same data. The
+ * query drives loading/error/empty states; projects are passed down to the
+ * active view rather than fetched inside it.
  */
 export function ProjectsPage({ slug }: { slug: string }) {
   const { data: workspace } = useWorkspace(slug);
@@ -33,6 +29,18 @@ export function ProjectsPage({ slug }: { slug: string }) {
     search: '',
     sort: 'createdAt',
     order: 'desc',
+  });
+
+  // Fetch the workspace's projects here (parent) so the list and kanban views
+  // share one query. Filter params are passed server-side where the endpoint
+  // supports them; search stays client-side in the list view.
+  const projectsQuery = useProjects(slug, {
+    status: filters.status,
+    ownerId: filters.ownerId,
+    startDate: filters.startDate,
+    targetDate: filters.targetDate,
+    sort: filters.sort,
+    order: filters.order,
   });
 
   return (
@@ -67,10 +75,16 @@ export function ProjectsPage({ slug }: { slug: string }) {
       {/* Toolbar row — search + view switch + filter/sort controls */}
       <ProjectsToolbar slug={slug} filters={filters} onChange={setFilters} />
 
-      {/* List view (mock data) — rendered when LIST view is active */}
+      {/* Active view — projects passed down from the parent query */}
       {(viewPref?.view ?? 'LIST') === 'LIST' ? (
         <div className="flex min-h-0 flex-1 flex-col">
-          <ProjectListView filters={filters} />
+          <ProjectListView
+            filters={filters}
+            projects={projectsQuery.data?.projects ?? []}
+            loading={projectsQuery.isPending}
+            error={projectsQuery.isError}
+            onRetry={projectsQuery.refetch}
+          />
         </div>
       ) : null}
 

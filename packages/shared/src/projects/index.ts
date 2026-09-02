@@ -29,20 +29,29 @@ export const viewTypeSchema = z.enum(['LIST', 'KANBAN']);
 export type ViewType = z.infer<typeof viewTypeSchema>;
 
 // Canonical name bound — matches Prisma VarChar(120); trimmed server-side.
-// Emptiness after trim must fail: use .trim().min(1) so whitespace-only is invalid.
-export const projectNameSchema = z.string().trim().min(1).max(120);
+// Product-facing messages: never leak Zod's "String must..." internals.
+export const projectNameSchema = z
+  .string({ message: 'Give your project a name' })
+  .trim()
+  .min(1, 'Give your project a name')
+  .max(120, 'Keep the project name under 120 characters');
 
 export type ProjectName = z.infer<typeof projectNameSchema>;
 
 // Day-precision dates travel as YYYY-MM-DD strings end-to-end (data-model D4,
 // @db.Date). A regex is the canonical shape; the API coerces to a Date.
-export const projectDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+export const projectDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use a valid date — YYYY-MM-DD');
 
 // ── Request contracts ──
 
 export const createProjectSchema = z.object({
   name: projectNameSchema,
-  description: z.string().max(10000).optional(),
+  description: z
+    .string()
+    .max(10000, 'Description must be 10,000 characters or less')
+    .optional(),
   startDate: projectDateSchema.optional(),
   targetDate: projectDateSchema.optional(),
 });
@@ -52,7 +61,11 @@ export type CreateProjectRequest = z.infer<typeof createProjectSchema>;
 // Nullable optional fields mean "explicitly unset"; omitted means "leave as is".
 export const updateProjectSchema = z.object({
   name: projectNameSchema.optional(),
-  description: z.string().max(10000).nullable().optional(),
+  description: z
+    .string()
+    .max(10000, 'Description must be 10,000 characters or less')
+    .nullable()
+    .optional(),
   status: projectStatusSchema.optional(),
   startDate: projectDateSchema.nullable().optional(),
   targetDate: projectDateSchema.nullable().optional(),
@@ -88,7 +101,11 @@ export type ConfirmProjectLifecycleRequest = z.infer<
 
 // Typed-name confirmation for permanent delete (spec §3.2, api-design #8).
 export const deleteProjectSchema = z.object({
-  confirmName: z.string().trim().min(1).max(120),
+  confirmName: z
+    .string()
+    .trim()
+    .min(1, 'Type the project name to confirm')
+    .max(120, 'Keep the project name under 120 characters'),
 });
 
 export type DeleteProjectRequest = z.infer<typeof deleteProjectSchema>;

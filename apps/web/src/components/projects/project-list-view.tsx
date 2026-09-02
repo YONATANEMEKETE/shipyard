@@ -2,23 +2,25 @@ import { useMemo } from 'react';
 import type { ProjectCard } from '@shipyard/shared';
 
 import { ProjectsTable } from '@/components/projects/projects-table';
-import { mockProjects } from '@/components/projects/mock-projects';
 import type { ProjectFilters } from '@/components/projects/projects-toolbar';
 
 /**
- * Projects List view — renders the ProjectsTable with mock data (until the
- * live list query is wired in). Applies the toolbar's client-side filters
- * (search + status + owner) so the UI responds to the controls, mirroring
- * MemberDirectory. `loading` drives the row skeletons, `error` renders the
- * ErrorState, an empty result renders the EmptyState — the table resolves its
- * own states, matching the members table. Sorting/pagination remain UI-only.
+ * Projects List view — renders the ProjectsTable with the projects fetched by
+ * the parent page query. The parent owns the server-side filter params
+ * (status/owner/dates/sort); here we apply the client-side text search (the
+ * list endpoint has no search param) so the toolbar responds live. `loading`
+ * drives the row skeletons, `error` renders the ErrorState, an empty result
+ * renders the EmptyState — the table resolves its own states, matching the
+ * members table.
  */
 export function ProjectListView({
+  projects,
   filters,
   loading = false,
   error = false,
   onRetry,
 }: {
+  projects: ProjectCard[];
   filters: ProjectFilters;
   loading?: boolean;
   error?: boolean;
@@ -26,22 +28,13 @@ export function ProjectListView({
 }) {
   const visibleProjects = useMemo(() => {
     const query = filters.search.trim().toLowerCase();
-    return mockProjects.filter((project: ProjectCard) => {
-      const matchesSearch =
-        query === '' || project.name.toLowerCase().includes(query);
-      const matchesStatus =
-        filters.status === undefined || project.status === filters.status;
-      const matchesOwner =
-        filters.ownerId === undefined ||
-        project.owner.memberId === filters.ownerId;
-      return matchesSearch && matchesStatus && matchesOwner;
-    });
-  }, [filters.search, filters.status, filters.ownerId]);
+    if (query === '') return projects;
+    return projects.filter((project: ProjectCard) =>
+      project.name.toLowerCase().includes(query),
+    );
+  }, [projects, filters.search]);
 
-  const hasActiveFilters =
-    filters.search.trim() !== '' ||
-    filters.status !== undefined ||
-    filters.ownerId !== undefined;
+  const hasActiveFilters = filters.search.trim() !== '';
 
   return (
     <ProjectsTable
@@ -52,7 +45,7 @@ export function ProjectListView({
       emptyTitle={hasActiveFilters ? 'No projects match' : undefined}
       emptyDescription={
         hasActiveFilters
-          ? 'Try a different name, status or owner — or clear the filters.'
+          ? 'Try a different name — or clear the search.'
           : undefined
       }
     />

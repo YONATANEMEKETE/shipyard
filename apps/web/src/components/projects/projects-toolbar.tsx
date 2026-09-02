@@ -165,7 +165,9 @@ export function ProjectsToolbar({
             <SelectContent>
               <SelectItem value="ALL">All owners</SelectItem>
               {(roster?.members ?? []).map((member) => (
-                <SelectItem key={member.id} value={member.id}>
+                // Use the user id (not the membership id) — the list endpoint
+                // filters Project.ownerId, which references User.id.
+                <SelectItem key={member.userId} value={member.userId}>
                   {member.name}
                 </SelectItem>
               ))}

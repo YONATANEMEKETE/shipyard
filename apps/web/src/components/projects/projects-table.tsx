@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { FolderKanban, RotateCw } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { ProjectCard } from '@shipyard/shared';
 
 import { ProjectStatusBadge } from '@/components/projects/project-status-badge';
@@ -10,6 +10,9 @@ import { ErrorState } from '@/components/ui/error-state';
 import { Button } from '@/components/ui/button';
 import { SPRING_LAYOUT } from '@/lib/ease';
 import { cn } from '@/lib/utils';
+
+// Projects per page — matches the design's "Showing 1–12 of …" footer.
+const PAGE_SIZE = 12;
 
 /**
  * Projects list table — mirrors "Projects List Card" in shipyard.pen:
@@ -175,6 +178,31 @@ export function ProjectsTable({
   const showEmpty = !loading && !error && projects.length === 0;
   const centered = (showEmpty || error) && !loading;
 
+  // Client-side pagination — the list endpoint pages server-side once wired;
+  // for now the mock data is sliced locally so the footer is exercised.
+  const totalPages = Math.max(1, Math.ceil(projects.length / PAGE_SIZE));
+  const [page, setPage] = useState(1);
+  const safePage = Math.min(page, totalPages);
+  const pageProjects = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE;
+    return projects.slice(start, start + PAGE_SIZE);
+  }, [projects, safePage]);
+  const from = projects.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+  const to = Math.min(safePage * PAGE_SIZE, projects.length);
+  // Compact page list: always 1 and last, current ±1, ellipsis in between.
+  const pageButtons = useMemo(() => {
+    const set = new Set<number>([
+      1,
+      totalPages,
+      safePage - 1,
+      safePage,
+      safePage + 1,
+    ]);
+    return [...set]
+      .filter((p) => p >= 1 && p <= totalPages)
+      .sort((a, b) => a - b);
+  }, [safePage, totalPages]);
+
   return (
     <div className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-ds-border bg-ds-surface">
       {/* Mono column header */}
@@ -236,7 +264,7 @@ export function ProjectsTable({
             }
           />
         ) : (
-          projects.map((project) => (
+          pageProjects.map((project) => (
             <ProjectRow
               key={project.id}
               project={project}
@@ -253,33 +281,63 @@ export function ProjectsTable({
         />
       </div>
 
-      {/* Pagination footer — UI only for now */}
+      {/* Pagination footer — pages the mock list locally */}
       <div className="flex h-[52px] shrink-0 items-center justify-between gap-4 px-4">
         <div className="flex items-center gap-1.5">
           <button
             type="button"
             aria-label="Previous page"
-            className="grid size-7 place-items-center rounded-md border border-ds-border bg-ds-bg text-muted-foreground transition-colors hover:text-foreground"
+            disabled={safePage === 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            className="grid size-7 place-items-center rounded-md border border-ds-border bg-ds-bg text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
           >
             <ChevronLeft className="size-[14px]" />
           </button>
-          <button
-            type="button"
-            className="grid size-7 place-items-center rounded-md bg-ds-brand text-xs font-semibold text-white"
-          >
-            1
-          </button>
+
+          {pageButtons.map((p, index) => {
+            const prev = pageButtons[index - 1];
+            const showEllipsis = prev !== undefined && p - prev > 1;
+            return (
+              <span key={p} className="flex items-center gap-1.5">
+                {showEllipsis ? (
+                  <span className="px-0.5 text-xs text-muted-foreground">
+                    …
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  aria-label={`Page ${p}`}
+                  aria-current={p === safePage ? 'page' : undefined}
+                  onClick={() => setPage(p)}
+                  className={cn(
+                    'grid size-7 place-items-center rounded-md text-xs font-semibold transition-colors',
+                    p === safePage
+                      ? 'bg-ds-brand text-white'
+                      : 'border border-ds-border bg-ds-bg text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {p}
+                </button>
+              </span>
+            );
+          })}
+
           <button
             type="button"
             aria-label="Next page"
-            className="grid size-7 place-items-center rounded-md border border-ds-border bg-ds-bg text-muted-foreground transition-colors hover:text-foreground"
+            disabled={safePage === totalPages}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            className="grid size-7 place-items-center rounded-md border border-ds-border bg-ds-bg text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
           >
             <ChevronRight className="size-[14px]" />
           </button>
         </div>
         <span className="text-[11px] text-muted-foreground">
-          Showing 1–{projects.length} of {projects.length}{' '}
-          {projects.length === 1 ? 'project' : 'projects'}
+          {projects.length === 0
+            ? 'No projects'
+            : `Showing ${from}–${to} of ${projects.length} ${
+                projects.length === 1 ? 'project' : 'projects'
+              }`}
         </span>
       </div>
     </div>

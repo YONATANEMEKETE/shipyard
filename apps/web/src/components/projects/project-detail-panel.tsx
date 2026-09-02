@@ -13,6 +13,12 @@ import type { ProjectDetail } from '@shipyard/shared';
 import { Loader } from '@/components/motion/loader';
 import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/ui/error-state';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 /**
@@ -230,33 +236,50 @@ export function ProjectDetailPanel({
           <Pencil className="size-3.5" />
           Edit
         </Button>
-        <Button
-          type="button"
-          aria-label="Transfer ownership"
-          variant="outline"
-          size="icon"
-          className="size-9 rounded-md border-ds-border bg-ds-surface text-muted-foreground"
-        >
-          <UserRoundPlus className="size-4" />
-        </Button>
-        <Button
-          type="button"
-          aria-label="Archive project"
-          variant="outline"
-          size="icon"
-          className="size-9 rounded-md border-ds-border bg-ds-surface text-muted-foreground"
-        >
-          <Archive className="size-4" />
-        </Button>
-        <Button
-          type="button"
-          aria-label="Delete project"
-          variant="outline"
-          size="icon"
-          className="size-9 rounded-md border-ds-border bg-ds-surface text-ds-danger"
-        >
-          <Trash2 className="size-4" />
-        </Button>
+        <TooltipProvider delayDuration={100}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                aria-label="Transfer ownership"
+                variant="outline"
+                size="icon"
+                className="size-9 rounded-md border-ds-border bg-ds-surface text-muted-foreground"
+              >
+                <UserRoundPlus className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Transfer ownership</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                aria-label="Archive project"
+                variant="outline"
+                size="icon"
+                className="size-9 rounded-md border-ds-border bg-ds-surface text-muted-foreground"
+              >
+                <Archive className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Archive project</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                aria-label="Delete project"
+                variant="outline"
+                size="icon"
+                className="size-9 rounded-md border-ds-border bg-ds-surface text-ds-danger"
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Delete project</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </aside>
   );

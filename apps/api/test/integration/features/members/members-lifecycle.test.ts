@@ -1343,6 +1343,360 @@ describe('members lifecycle (integration)', () => {
     }
   });
 
+  // ── Checkpoint B — project ownership transfer on remove / leave ───
+  // F3 Checkpoint B depends on F4's transferOwnedProjects contract.
+  // Every test creates a fresh workspace (beforeEach) so counts are exact.
+
+  it('owner removes member — transfers active + archived projects to Owner', async () => {
+    const email = uniqueEmail('ckpt-remove');
+    const member = await registerVerifiedUser(createTestApp(), email);
+    const inv = await request
+      .post(`/api/v1/workspaces/${ws.slug}/invitations`)
+      .set('Cookie', owner.cookies)
+      .send({ emails: [email], role: 'MEMBER' });
+    expect(inv.status).toBe(201);
+    const accept = await createTestApp()
+      .post(
+        `/api/v1/invitations/${dataOf<{ invitations: InvitationCard[] }>(inv).invitations[0]!.token}/accept`,
+      )
+      .set('Cookie', member.cookies)
+      .send({});
+    expect(accept.status).toBe(201);
+    const memberCard = dataOf<{ member: MemberCard; workspaceSlug: string }>(
+      accept,
+    ).member;
+
+    // Owner creates 3 projects then transfers them to the member (owner is the only writer, MEMBER cannot create).
+    const makeProject = async (name: string): Promise<string> => {
+      const res = await request
+        .post(`/api/v1/workspaces/${ws.slug}/projects`)
+        .set('Cookie', owner.cookies)
+        .send({ name });
+      expect(res.status).toBe(201);
+      return dataOf<{ id: string }>(res).id;
+    };
+    const p1 = await makeProject('Alpha');
+    const p2 = await makeProject('Beta');
+    const p3 = await makeProject('Gamma');
+
+    for (const pid of [p1, p2, p3]) {
+      const tr = await request
+        .post(`/api/v1/workspaces/${ws.slug}/projects/${pid}/transfer-owner`)
+        .set('Cookie', owner.cookies)
+        .send({ targetMemberId: memberCard.id });
+      expect(tr.status).toBe(200);
+    }
+
+    // Archive one — Checkpoint B must include archived projects.
+    const archived = await request
+      .post(`/api/v1/workspaces/${ws.slug}/projects/${p2}/archive`)
+      .set('Cookie', owner.cookies)
+      .send({ confirm: true });
+    expect(archived.status).toBe(200);
+
+    const before = await prisma.project.findMany({
+      where: { workspaceId: ws.id, ownerId: member.userId },
+    });
+    expect(before).toHaveLength(3);
+    expect(before.filter((p) => p.archivedAt !== null)).toHaveLength(1);
+
+    const remove = await request
+      .post(`/api/v1/workspaces/${ws.slug}/members/${memberCard.id}/remove`)
+      .set('Cookie', owner.cookies)
+      .send({ confirm: true });
+    expect(remove.status).toBe(200);
+    const payload = dataOf<{
+      removedMemberId: string;
+      transferredProjects: number;
+    }>(remove);
+    expect(payload.removedMemberId).toBe(memberCard.id);
+    expect(payload.transferredProjects).toBe(3);
+
+    // All 3 now owned by the workspace Owner, archived flag preserved.
+    const after = await prisma.project.findMany({
+      where: { workspaceId: ws.id },
+    });
+    expect(after).toHaveLength(3);
+    for (const row of after) {
+      expect(row.ownerId).toBe(owner.userId);
+    }
+    const stillArchived = after.find((p) => p.id === p2)!;
+    expect(stillArchived.archivedAt).not.toBeNull();
+
+    // Membership is gone; removed user gets 404 on next workspace request.
+    const list = dataOf<{ members: MemberCard[] }>(
+      await request
+        .get(`/api/v1/workspaces/${ws.slug}/members`)
+        .set('Cookie', owner.cookies),
+    );
+    expect(list.members.find((m) => m.id === memberCard.id)).toBeUndefined();
+
+    const denied = await createTestApp()
+      .get(`/api/v1/workspaces/${ws.slug}/members`)
+      .set('Cookie', member.cookies);
+    expect(denied.status).toBe(404);
+    expect(errorCodeOf(denied)).toBe('WORKSPACE_NOT_FOUND');
+  });
+
+  it('member leaves — transfers owned projects including archived to Owner', async () => {
+    const email = uniqueEmail('ckpt-leave');
+    const member = await registerVerifiedUser(createTestApp(), email);
+    const inv = await request
+      .post(`/api/v1/workspaces/${ws.slug}/invitations`)
+      .set('Cookie', owner.cookies)
+      .send({ emails: [email], role: 'MEMBER' });
+    const accept = await createTestApp()
+      .post(
+        `/api/v1/invitations/${dataOf<{ invitations: InvitationCard[] }>(inv).invitations[0]!.token}/accept`,
+      )
+      .set('Cookie', member.cookies)
+      .send({});
+    const memberCard = dataOf<{ member: MemberCard; workspaceSlug: string }>(
+      accept,
+    ).member;
+
+    const p1 = dataOf<{ id: string }>(
+      await request
+        .post(`/api/v1/workspaces/${ws.slug}/projects`)
+        .set('Cookie', owner.cookies)
+        .send({ name: 'Leaving-One' }),
+    ).id;
+    const p2 = dataOf<{ id: string }>(
+      await request
+        .post(`/api/v1/workspaces/${ws.slug}/projects`)
+        .set('Cookie', owner.cookies)
+        .send({ name: 'Leaving-Two' }),
+    ).id;
+
+    for (const pid of [p1, p2]) {
+      const tr = await request
+        .post(`/api/v1/workspaces/${ws.slug}/projects/${pid}/transfer-owner`)
+        .set('Cookie', owner.cookies)
+        .send({ targetMemberId: memberCard.id });
+      expect(tr.status).toBe(200);
+    }
+    // Archive one of the leaving member's projects.
+    const arch = await request
+      .post(`/api/v1/workspaces/${ws.slug}/projects/${p2}/archive`)
+      .set('Cookie', owner.cookies)
+      .send({ confirm: true });
+    expect(arch.status).toBe(200);
+
+    const leave = await createTestApp()
+      .post(`/api/v1/workspaces/${ws.slug}/leave`)
+      .set('Cookie', member.cookies)
+      .send({ confirm: true });
+    expect(leave.status).toBe(200);
+    expect(
+      dataOf<{ transferredProjects: number }>(leave).transferredProjects,
+    ).toBe(2);
+
+    const after = await prisma.project.findMany({
+      where: { workspaceId: ws.id },
+    });
+    for (const row of after) {
+      expect(row.ownerId).toBe(owner.userId);
+    }
+    expect(after.find((p) => p.id === p2)?.archivedAt).not.toBeNull();
+
+    const list = dataOf<{ members: MemberCard[] }>(
+      await request
+        .get(`/api/v1/workspaces/${ws.slug}/members`)
+        .set('Cookie', owner.cookies),
+    );
+    expect(list.members.find((m) => m.id === memberCard.id)).toBeUndefined();
+  });
+
+  it('remove with no owned projects returns transferredProjects 0', async () => {
+    const email = uniqueEmail('ckpt-remove-zero');
+    const member = await registerVerifiedUser(createTestApp(), email);
+    const inv = await request
+      .post(`/api/v1/workspaces/${ws.slug}/invitations`)
+      .set('Cookie', owner.cookies)
+      .send({ emails: [email], role: 'MEMBER' });
+    const accept = await createTestApp()
+      .post(
+        `/api/v1/invitations/${dataOf<{ invitations: InvitationCard[] }>(inv).invitations[0]!.token}/accept`,
+      )
+      .set('Cookie', member.cookies)
+      .send({});
+    const memberCard = dataOf<{ member: MemberCard; workspaceSlug: string }>(
+      accept,
+    ).member;
+
+    const res = await request
+      .post(`/api/v1/workspaces/${ws.slug}/members/${memberCard.id}/remove`)
+      .set('Cookie', owner.cookies)
+      .send({ confirm: true });
+    expect(res.status).toBe(200);
+    expect(
+      dataOf<{ transferredProjects: number }>(res).transferredProjects,
+    ).toBe(0);
+  });
+
+  it('leave with no owned projects returns 0', async () => {
+    const email = uniqueEmail('ckpt-leave-zero');
+    const member = await registerVerifiedUser(createTestApp(), email);
+    const inv = await request
+      .post(`/api/v1/workspaces/${ws.slug}/invitations`)
+      .set('Cookie', owner.cookies)
+      .send({ emails: [email], role: 'MEMBER' });
+    await createTestApp()
+      .post(
+        `/api/v1/invitations/${dataOf<{ invitations: InvitationCard[] }>(inv).invitations[0]!.token}/accept`,
+      )
+      .set('Cookie', member.cookies)
+      .send({});
+
+    const leave = await createTestApp()
+      .post(`/api/v1/workspaces/${ws.slug}/leave`)
+      .set('Cookie', member.cookies)
+      .send({ confirm: true });
+    expect(leave.status).toBe(200);
+    expect(
+      dataOf<{ transferredProjects: number }>(leave).transferredProjects,
+    ).toBe(0);
+  });
+
+  it('transfer is workspace-scoped — foreign workspace projects untouched', async () => {
+    const email = uniqueEmail('ckpt-scoped');
+    const alice = await registerVerifiedUser(createTestApp(), email);
+    const inv = await request
+      .post(`/api/v1/workspaces/${ws.slug}/invitations`)
+      .set('Cookie', owner.cookies)
+      .send({ emails: [email], role: 'MEMBER' });
+    const accept = await createTestApp()
+      .post(
+        `/api/v1/invitations/${dataOf<{ invitations: InvitationCard[] }>(inv).invitations[0]!.token}/accept`,
+      )
+      .set('Cookie', alice.cookies)
+      .send({});
+    const aliceCard = dataOf<{
+      member: MemberCard;
+      workspaceSlug: string;
+    }>(accept).member;
+
+    // Project in the original workspace, owned by Alice.
+    const localId = dataOf<{ id: string }>(
+      await request
+        .post(`/api/v1/workspaces/${ws.slug}/projects`)
+        .set('Cookie', owner.cookies)
+        .send({ name: 'Local' }),
+    ).id;
+    const trLocal = await request
+      .post(`/api/v1/workspaces/${ws.slug}/projects/${localId}/transfer-owner`)
+      .set('Cookie', owner.cookies)
+      .send({ targetMemberId: aliceCard.id });
+    expect(trLocal.status).toBe(200);
+
+    // Second workspace where Alice is ADMIN and owns a separate project.
+    const foreignOwner = await registerVerifiedUser(
+      createTestApp(),
+      uniqueEmail('ckpt-foreign-owner'),
+    );
+    const foreignWsRes = await createTestApp()
+      .post('/api/v1/workspaces')
+      .set('Cookie', foreignOwner.cookies)
+      .send({ name: 'Foreign Workspace' });
+    expect(foreignWsRes.status).toBe(201);
+    const foreignWs = dataOf<WsResp>(foreignWsRes);
+
+    // Invite Alice as ADMIN so she can create there.
+    const invForeign = await createTestApp()
+      .post(`/api/v1/workspaces/${foreignWs.slug}/invitations`)
+      .set('Cookie', foreignOwner.cookies)
+      .send({ emails: [email], role: 'ADMIN' });
+    expect(invForeign.status).toBe(201);
+    const acceptForeign = await createTestApp()
+      .post(
+        `/api/v1/invitations/${dataOf<{ invitations: InvitationCard[] }>(invForeign).invitations[0]!.token}/accept`,
+      )
+      .set('Cookie', alice.cookies)
+      .send({});
+    expect(acceptForeign.status).toBe(201);
+
+    const foreignProject = await createTestApp()
+      .post(`/api/v1/workspaces/${foreignWs.slug}/projects`)
+      .set('Cookie', alice.cookies)
+      .send({ name: 'Foreign' });
+    expect(foreignProject.status).toBe(201);
+    const foreignProjectId = dataOf<{ id: string }>(foreignProject).id;
+
+    // Remove Alice from the original workspace only.
+    const remove = await request
+      .post(`/api/v1/workspaces/${ws.slug}/members/${aliceCard.id}/remove`)
+      .set('Cookie', owner.cookies)
+      .send({ confirm: true });
+    expect(remove.status).toBe(200);
+    expect(
+      dataOf<{ transferredProjects: number }>(remove).transferredProjects,
+    ).toBe(1);
+
+    // Local project transferred to Owner.
+    const localAfter = await prisma.project.findUnique({
+      where: { id: localId },
+    });
+    expect(localAfter?.ownerId).toBe(owner.userId);
+
+    // Foreign project untouched — still owned by Alice in the other workspace.
+    const foreignAfter = await prisma.project.findUnique({
+      where: { id: foreignProjectId },
+    });
+    expect(foreignAfter?.ownerId).toBe(alice.userId);
+    expect(foreignAfter?.workspaceId).toBe(foreignWs.id);
+  });
+
+  it('failed confirmation does not mutate — projects stay with target', async () => {
+    const email = uniqueEmail('ckpt-nomutate');
+    const member = await registerVerifiedUser(createTestApp(), email);
+    const inv = await request
+      .post(`/api/v1/workspaces/${ws.slug}/invitations`)
+      .set('Cookie', owner.cookies)
+      .send({ emails: [email], role: 'MEMBER' });
+    const accept = await createTestApp()
+      .post(
+        `/api/v1/invitations/${dataOf<{ invitations: InvitationCard[] }>(inv).invitations[0]!.token}/accept`,
+      )
+      .set('Cookie', member.cookies)
+      .send({});
+    const memberCard = dataOf<{ member: MemberCard; workspaceSlug: string }>(
+      accept,
+    ).member;
+
+    const pid = dataOf<{ id: string }>(
+      await request
+        .post(`/api/v1/workspaces/${ws.slug}/projects`)
+        .set('Cookie', owner.cookies)
+        .send({ name: 'NoMutate' }),
+    ).id;
+    const tr = await request
+      .post(`/api/v1/workspaces/${ws.slug}/projects/${pid}/transfer-owner`)
+      .set('Cookie', owner.cookies)
+      .send({ targetMemberId: memberCard.id });
+    expect(tr.status).toBe(200);
+
+    // Missing confirm -> 400, nothing transferred, membership intact.
+    const badRemove = await request
+      .post(`/api/v1/workspaces/${ws.slug}/members/${memberCard.id}/remove`)
+      .set('Cookie', owner.cookies)
+      .send({});
+    expect(badRemove.status).toBe(400);
+    expect(errorCodeOf(badRemove)).toBe('VALIDATION_ERROR');
+
+    const badLeave = await createTestApp()
+      .post(`/api/v1/workspaces/${ws.slug}/leave`)
+      .set('Cookie', member.cookies)
+      .send({});
+    expect(badLeave.status).toBe(400);
+
+    const stillOwned = await prisma.project.findUnique({ where: { id: pid } });
+    expect(stillOwned?.ownerId).toBe(member.userId);
+    const stillMember = await prisma.workspaceMember.findUnique({
+      where: { id: memberCard.id },
+    });
+    expect(stillMember).not.toBeNull();
+  });
+
   // ── Validation ─────────────────────────────────────────────────────────
 
   it('validates change-role and transfer bodies (400)', async () => {

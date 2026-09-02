@@ -31,7 +31,8 @@ export const viewScopeParamsSchema = z.object({
 // values arrive as strings; `archived` is coerced from 'true'/'false'.
 export const listProjectsQuerySchema = z.object({
   status: projectStatusSchema.optional(),
-  ownerId: z.string().cuid().optional(),
+  // Filters by an opaque Better Auth user id (not a cuid), so validate length, not format.
+  ownerId: z.string().min(1).optional(),
   startDate: projectDateSchema.optional(),
   targetDate: projectDateSchema.optional(),
   sort: z

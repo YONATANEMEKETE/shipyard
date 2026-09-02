@@ -61,7 +61,14 @@ function forSource(
         request.body = result.data;
         break;
       case 'query':
-        request.query = result.data as Request['query'];
+        // Express 5 declares req.query as a getter-only accessor on the request
+        // prototype, so a plain assignment throws. Shadow it with an own data
+        // property so downstream handlers read the schema-validated query.
+        Object.defineProperty(request, 'query', {
+          value: result.data,
+          writable: true,
+          configurable: true,
+        });
         break;
       case 'params':
         request.params = result.data as Request['params'];
@@ -111,7 +118,12 @@ export const validate = {
             request.body = result.data;
             break;
           case 'query':
-            request.query = result.data as Request['query'];
+            // Shadow the getter-only req.query (Express 5) with the parsed query.
+            Object.defineProperty(request, 'query', {
+              value: result.data,
+              writable: true,
+              configurable: true,
+            });
             break;
           case 'params':
             request.params = result.data as Request['params'];

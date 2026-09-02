@@ -35,15 +35,24 @@ export function KanbanColumn({
   status,
   count,
   onAdd,
+  isDropTarget = false,
   children,
 }: {
   status: ProjectStatus;
   count: number;
   onAdd?: () => void;
+  /** Highlight the column while a card is dragged over it. */
+  isDropTarget?: boolean;
   children: ReactNode;
 }) {
   return (
-    <section className="flex min-w-0 flex-1 flex-col gap-3 rounded-xl border border-ds-border bg-ds-sidebar p-3">
+    <section
+      data-column-status={status}
+      className={cn(
+        'flex h-full min-w-0 flex-1 flex-col gap-3 rounded-xl border bg-ds-sidebar p-3 transition-colors',
+        isDropTarget ? 'border-ds-brand border-[1.5px]' : 'border-ds-border',
+      )}
+    >
       {/* Column header */}
       <div className="flex w-full items-center gap-2">
         <span
@@ -76,8 +85,11 @@ export function KanbanColumn({
         </TooltipProvider>
       </div>
 
-      {/* Column body */}
-      <div className="flex flex-col gap-2.5 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {/* Column body — owns the vertical scroll so only this column scrolls */}
+      <div
+        data-column-body
+        className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         {children}
       </div>
     </section>

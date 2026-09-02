@@ -44,6 +44,7 @@ export function ProjectKanbanCard({
   members,
   description,
   onOpen,
+  onPointerDown,
 }: {
   project: ProjectCard;
   /** Assigned member names — displayed as an overlapping avatar stack. */
@@ -51,6 +52,7 @@ export function ProjectKanbanCard({
   /** Optional description (list card omits it; kanban shows it). */
   description?: string | null;
   onOpen: () => void;
+  onPointerDown?: (event: React.PointerEvent<HTMLElement>) => void;
 }) {
   const visible = members.slice(0, 3);
   const overflow = members.length - visible.length;
@@ -59,7 +61,8 @@ export function ProjectKanbanCard({
     <button
       type="button"
       onClick={onOpen}
-      className="flex w-full flex-col gap-2.5 rounded-xl border border-ds-border bg-ds-surface p-3 text-left shadow-[0_2px_8px_#17171714] transition-colors hover:border-ds-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      onPointerDown={onPointerDown}
+      className="flex w-full cursor-grab flex-col gap-2.5 rounded-xl border border-ds-border bg-ds-surface p-3 text-left shadow-[0_2px_8px_#17171714] transition-colors active:cursor-grabbing hover:border-ds-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       {/* Title */}
       <span className="text-[13.5px] font-semibold leading-snug text-foreground">

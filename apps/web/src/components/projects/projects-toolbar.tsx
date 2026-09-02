@@ -132,25 +132,30 @@ export function ProjectsToolbar({
 
         {/* Filter + sort controls */}
         <div className="flex items-center gap-2">
-          <Select
-            value={filters.status ?? 'ALL'}
-            onValueChange={(value) =>
-              set({
-                status: value === 'ALL' ? undefined : (value as ProjectStatus),
-              })
-            }
-          >
-            <SelectTrigger className="h-[34px] gap-1.5 border-ds-border bg-ds-surface px-3 text-xs text-muted-foreground hover:border-ds-border">
-              <Filter className="size-[14px]" />
-              <SelectValue placeholder="All statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All statuses</SelectItem>
-              <SelectItem value="PLANNED">Planned</SelectItem>
-              <SelectItem value="ACTIVE">Active</SelectItem>
-              <SelectItem value="COMPLETED">Completed</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Status is a list-only concept — the board always shows every
+              status, so the pill is hidden (not just ignored) in Kanban. */}
+          {activeView === 'LIST' ? (
+            <Select
+              value={filters.status ?? 'ALL'}
+              onValueChange={(value) =>
+                set({
+                  status:
+                    value === 'ALL' ? undefined : (value as ProjectStatus),
+                })
+              }
+            >
+              <SelectTrigger className="h-[34px] gap-1.5 border-ds-border bg-ds-surface px-3 text-xs text-muted-foreground hover:border-ds-border">
+                <Filter className="size-[14px]" />
+                <SelectValue placeholder="All statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All statuses</SelectItem>
+                <SelectItem value="PLANNED">Planned</SelectItem>
+                <SelectItem value="ACTIVE">Active</SelectItem>
+                <SelectItem value="COMPLETED">Completed</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : null}
 
           <Select
             value={filters.ownerId ?? 'ALL'}
@@ -195,11 +200,6 @@ export function ProjectsToolbar({
             }
           >
             <SelectTrigger className="h-[34px] gap-1.5 border-ds-border bg-ds-surface px-3 text-xs text-muted-foreground hover:border-ds-border">
-              {filters.order === 'asc' ? (
-                <ArrowUpAZ className="size-[14px]" />
-              ) : (
-                <ArrowDownAZ className="size-[14px]" />
-              )}
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -210,6 +210,25 @@ export function ProjectsToolbar({
               ))}
             </SelectContent>
           </Select>
+
+          {/* Sort direction toggle — flips asc/desc (previously decorative). */}
+          <button
+            type="button"
+            aria-label={`Sort ${
+              filters.order === 'asc' ? 'descending' : 'ascending'
+            }`}
+            title={`Sort ${filters.order === 'asc' ? 'descending' : 'ascending'}`}
+            onClick={() =>
+              set({ order: filters.order === 'asc' ? 'desc' : 'asc' })
+            }
+            className="grid size-[34px] shrink-0 place-items-center rounded-md border border-ds-border bg-ds-surface text-muted-foreground transition-colors hover:border-ds-border hover:text-foreground"
+          >
+            {filters.order === 'asc' ? (
+              <ArrowUpAZ className="size-[14px]" />
+            ) : (
+              <ArrowDownAZ className="size-[14px]" />
+            )}
+          </button>
         </div>
       </div>
     </div>

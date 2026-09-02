@@ -57,15 +57,21 @@ export function ProjectsPage({ slug }: { slug: string }) {
 
   // Fetch the workspace's projects here (parent) so the list and kanban views
   // share one query. Filter params are passed server-side where the endpoint
-  // supports them; search stays client-side in the list view.
+  // supports them; search stays client-side in the list and board views.
   //
-  // In Kanban view the board is the full pipeline — the status/owner/date
-  // filters belong to the list, so they're dropped (applying a status filter
-  // would empty the other columns).
+  // Status is a list-only filter — the board always shows every status, so
+  // it's dropped from the query in Kanban; owner/date/sort still apply (server
+  // sorted, grouped per column).
   const projectsQuery = useProjects(
     slug,
     view === 'KANBAN'
-      ? undefined
+      ? {
+          ownerId: filters.ownerId,
+          startDate: filters.startDate,
+          targetDate: filters.targetDate,
+          sort: filters.sort,
+          order: filters.order,
+        }
       : {
           status: filters.status,
           ownerId: filters.ownerId,
@@ -145,6 +151,7 @@ export function ProjectsPage({ slug }: { slug: string }) {
           ) : (
             <ProjectKanbanView
               projects={projectsQuery.data?.projects ?? []}
+              search={filters.search}
               onOpenProject={(id) => setSelectedProjectId(id)}
               onAddProject={(status) => openCreate(status)}
               onStatusChange={(projectId, status) =>

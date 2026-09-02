@@ -21,14 +21,22 @@ const CARD_GAP = 10; // px — matches the column body gap-2.5
 // Below this a pointer-down is a click: the card stays put and selection works.
 const DRAG_THRESHOLD = 5;
 
-/** Group the live list into the three board columns by status. */
+/** Group the live list into the three board columns by status. The toolbar's
+ *  text search is applied client-side first (matches the list view), so both
+ *  views stay live as the user types. */
 function groupByStatus(
   projects: ProjectCard[],
+  search = '',
 ): Record<ProjectStatus, ProjectCard[]> {
+  const q = search.trim().toLowerCase();
+  const visible =
+    q === ''
+      ? projects
+      : projects.filter((p) => p.name.toLowerCase().includes(q));
   return {
-    PLANNED: projects.filter((p) => p.status === 'PLANNED'),
-    ACTIVE: projects.filter((p) => p.status === 'ACTIVE'),
-    COMPLETED: projects.filter((p) => p.status === 'COMPLETED'),
+    PLANNED: visible.filter((p) => p.status === 'PLANNED'),
+    ACTIVE: visible.filter((p) => p.status === 'ACTIVE'),
+    COMPLETED: visible.filter((p) => p.status === 'COMPLETED'),
   };
 }
 
@@ -69,6 +77,7 @@ function groupByStatus(
  */
 export function ProjectKanbanView({
   projects,
+  search = '',
   onOpenProject,
   onAddProject,
   onStatusChange,
@@ -77,6 +86,8 @@ export function ProjectKanbanView({
   onRetry,
 }: {
   projects: ProjectCard[];
+  /** Toolbar text search — filters cards by name across all columns. */
+  search?: string;
   onOpenProject?: (id: string) => void;
   /** + button in a column — create a new project in that column's status. */
   onAddProject?: (status: ProjectStatus) => void;
@@ -87,17 +98,20 @@ export function ProjectKanbanView({
   onRetry?: () => void;
 }) {
   const [columns, setColumns] = useState<Record<ProjectStatus, ProjectCard[]>>(
-    () => groupByStatus(projects),
+    () => groupByStatus(projects, search),
   );
 
   // Keep the board grouped from the live list query — the server is
-  // authoritative. Re-group whenever the fetched projects change (create,
-  // persisted drag, refetch) via the React "adjust state when a prop changes"
-  // pattern, while local drag reordering still applies on top between syncs.
+  // authoritative. Re-group whenever the fetched projects OR the search term
+  // change (create, persisted drag, refetch) via the React "adjust state when
+  // a prop changes" pattern, while local drag reordering still applies on top
+  // between syncs.
   const [syncedProjects, setSyncedProjects] = useState(projects);
-  if (syncedProjects !== projects) {
+  const [syncedSearch, setSyncedSearch] = useState(search);
+  if (syncedProjects !== projects || syncedSearch !== search) {
     setSyncedProjects(projects);
-    setColumns(groupByStatus(projects));
+    setSyncedSearch(search);
+    setColumns(groupByStatus(projects, search));
   }
 
   // Column wrapper elements (viewport-space bounds) — drop-target resolution.

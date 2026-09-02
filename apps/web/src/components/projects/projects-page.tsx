@@ -3,11 +3,9 @@
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import type { ProjectStatus } from '@shipyard/shared';
-import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { useWorkspace } from '@/hooks/use-workspaces';
 import {
-  projectKeys,
   useProjects,
   useProject,
   useViewPreference,
@@ -92,20 +90,26 @@ export function ProjectsPage({ slug }: { slug: string }) {
   const projectQuery = useProject(slug, selectedProjectId);
 
   // Status switch — a kanban card dragged onto another column. Persisted via
-  // the update API; on failure the board rolls back to server truth (refetch)
-  // and the user is told why.
-  const queryClient = useQueryClient();
+  // Status switch — a kanban card dragged onto another column. Persisted via
+  // the update API; the kanban owns the visual revert (it re-groups from the
+  // server-side list on failure), and we own the toast.
   const { showToast } = useToast();
-  const updateProjectMutation = useUpdateProject(slug, {
-    onError: (error) => {
-      void queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
-      showToast({
-        status: 'error',
-        title: "Couldn't move project",
-        description: error.message || 'Please try again.',
+  const updateProjectMutation = useUpdateProject(slug);
+
+  const moveProject = (projectId: string, status: ProjectStatus) =>
+    updateProjectMutation
+      .mutateAsync({ projectId, body: { status } })
+      .catch((error: unknown) => {
+        const message =
+          error instanceof Error ? error.message : 'Please try again.';
+        showToast({
+          status: 'error',
+          title: "Couldn't move project",
+          description: message,
+        });
+        // Re-throw so the board can revert its optimistic move.
+        throw error;
       });
-    },
-  });
 
   return (
     <div className="flex h-full w-full flex-col gap-6">
@@ -177,9 +181,7 @@ export function ProjectsPage({ slug }: { slug: string }) {
                 search={filters.search}
                 onOpenProject={(id) => setSelectedProjectId(id)}
                 onAddProject={(status) => openCreate(status)}
-                onStatusChange={(projectId, status) =>
-                  updateProjectMutation.mutate({ projectId, body: { status } })
-                }
+                onStatusChange={moveProject}
                 loading={projectsQuery.isPending}
                 error={projectsQuery.isError}
                 onRetry={projectsQuery.refetch}

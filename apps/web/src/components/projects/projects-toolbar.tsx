@@ -96,20 +96,20 @@ export function ProjectsToolbar({
 
   return (
     <div className="flex w-full flex-wrap items-center justify-between gap-3">
-      {/* Search — Projects Toolbar Left */}
-      <Input
-        value={filters.search}
-        onChange={(value) => set({ search: value })}
-        placeholder="Find projects…"
-        leftIcon={<Search className="size-[14px] text-muted-foreground" />}
-        classNames={{
-          field: 'h-[34px] w-[240px] rounded-lg border-ds-border bg-ds-surface',
-          input: 'text-xs',
-        }}
-      />
-
-      {/* View switch + filter controls — Projects Toolbar Right */}
+      {/* Left group — search + Active/Archived scope (reads left-to-right). */}
       <div className="flex items-center gap-3">
+        <Input
+          value={filters.search}
+          onChange={(value) => set({ search: value })}
+          placeholder="Find projects…"
+          leftIcon={<Search className="size-[14px] text-muted-foreground" />}
+          classNames={{
+            field:
+              'h-[34px] w-[240px] rounded-lg border-ds-border bg-ds-surface',
+            input: 'text-xs',
+          }}
+        />
+
         {/* Active / Archived scope — same Tabs component as the view switch.
             Archived is a read-only list (no board, no filters), so the rest of
             the controls hide while it's on. */}
@@ -126,7 +126,10 @@ export function ProjectsToolbar({
             </TabsList>
           </Tabs>
         ) : null}
+      </div>
 
+      {/* Right group — view switch + filter controls. */}
+      <div className="flex items-center gap-3">
         {/* View switch — Tabs (mirrors Members page tab pattern). The board
             is meaningless for archived projects, so it hides in that mode. */}
         {!archived ? (

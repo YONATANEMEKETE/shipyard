@@ -17,6 +17,7 @@ import { ErrorState } from '@/components/ui/error-state';
 import { EditProjectDialog } from '@/components/projects/edit-project-dialog';
 import { TransferProjectDialog } from '@/components/projects/transfer-project-dialog';
 import { ArchiveProjectDialog } from '@/components/projects/archive-project-dialog';
+import { DeleteProjectDialog } from '@/components/projects/delete-project-dialog';
 import { useSession } from '@/hooks/use-session';
 import { useWorkspace } from '@/hooks/use-workspaces';
 import {
@@ -73,6 +74,7 @@ export function ProjectDetailPanel({
   error = false,
   onRetry,
   onArchived,
+  onDeleted,
 }: {
   slug: string;
   project: ProjectDetail | null;
@@ -81,10 +83,13 @@ export function ProjectDetailPanel({
   onRetry?: () => void;
   /** Fired after a successful archive so the parent clears the selection. */
   onArchived?: () => void;
+  /** Fired after a successful delete so the parent clears the selection. */
+  onDeleted?: () => void;
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   // Transfer visibility: workspace OWNERs can change ownership of any project;
   // ADMINs only of projects they own. MEMBERs never see the button (and must
@@ -305,6 +310,7 @@ export function ProjectDetailPanel({
                 variant="outline"
                 size="icon"
                 disabled={!canEdit}
+                onClick={() => setDeleteOpen(true)}
                 className="size-9 rounded-md border-ds-border bg-ds-surface text-ds-danger"
               >
                 <Trash2 className="size-4" />
@@ -339,6 +345,16 @@ export function ProjectDetailPanel({
         slug={slug}
         project={project}
         onArchived={onArchived}
+      />
+
+      {/* Delete — typed-name confirm; permanent, on success the parent clears
+          the selection. */}
+      <DeleteProjectDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        slug={slug}
+        project={project}
+        onDeleted={onDeleted}
       />
     </aside>
   );

@@ -208,13 +208,14 @@ export function MembersPage({ slug }: { slug: string }) {
         Members
       </span>
 
-      {/* Header row — title + subcopy, invite button on the right */}
-      <div className="flex w-full flex-wrap items-center justify-between gap-4">
+      {/* Header row — title + subcopy, invite button on the right. On mobile
+          the button wraps below the text block and spans full width. */}
+      <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:gap-4">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <h1 className="text-[28px] font-bold leading-none tracking-[-1px] text-foreground">
+          <h1 className="text-[22px] font-bold leading-none tracking-[-0.75px] text-foreground sm:text-[28px] sm:tracking-[-1px]">
             Members
           </h1>
-          <p className="text-[13px] leading-[1.5] text-muted-foreground">
+          <p className="text-[12.5px] leading-[1.5] text-muted-foreground sm:text-[13px]">
             {isMemberView
               ? `Everyone with access to ${workspaceName}. As a Member you can view the directory and manage your own work here — invite and role management are handled by Owners and Admins.`
               : `Everyone with access to ${workspaceName}. Roles take effect immediately — projects owned by a removed member transfer automatically to the Workspace Owner.`}
@@ -222,11 +223,11 @@ export function MembersPage({ slug }: { slug: string }) {
         </div>
 
         {!isMemberView ? (
-          <div className="flex items-center gap-2.5">
+          <div className="flex w-full items-center gap-2.5 sm:w-auto">
             <Button
               type="button"
               onClick={() => setInviteOpen(true)}
-              className="h-9 gap-2 rounded-md bg-ds-brand px-4 text-sm font-semibold text-white hover:bg-ds-brand/90"
+              className="h-9 w-full gap-2 rounded-md bg-ds-brand px-4 text-sm font-semibold text-white hover:bg-ds-brand/90 sm:w-auto"
             >
               <UserPlus className="size-4" />
               Invite members

@@ -47,7 +47,7 @@ function InvitationRowSkeleton() {
     <div
       aria-hidden
       data-testid="invitation-row-skeleton"
-      className="flex h-12 items-center gap-3 border-b border-ds-border/70 px-4 last:border-b-0"
+      className="flex h-12 min-w-[720px] items-center gap-3 border-b border-ds-border/70 px-4 last:border-b-0 md:min-w-0"
     >
       {/* Invitee — email + note placeholders */}
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -93,7 +93,7 @@ function InvitationRow({
   const isBusy = isResending || isRevoking;
 
   return (
-    <div className="flex h-12 items-center gap-3 border-b border-ds-border/70 px-4 transition-colors hover:bg-ds-bg last:border-b-0">
+    <div className="flex h-12 min-w-[720px] items-center gap-3 border-b border-ds-border/70 px-4 transition-colors hover:bg-ds-bg last:border-b-0 md:min-w-0">
       {/* Invitee — email + invited note */}
       <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
         <span className="truncate text-[12.5px] font-semibold leading-none text-foreground">
@@ -212,11 +212,11 @@ export function PendingInvitationsTable({
   const centered = (showEmpty || error) && !loading;
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-ds-border bg-ds-surface">
+    <div className="flex h-full w-full flex-col overflow-x-auto rounded-xl border border-ds-border bg-ds-surface">
       {/* Mono column header — shipyard.pen TH cells */}
       {/* Each TH is shrink-0 at the exact width of its row cell so header text
           stays aligned above its data when the table is narrower than content. */}
-      <div className="flex h-9 shrink-0 items-center gap-3 border-b border-ds-border bg-ds-bg px-4">
+      <div className="flex h-9 min-w-[720px] shrink-0 items-center gap-3 border-b border-ds-border bg-ds-bg px-4 md:min-w-0">
         <span className="min-w-0 flex-1 font-mono text-[10px] font-semibold uppercase tracking-[0.8px] text-muted-foreground">
           Invitee
         </span>
@@ -304,7 +304,7 @@ export function PendingInvitationsTable({
       </div>
 
       {/* Pagination footer — UI only for now */}
-      <div className="flex h-[52px] shrink-0 items-center justify-between gap-4 px-4">
+      <div className="flex h-[52px] min-w-[720px] shrink-0 items-center justify-between gap-4 px-4 md:min-w-0">
         <div className="flex items-center gap-1.5">
           <button
             type="button"

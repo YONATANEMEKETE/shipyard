@@ -91,8 +91,12 @@ export function ProjectKanbanView({
   onOpenProject?: (id: string) => void;
   /** + button in a column — create a new project in that column's status. */
   onAddProject?: (status: ProjectStatus) => void;
-  /** Persist a card dropped onto another column (status switch). */
-  onStatusChange?: (projectId: string, status: ProjectStatus) => void;
+  /** Persist a card dropped onto another column (status switch). A rejected
+   *  promise means it failed — the board reverts the optimistic move. */
+  onStatusChange?: (
+    projectId: string,
+    status: ProjectStatus,
+  ) => Promise<unknown> | void;
   loading?: boolean;
   error?: boolean;
   onRetry?: () => void;
@@ -350,9 +354,15 @@ export function ProjectKanbanView({
     });
 
     // Cross-column drop = a status switch — persist it so the board stays in
-    // sync with the DB (the parent refetch re-groups the board afterwards).
-    if (targetStatus !== drag.from)
-      onStatusChange?.(drag.card.id, targetStatus);
+    // sync with the DB. On rejection (e.g. role 403) the card snaps back to
+    // the server's grouping — direct state revert, no refetch round-trip.
+    if (targetStatus !== drag.from) {
+      Promise.resolve(onStatusChange?.(drag.card.id, targetStatus)).catch(
+        () => {
+          setColumns(groupByStatus(projects, search));
+        },
+      );
+    }
 
     setDragging(null);
     setOverlayRect(null);

@@ -10,6 +10,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import {
   createProjectSchema,
   type CreateProjectRequest,
+  type ProjectStatus,
 } from '@shipyard/shared';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -36,6 +37,11 @@ export interface CreateProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   slug: string;
+  /**
+   * Status the new project is created in (e.g. the board column the + was
+   * clicked in). Omitted → server defaults to ACTIVE. Not rendered as a field.
+   */
+  defaultStatus?: ProjectStatus;
 }
 
 // Form-only contract: start/target dates are required in this dialog, but the
@@ -66,6 +72,7 @@ export function CreateProjectDialog({
   open,
   onOpenChange,
   slug,
+  defaultStatus,
 }: CreateProjectDialogProps) {
   const { showToast } = useToast();
 
@@ -118,7 +125,7 @@ export function CreateProjectDialog({
   }, [open, form]);
 
   const onSubmit = form.handleSubmit((vals) => {
-    createMutation.mutate(vals);
+    createMutation.mutate({ ...vals, status: defaultStatus });
   });
 
   return (

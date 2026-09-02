@@ -3,13 +3,11 @@
 import { Calendar } from 'lucide-react';
 import type { ProjectCard } from '@shipyard/shared';
 
-import { cn } from '@/lib/utils';
-
 /**
  * Kanban project card — mirrors "Card / Project (Kanban)" (lDauH) in
  * shipyard.pen: a white 260px card with title, 2-line clamped description,
- * and a footer of member avatar stack + target date. Clicking selects the
- * project (drives the detail panel via the parent).
+ * and a footer of owner avatar + target date. Clicking selects the project
+ * (drives the detail panel via the parent).
  */
 
 function initialsOf(name: string): string {
@@ -20,15 +18,6 @@ function initialsOf(name: string): string {
     .map((part) => part[0]!.toUpperCase())
     .join('');
 }
-
-const AVATAR_COLORS = [
-  'bg-ds-brand',
-  'bg-ds-info',
-  'bg-ds-success',
-  'bg-ds-warning',
-  'bg-ds-danger',
-  'bg-ds-text',
-];
 
 function formatDate(value: string | null): string {
   if (!value) return '—';
@@ -41,21 +30,29 @@ function formatDate(value: string | null): string {
 
 export function ProjectKanbanCard({
   project,
-  members,
   description,
   onOpen,
   onPointerDown,
 }: {
   project: ProjectCard;
-  /** Assigned member names — displayed as an overlapping avatar stack. */
-  members: string[];
   /** Optional description (list card omits it; kanban shows it). */
   description?: string | null;
   onOpen: () => void;
   onPointerDown?: (event: React.PointerEvent<HTMLElement>) => void;
 }) {
-  const visible = members.slice(0, 3);
-  const overflow = members.length - visible.length;
+  // Avatar — the owner's image when available, initials otherwise.
+  const ownerAvatar = project.owner.image ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={project.owner.image}
+      alt=""
+      className="size-[18px] shrink-0 rounded-full object-cover ring-2 ring-ds-surface"
+    />
+  ) : (
+    <span className="grid size-[18px] shrink-0 place-items-center rounded-full bg-ds-brand font-mono text-[7px] font-bold text-white ring-2 ring-ds-surface">
+      {initialsOf(project.owner.name)}
+    </span>
+  );
 
   return (
     <button
@@ -74,30 +71,10 @@ export function ProjectKanbanCard({
         {description ?? 'No description yet.'}
       </span>
 
-      {/* Footer — avatar stack + target date */}
+      {/* Footer — owner avatar + target date */}
       <div className="mt-0.5 flex w-full items-center justify-between gap-1.5">
         <span className="relative flex h-[18px] items-center">
-          {visible.map((name, index) => (
-            <span
-              key={`${name}-${index}`}
-              className={cn(
-                'grid size-[18px] shrink-0 place-items-center rounded-full font-mono text-[7px] font-bold text-white ring-2 ring-ds-surface',
-                AVATAR_COLORS[index % AVATAR_COLORS.length],
-                index > 0 && '-ml-2',
-              )}
-              style={{ zIndex: index + 1 }}
-            >
-              {initialsOf(name)}
-            </span>
-          ))}
-          {overflow > 0 ? (
-            <span
-              className="grid size-[18px] shrink-0 place-items-center rounded-full bg-ds-brand font-mono text-[7px] font-bold text-white ring-2 ring-ds-surface -ml-2"
-              style={{ zIndex: visible.length + 1 }}
-            >
-              +{overflow}
-            </span>
-          ) : null}
+          {ownerAvatar}
         </span>
 
         <span className="flex shrink-0 items-center gap-1.5 text-[10.5px] text-muted-foreground">

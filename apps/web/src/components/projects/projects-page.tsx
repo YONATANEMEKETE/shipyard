@@ -2,12 +2,14 @@
 
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
+import type { ProjectStatus } from '@shipyard/shared';
 import { Button } from '@/components/ui/button';
 import { useWorkspace } from '@/hooks/use-workspaces';
 import {
   useProjects,
   useProject,
   useViewPreference,
+  useUpdateProject,
 } from '@/hooks/use-projects';
 import { CreateProjectDialog } from '@/components/projects/create-project-dialog';
 import { ProjectListView } from '@/components/projects/project-list-view';
@@ -32,6 +34,15 @@ export function ProjectsPage({ slug }: { slug: string }) {
   const view = viewPref?.view ?? 'LIST';
   const canCreate = workspace?.role !== 'MEMBER';
   const [createOpen, setCreateOpen] = useState(false);
+  // Status the create dialog should default the new project into. undefined
+  // (header / list) → server defaults to ACTIVE; a column + sets the status.
+  const [createStatus, setCreateStatus] = useState<ProjectStatus | undefined>(
+    undefined,
+  );
+  const openCreate = (status?: ProjectStatus) => {
+    setCreateStatus(status);
+    setCreateOpen(true);
+  };
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     null,
   );
@@ -44,18 +55,30 @@ export function ProjectsPage({ slug }: { slug: string }) {
   // Fetch the workspace's projects here (parent) so the list and kanban views
   // share one query. Filter params are passed server-side where the endpoint
   // supports them; search stays client-side in the list view.
-  const projectsQuery = useProjects(slug, {
-    status: filters.status,
-    ownerId: filters.ownerId,
-    startDate: filters.startDate,
-    targetDate: filters.targetDate,
-    sort: filters.sort,
-    order: filters.order,
-  });
+  //
+  // In Kanban view the board is the full pipeline — the status/owner/date
+  // filters belong to the list, so they're dropped (applying a status filter
+  // would empty the other columns).
+  const projectsQuery = useProjects(
+    slug,
+    view === 'KANBAN'
+      ? undefined
+      : {
+          status: filters.status,
+          ownerId: filters.ownerId,
+          startDate: filters.startDate,
+          targetDate: filters.targetDate,
+          sort: filters.sort,
+          order: filters.order,
+        },
+  );
 
   // Detail query — fetched on selection and passed to the always-present
   // detail panel, which shows a centered loader while it resolves.
   const projectQuery = useProject(slug, selectedProjectId);
+
+  // Status switch — a kanban card dragged onto another column.
+  const updateProjectMutation = useUpdateProject(slug);
 
   return (
     <div className="flex h-full w-full flex-col gap-6">
@@ -77,7 +100,7 @@ export function ProjectsPage({ slug }: { slug: string }) {
         {canCreate ? (
           <Button
             type="button"
-            onClick={() => setCreateOpen(true)}
+            onClick={() => openCreate()}
             className="h-9 gap-2 rounded-md bg-ds-brand px-4 text-sm font-semibold text-white hover:bg-ds-brand/90"
           >
             <Plus className="size-4" />
@@ -105,7 +128,12 @@ export function ProjectsPage({ slug }: { slug: string }) {
             />
           ) : (
             <ProjectKanbanView
+              projects={projectsQuery.data?.projects ?? []}
               onOpenProject={(id) => setSelectedProjectId(id)}
+              onAddProject={(status) => openCreate(status)}
+              onStatusChange={(projectId, status) =>
+                updateProjectMutation.mutate({ projectId, body: { status } })
+              }
               loading={projectsQuery.isPending}
               error={projectsQuery.isError}
               onRetry={projectsQuery.refetch}
@@ -128,6 +156,7 @@ export function ProjectsPage({ slug }: { slug: string }) {
         open={createOpen}
         onOpenChange={setCreateOpen}
         slug={slug}
+        defaultStatus={createStatus}
       />
     </div>
   );

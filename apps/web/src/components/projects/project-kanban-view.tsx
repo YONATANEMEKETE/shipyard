@@ -17,6 +17,10 @@ const STATUS_ORDER: ProjectStatus[] = ['PLANNED', 'ACTIVE', 'COMPLETED'];
 
 const CARD_GAP = 10; // px — matches the column body gap-2.5
 
+// Pointer movement required (px) before a card lifts into the drag overlay.
+// Below this a pointer-down is a click: the card stays put and selection works.
+const DRAG_THRESHOLD = 5;
+
 /** Group the live list into the three board columns by status. */
 function groupByStatus(
   projects: ProjectCard[],
@@ -34,10 +38,12 @@ function groupByStatus(
  * the live project list grouped by `status`.
  *
  * Drag-and-drop, built on framer-motion:
- *  - Pointer-down on a card lifts it out of its column and mounts a floating
- *    overlay (portaled to the body) that takes over the drag via
- *    `useDragControls`. Because the overlay lives outside the board, the
- *    grabbed card is unclipped, sits above every other UI element, and is
+ *  - Pointer-down on a card arms a pending drag; only once the pointer moves
+ *    past a small threshold (DRAG_THRESHOLD px) is the card lifted into a
+ *    floating overlay (portaled to the body) that takes over via
+ *    `useDragControls`. A plain click never lifts the card, so selection is
+ *    reliable on the first try. Because the overlay lives outside the board,
+ *    the grabbed card is unclipped, sits above every other UI element, and is
  *    free to move across columns.
  *  - The lifted card is removed from its column, so the remaining cards
  *    reflow with a shared-layout animation to fill the vacated slot.
@@ -126,37 +132,121 @@ export function ProjectKanbanView({
 
   const dragControls = useDragControls();
 
-  const startDrag = (
+  // Pending pointer session — armed on pointer-down. Commits to a real drag
+  // only after the pointer moves past DRAG_THRESHOLD px, so a click never
+  // lifts/unmounts its card (the browser click always lands on it → selection
+  // works on the first try).
+  const pendingDragRef = useRef<{
+    card: ProjectCard;
+    from: ProjectStatus;
+    pointerId: number;
+    startX: number;
+    startY: number;
+    rect: DOMRect;
+  } | null>(null);
+  // True once the framer drag session is bound to the overlay.
+  const sessionStartedRef = useRef(false);
+  // pointerup/cancel fallback registered when a drag commits — held in a ref
+  // so it can be removed from a later render without an identity mismatch.
+  const dragFallbackRef = useRef<(() => void) | null>(null);
+
+  const removeDragFallback = () => {
+    const fallback = dragFallbackRef.current;
+    if (fallback) {
+      window.removeEventListener('pointerup', fallback);
+      window.removeEventListener('pointercancel', fallback);
+      dragFallbackRef.current = null;
+    }
+  };
+
+  // Force-resolve an active drag/overlay state. Used when the pointer is
+  // released before framer's session could bind (e.g. a very fast flick) so
+  // no overlay is left stuck over the board.
+  const settleDrag = () => {
+    removeDragFallback();
+    sessionStartedRef.current = false;
+    pendingDragRef.current = null;
+    dragRef.current = null;
+    dragEventRef.current = null;
+    setDropTarget(null);
+    setDragging(null);
+    setOverlayRect(null);
+    // Allow the next quick click to select normally (matches handleDragEnd).
+    window.setTimeout(() => {
+      movedRef.current = false;
+    }, 0);
+  };
+
+  const beginDrag = (
     event: React.PointerEvent<HTMLElement>,
     card: ProjectCard,
     from: ProjectStatus,
   ) => {
-    const el = event.currentTarget;
-    const rect = el.getBoundingClientRect();
-    dragRef.current = { card, from };
-    dragEventRef.current = event.nativeEvent;
-    setOverlayRect({
-      x: rect.left,
-      y: rect.top,
-      width: rect.width,
-      height: rect.height,
-    });
-    // Lifts the card out of its column (siblings reflow) and mounts the
-    // overlay, which starts the framer drag session on mount.
-    setDragging({ card, from });
+    pendingDragRef.current = {
+      card,
+      from,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      rect: event.currentTarget.getBoundingClientRect(),
+    };
+
+    const onMove = (e: PointerEvent) => {
+      const pending = pendingDragRef.current;
+      if (!pending || e.pointerId !== pending.pointerId) return;
+      const dx = e.clientX - pending.startX;
+      const dy = e.clientY - pending.startY;
+      if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+
+      // Real movement — lift the card into the overlay. The dragging effect
+      // binds the framer session to the overlay next frame.
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      pendingDragRef.current = null;
+
+      dragRef.current = { card: pending.card, from: pending.from };
+      dragEventRef.current = e;
+      movedRef.current = true;
+      setOverlayRect({
+        x: pending.rect.x,
+        y: pending.rect.y,
+        width: pending.rect.width,
+        height: pending.rect.height,
+      });
+      setDragging({ card: pending.card, from: pending.from });
+
+      // Safety net: pointer released before framer's session binds → settle.
+      const onFallback = () => {
+        if (sessionStartedRef.current) return;
+        settleDrag();
+      };
+      dragFallbackRef.current = onFallback;
+      window.addEventListener('pointerup', onFallback);
+      window.addEventListener('pointercancel', onFallback);
+    };
+
+    const onUp = () => {
+      // No threshold crossed — a tap/click. The card was never lifted, so the
+      // browser click lands on it and selection happens in the card's onClick.
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      pendingDragRef.current = null;
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
   };
 
-  // Start the drag session once the overlay is mounted, using the original
-  // pointer event captured at pointer-down.
-  const overlayStartedRef = useRef<{ started: boolean; at?: number }>({
-    started: false,
-  });
+  // Start the drag session once the overlay is mounted, using the pointer
+  // event captured when the drag committed.
   useEffect(() => {
-    if (!dragging) return;
-    if (overlayStartedRef.current.started) return;
+    if (!dragging || sessionStartedRef.current) return;
     const event = dragEventRef.current;
     if (!event) return;
-    overlayStartedRef.current.started = true;
+    sessionStartedRef.current = true;
     const frame = requestAnimationFrame(() => dragControls.start(event));
     return () => cancelAnimationFrame(frame);
   }, [dragging, dragControls]);
@@ -206,9 +296,10 @@ export function ProjectKanbanView({
     const drop =
       drag && overlayRect ? resolveDrop(info.point.x, info.point.y) : null;
 
+    removeDragFallback();
+    sessionStartedRef.current = false;
     dragRef.current = null;
     dragEventRef.current = null;
-    overlayStartedRef.current = { started: false };
     setDropTarget(null);
     if (!drag || !overlayRect) {
       setDragging(null);
@@ -321,7 +412,7 @@ export function ProjectKanbanView({
                   <CardItem
                     key={item.id}
                     card={item}
-                    onPointerDown={(event) => startDrag(event, item, status)}
+                    onPointerDown={(event) => beginDrag(event, item, status)}
                     onOpenProject={onOpenProject}
                     movedRef={movedRef}
                   />
@@ -393,9 +484,6 @@ export function ProjectKanbanView({
               dragControls={dragControls}
               dragMomentum={false}
               dragElastic={0.12}
-              onDragStart={() => {
-                movedRef.current = true;
-              }}
               onDrag={(_, info) => {
                 const drop = resolveDrop(info.point.x, info.point.y);
                 setDropTarget(drop?.status ?? null);

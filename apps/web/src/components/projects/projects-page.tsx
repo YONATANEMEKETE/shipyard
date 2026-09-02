@@ -106,6 +106,9 @@ export function ProjectsPage({ slug }: { slug: string }) {
           ) : (
             <ProjectKanbanView
               onOpenProject={(id) => setSelectedProjectId(id)}
+              loading={projectsQuery.isPending}
+              error={projectsQuery.isError}
+              onRetry={projectsQuery.refetch}
             />
           )}
         </div>

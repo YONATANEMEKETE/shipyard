@@ -172,6 +172,7 @@ export function ProjectsPage({ slug }: { slug: string }) {
             loading={selectedProjectId !== null && projectQuery.isPending}
             error={selectedProjectId !== null && projectQuery.isError}
             onRetry={projectQuery.refetch}
+            onArchived={() => setSelectedProjectId(null)}
           />
         </div>
       </div>

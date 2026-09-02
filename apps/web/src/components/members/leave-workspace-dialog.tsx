@@ -147,7 +147,7 @@ function LeaveMemberContent({
         <div className="flex w-full items-center gap-3.5">
           <span
             aria-hidden
-            className="grid size-11 shrink-0 place-items-center rounded-lg border border-[#EDD9A8] bg-ds-warning-soft"
+            className="grid size-11 shrink-0 place-items-center rounded-lg border border-ds-warning/30 bg-ds-warning-soft"
           >
             <LogOut className="size-[22px] text-ds-warning" aria-hidden />
           </span>
@@ -175,7 +175,7 @@ function LeaveMemberContent({
           you own transfer automatically to the Workspace Owner.
         </p>
 
-        <div className="flex w-full items-center gap-2 rounded-lg border border-[#EDD9A8] bg-ds-warning-soft px-3 py-2.5">
+        <div className="flex w-full items-center gap-2 rounded-lg border border-ds-warning/30 bg-ds-warning-soft px-3 py-2.5">
           <ShieldAlert
             className="size-[13px] shrink-0 text-ds-warning"
             aria-hidden
@@ -292,7 +292,7 @@ function LeaveOwnerContent({
         <div className="flex w-full items-center gap-3.5">
           <span
             aria-hidden
-            className="grid size-11 shrink-0 place-items-center rounded-lg border border-[#EDD9A8] bg-ds-warning-soft"
+            className="grid size-11 shrink-0 place-items-center rounded-lg border border-ds-warning/30 bg-ds-warning-soft"
           >
             <LogOut className="size-[22px] text-ds-warning" aria-hidden />
           </span>
@@ -341,7 +341,7 @@ function LeaveOwnerContent({
                       className="size-6 rounded-full border object-cover"
                     />
                   ) : (
-                    <span className="grid size-6 place-items-center rounded-full border border-[#C9DAFF] bg-ds-info-soft font-mono text-[9px] font-bold text-ds-info">
+                    <span className="grid size-6 place-items-center rounded-full border border-ds-info/30 bg-ds-info-soft font-mono text-[9px] font-bold text-ds-info">
                       {selected ? initialsOf(selected.name) : ''}
                     </span>
                   )}
@@ -367,7 +367,7 @@ function LeaveOwnerContent({
           )}
         </div>
 
-        <div className="flex w-full items-center gap-2 rounded-lg border border-[#EDD9A8] bg-ds-warning-soft px-3 py-2.5">
+        <div className="flex w-full items-center gap-2 rounded-lg border border-ds-warning/30 bg-ds-warning-soft px-3 py-2.5">
           <ShieldAlert
             className="size-[13px] shrink-0 text-ds-warning"
             aria-hidden

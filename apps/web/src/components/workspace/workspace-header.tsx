@@ -23,6 +23,12 @@ import {
 import { BloomMenu } from '@/components/motion/bloom-menu';
 import { Float } from '@/components/ui/float';
 import { Input } from '@/components/ui/input';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { CreateWorkspaceDialog } from '@/components/workspace/create-workspace-dialog';
 import { CreateProjectDialog } from '@/components/projects/create-project-dialog';
 import { LeaveWorkspaceDialog } from '@/components/members/leave-workspace-dialog';
@@ -150,30 +156,44 @@ export function WorkspaceHeader({
       </div>
 
       {/* Notifications */}
-      <div className="relative shrink-0">
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="grid size-8 place-items-center rounded-lg border border-ds-border bg-ds-surface text-foreground transition-colors hover:border-ds-border-strong sm:size-9"
-        >
-          <Bell className="h-4 w-4 sm:h-[17px] sm:w-[17px]" />
-        </button>
-        <Float
-          placement="top-end"
-          aria-hidden
-          className="size-2 rounded-full bg-ds-accent ring-2 ring-ds-bg !translate-x-1/4 !-translate-y-1/4"
-        />
-      </div>
+      <TooltipProvider delayDuration={100}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                aria-label="Notifications"
+                className="grid size-8 place-items-center rounded-lg border border-ds-border bg-ds-surface text-foreground transition-colors hover:border-ds-border-strong sm:size-9"
+              >
+                <Bell className="h-4 w-4 sm:h-[17px] sm:w-[17px]" />
+              </button>
+              <Float
+                placement="top-end"
+                aria-hidden
+                className="size-2 rounded-full bg-ds-accent ring-2 ring-ds-bg !translate-x-1/4 !-translate-y-1/4"
+              />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Notifications</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
       {/* Leave workspace — always available, Owner sees transfer variant */}
-      <button
-        type="button"
-        aria-label="Leave workspace"
-        onClick={() => setLeaveOpen(true)}
-        className="grid size-8 shrink-0 place-items-center rounded-lg border border-ds-border bg-ds-surface text-muted-foreground transition-colors hover:border-ds-border-strong hover:text-foreground sm:size-9"
-      >
-        <LogOut className="h-4 w-4 sm:h-[17px] sm:w-[17px]" />
-      </button>
+      <TooltipProvider delayDuration={100}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label="Leave workspace"
+              onClick={() => setLeaveOpen(true)}
+              className="grid size-8 shrink-0 place-items-center rounded-lg border border-ds-border bg-ds-surface text-muted-foreground transition-colors hover:border-ds-border-strong hover:text-foreground sm:size-9"
+            >
+              <LogOut className="h-4 w-4 sm:h-[17px] sm:w-[17px]" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Leave workspace</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
       {/* Create — disabled while archived; filtered by role */}
       <div className="shrink-0">

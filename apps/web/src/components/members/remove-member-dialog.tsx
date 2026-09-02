@@ -126,7 +126,7 @@ function RemoveMemberDialogContent({
         <div className="flex w-full items-center gap-3.5">
           <span
             aria-hidden
-            className="grid size-11 shrink-0 place-items-center rounded-lg border border-[#F1C9C2] bg-ds-danger-soft"
+            className="grid size-11 shrink-0 place-items-center rounded-lg border border-ds-danger/30 bg-ds-danger-soft"
           >
             <UserX className="size-[22px] text-ds-danger" aria-hidden />
           </span>
@@ -166,7 +166,7 @@ function RemoveMemberDialogContent({
               className="size-9 shrink-0 rounded-full border object-cover"
             />
           ) : (
-            <span className="grid size-9 shrink-0 place-items-center rounded-full border border-[#F1C9C2] bg-ds-danger-soft font-mono text-xs font-bold text-ds-danger">
+            <span className="grid size-9 shrink-0 place-items-center rounded-full border border-ds-danger/30 bg-ds-danger-soft font-mono text-xs font-bold text-ds-danger">
               {initialsOf(member.name)}
             </span>
           )}
@@ -196,7 +196,7 @@ function RemoveMemberDialogContent({
         </div>
 
         {/* Transfer note — warning-soft */}
-        <div className="flex w-full items-center gap-2 rounded-lg border border-[#EDD9A8] bg-ds-warning-soft px-3 py-2.5">
+        <div className="flex w-full items-center gap-2 rounded-lg border border-ds-warning/30 bg-ds-warning-soft px-3 py-2.5">
           <ShieldAlert
             className="size-[13px] shrink-0 text-ds-warning"
             aria-hidden

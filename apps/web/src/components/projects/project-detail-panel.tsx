@@ -16,6 +16,8 @@ import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/ui/error-state';
 import { EditProjectDialog } from '@/components/projects/edit-project-dialog';
 import { TransferProjectDialog } from '@/components/projects/transfer-project-dialog';
+import { useSession } from '@/hooks/use-session';
+import { useWorkspace } from '@/hooks/use-workspaces';
 import {
   Tooltip,
   TooltipContent,
@@ -78,6 +80,15 @@ export function ProjectDetailPanel({
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
+
+  // Transfer visibility: workspace OWNERs can change ownership of any project;
+  // ADMINs only of projects they own. MEMBERs never see the button (and must
+  // not, even when they own a project).
+  const { data: session } = useSession();
+  const { data: workspace } = useWorkspace(slug);
+  const canTransfer =
+    workspace?.role === 'OWNER' ||
+    (workspace?.role === 'ADMIN' && project?.owner.userId === session?.user.id);
   // Loading — centered loader inside the card.
   if (loading) {
     return (
@@ -245,21 +256,23 @@ export function ProjectDetailPanel({
           Edit
         </Button>
         <TooltipProvider delayDuration={100}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                aria-label="Transfer ownership"
-                variant="outline"
-                size="icon"
-                onClick={() => setTransferOpen(true)}
-                className="size-9 rounded-md border-ds-border bg-ds-surface text-muted-foreground"
-              >
-                <UserRoundPlus className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">Transfer ownership</TooltipContent>
-          </Tooltip>
+          {canTransfer ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  aria-label="Transfer ownership"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setTransferOpen(true)}
+                  className="size-9 rounded-md border-ds-border bg-ds-surface text-muted-foreground"
+                >
+                  <UserRoundPlus className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Transfer ownership</TooltipContent>
+            </Tooltip>
+          ) : null}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button

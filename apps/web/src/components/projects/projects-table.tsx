@@ -45,7 +45,7 @@ function ProjectRowSkeleton() {
     <div
       aria-hidden
       data-testid="project-row-skeleton"
-      className="flex h-12 items-center gap-3 border-b border-ds-border/70 px-4 last:border-b-0"
+      className="flex h-12 min-w-[640px] items-center gap-3 border-b border-ds-border/70 px-4 last:border-b-0 md:min-w-0"
     >
       {/* Project name */}
       <div className="flex min-w-0 flex-[2] items-center gap-3">
@@ -93,7 +93,7 @@ function ProjectRow({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={onOpen}
-      className="flex h-12 cursor-pointer items-center gap-3 border-b border-ds-border/70 px-4 transition-colors hover:bg-ds-bg last:border-b-0"
+      className="flex h-12 min-w-[640px] cursor-pointer items-center gap-3 border-b border-ds-border/70 px-4 transition-colors hover:bg-ds-bg last:border-b-0 md:min-w-0"
     >
       {/* Project name */}
       <div className="flex min-w-0 flex-[2] items-center">
@@ -204,9 +204,9 @@ export function ProjectsTable({
   }, [safePage, totalPages]);
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-ds-border bg-ds-surface">
+    <div className="flex h-full w-full flex-col overflow-x-auto rounded-xl border border-ds-border bg-ds-surface">
       {/* Mono column header */}
-      <div className="flex h-9 shrink-0 items-center gap-3 border-b border-ds-border bg-ds-bg px-4">
+      <div className="flex h-9 min-w-[640px] shrink-0 items-center gap-3 border-b border-ds-border bg-ds-bg px-4 md:min-w-0">
         <span className="flex-[2] font-mono text-[10px] font-semibold uppercase tracking-[0.8px] text-muted-foreground">
           Project
         </span>
@@ -282,7 +282,7 @@ export function ProjectsTable({
       </div>
 
       {/* Pagination footer — pages the mock list locally */}
-      <div className="flex h-[52px] shrink-0 items-center justify-between gap-4 px-4">
+      <div className="flex h-[52px] min-w-[640px] shrink-0 items-center justify-between gap-4 px-4 md:min-w-0">
         <div className="flex items-center gap-1.5">
           <button
             type="button"

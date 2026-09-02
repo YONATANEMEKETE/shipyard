@@ -49,7 +49,7 @@ export function KanbanColumn({
     <section
       data-column-status={status}
       className={cn(
-        'flex h-full min-w-0 flex-1 flex-col gap-3 rounded-xl border bg-ds-sidebar p-3 transition-colors',
+        'flex h-full min-w-[280px] flex-1 flex-col gap-3 rounded-xl border bg-ds-sidebar p-3 transition-colors',
         isDropTarget ? 'border-ds-brand border-[1.5px]' : 'border-ds-border',
       )}
     >

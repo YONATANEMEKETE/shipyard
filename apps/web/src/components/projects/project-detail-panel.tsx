@@ -7,6 +7,7 @@ import {
   RotateCw,
   Trash2,
   UserRoundPlus,
+  X,
 } from 'lucide-react';
 import { useState } from 'react';
 import type { ProjectDetail } from '@shipyard/shared';
@@ -67,6 +68,20 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+function PanelClose({ onClose }: { onClose?: () => void }) {
+  if (!onClose) return null;
+  return (
+    <button
+      type="button"
+      aria-label="Close project details"
+      onClick={onClose}
+      className="absolute right-3 top-3 z-10 grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-ds-bg hover:text-foreground md:hidden"
+    >
+      <X className="size-4" />
+    </button>
+  );
+}
+
 export function ProjectDetailPanel({
   slug,
   project,
@@ -75,6 +90,7 @@ export function ProjectDetailPanel({
   onRetry,
   onArchived,
   onDeleted,
+  onClose,
 }: {
   slug: string;
   project: ProjectDetail | null;
@@ -85,6 +101,8 @@ export function ProjectDetailPanel({
   onArchived?: () => void;
   /** Fired after a successful delete so the parent clears the selection. */
   onDeleted?: () => void;
+  /** Dismisses the panel — powers the mobile drawer's close button. */
+  onClose?: () => void;
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
@@ -104,7 +122,8 @@ export function ProjectDetailPanel({
   // Loading — centered loader inside the card.
   if (loading) {
     return (
-      <aside className="flex h-full w-full items-center justify-center rounded-xl border border-ds-border bg-ds-surface">
+      <aside className="relative flex h-full w-full items-center justify-center rounded-xl border border-ds-border bg-ds-surface">
+        <PanelClose onClose={onClose} />
         <Loader size={28} variant="spinner" label="Loading project details" />
       </aside>
     );
@@ -113,7 +132,8 @@ export function ProjectDetailPanel({
   // Error — centered error state with a retry action (matches the tables).
   if (error) {
     return (
-      <aside className="flex h-full w-full items-center justify-center rounded-xl border border-ds-border bg-ds-surface">
+      <aside className="relative flex h-full w-full items-center justify-center rounded-xl border border-ds-border bg-ds-surface">
+        <PanelClose onClose={onClose} />
         <ErrorState
           title="Couldn't load project details"
           description="We ran into a problem fetching this project. Try again in a moment."
@@ -159,7 +179,7 @@ export function ProjectDetailPanel({
   };
 
   return (
-    <aside className="flex h-full w-full flex-col gap-4 overflow-hidden rounded-xl border border-ds-border bg-ds-surface p-5">
+    <aside className="relative flex h-full w-full flex-col gap-4 overflow-hidden rounded-xl border border-ds-border bg-ds-surface p-5">
       {/* Header — title */}
       <div className="flex w-full items-center gap-2.5">
         <div className="flex min-w-0 flex-1 flex-col gap-1">

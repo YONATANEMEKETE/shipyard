@@ -300,6 +300,7 @@ export function MembersPage({ slug }: { slug: string }) {
         <>
           <MemberDetailsDialog
             member={selectedMember}
+            slug={slug}
             open={detailsOpen}
             onOpenChange={setDetailsOpen}
             onChangeRole={() => {

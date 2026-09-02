@@ -12,6 +12,7 @@ import {
   useTransferOwnership,
 } from '@/hooks/use-members';
 import { useSession } from '@/hooks/use-session';
+import { useOwnedProjectCount } from '@/hooks/use-projects';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
@@ -64,6 +65,7 @@ export function LeaveWorkspaceDialog({
             slug={slug}
             workspaceName={workspaceName}
             workspaceRole={workspaceRole}
+            open={open}
             onOpenChange={onOpenChange}
           />
         )}
@@ -76,11 +78,13 @@ function LeaveMemberContent({
   slug,
   workspaceName,
   workspaceRole,
+  open,
   onOpenChange,
 }: {
   slug: string;
   workspaceName: string;
   workspaceRole?: string;
+  open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
   const { showToast } = useToast();
@@ -116,6 +120,18 @@ function LeaveMemberContent({
 
   const busy = leaveMutation.isPending;
   const roleLabel = workspaceRole === 'ADMIN' ? 'Admin' : 'Member';
+
+  // Real owned-project count including archived — same inclusive count the
+  // API transfers atomically on leave (Checkpoint B, spec rule 6).
+  const { data: session } = useSession();
+  const { data: ownedCount, isLoading: isCountLoading } = useOwnedProjectCount(
+    slug,
+    session?.user.id ?? null,
+    {
+      enabled: open,
+    },
+  );
+  const isCheckingCount = open && isCountLoading && ownedCount === undefined;
 
   return (
     <>
@@ -166,11 +182,15 @@ function LeaveMemberContent({
           />
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <span className="text-xs font-semibold leading-none text-foreground">
-              Projects will transfer to Owner if any
+              {isCheckingCount
+                ? 'Checking owned projects…'
+                : ownedCount !== undefined && ownedCount > 0
+                  ? `${ownedCount} owned project${ownedCount === 1 ? '' : 's'} will transfer`
+                  : 'Projects will transfer to Owner if any'}
             </span>
             <span className="text-[10.5px] leading-none text-muted-foreground">
               Ownership moves to the Workspace Owner — you can&apos;t choose
-              who.
+              who. Includes archived projects.
             </span>
           </div>
         </div>

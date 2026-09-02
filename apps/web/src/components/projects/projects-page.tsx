@@ -4,9 +4,14 @@ import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useWorkspace } from '@/hooks/use-workspaces';
-import { useProjects, useViewPreference } from '@/hooks/use-projects';
+import {
+  useProjects,
+  useProject,
+  useViewPreference,
+} from '@/hooks/use-projects';
 import { CreateProjectDialog } from '@/components/projects/create-project-dialog';
 import { ProjectListView } from '@/components/projects/project-list-view';
+import { ProjectDetailPanel } from '@/components/projects/project-detail-panel';
 import {
   ProjectsToolbar,
   type ProjectFilters,
@@ -25,6 +30,9 @@ export function ProjectsPage({ slug }: { slug: string }) {
   const { data: viewPref } = useViewPreference(slug, 'PROJECT');
   const canCreate = workspace?.role !== 'MEMBER';
   const [createOpen, setCreateOpen] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+    null,
+  );
   const [filters, setFilters] = useState<ProjectFilters>({
     search: '',
     sort: 'createdAt',
@@ -42,6 +50,10 @@ export function ProjectsPage({ slug }: { slug: string }) {
     sort: filters.sort,
     order: filters.order,
   });
+
+  // Detail query — fetched on selection and passed to the always-present
+  // detail panel, which shows a centered loader while it resolves.
+  const projectQuery = useProject(slug, selectedProjectId);
 
   return (
     <div className="flex h-full w-full flex-col gap-6">
@@ -75,18 +87,33 @@ export function ProjectsPage({ slug }: { slug: string }) {
       {/* Toolbar row — search + view switch + filter/sort controls */}
       <ProjectsToolbar slug={slug} filters={filters} onChange={setFilters} />
 
-      {/* Active view — projects passed down from the parent query */}
-      {(viewPref?.view ?? 'LIST') === 'LIST' ? (
-        <div className="flex min-h-0 flex-1 flex-col">
-          <ProjectListView
-            filters={filters}
-            projects={projectsQuery.data?.projects ?? []}
-            loading={projectsQuery.isPending}
-            error={projectsQuery.isError}
-            onRetry={projectsQuery.refetch}
+      {/* Content area — 70/30 split: active view (List/Kanban) + always-present
+          detail panel. Independent of the chosen view. */}
+      <div className="flex min-h-0 flex-1 gap-4">
+        {/* Active view — 70% */}
+        <div className="flex min-h-0 w-[70%] flex-col">
+          {(viewPref?.view ?? 'LIST') === 'LIST' ? (
+            <ProjectListView
+              filters={filters}
+              projects={projectsQuery.data?.projects ?? []}
+              loading={projectsQuery.isPending}
+              error={projectsQuery.isError}
+              onRetry={projectsQuery.refetch}
+              onOpenProject={(project) => setSelectedProjectId(project.id)}
+            />
+          ) : null}
+        </div>
+
+        {/* Detail panel — 30% (empty prompt until a project is selected) */}
+        <div className="flex min-h-0 w-[30%] flex-col">
+          <ProjectDetailPanel
+            project={projectQuery.data ?? null}
+            loading={selectedProjectId !== null && projectQuery.isPending}
+            error={selectedProjectId !== null && projectQuery.isError}
+            onRetry={projectQuery.refetch}
           />
         </div>
-      ) : null}
+      </div>
 
       <CreateProjectDialog
         open={createOpen}

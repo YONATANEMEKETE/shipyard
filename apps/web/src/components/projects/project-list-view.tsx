@@ -19,12 +19,14 @@ export function ProjectListView({
   loading = false,
   error = false,
   onRetry,
+  onOpenProject,
 }: {
   projects: ProjectCard[];
   filters: ProjectFilters;
   loading?: boolean;
   error?: boolean;
   onRetry?: () => void;
+  onOpenProject?: (project: ProjectCard) => void;
 }) {
   const visibleProjects = useMemo(() => {
     const query = filters.search.trim().toLowerCase();
@@ -42,6 +44,7 @@ export function ProjectListView({
       loading={loading}
       error={error}
       onRetry={onRetry}
+      onOpenProject={onOpenProject}
       emptyTitle={hasActiveFilters ? 'No projects match' : undefined}
       emptyDescription={
         hasActiveFilters

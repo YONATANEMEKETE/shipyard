@@ -1,61 +1,392 @@
 'use client';
 
+import { Fragment, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { motion, useDragControls } from 'motion/react';
 import type { ProjectStatus } from '@shipyard/shared';
 
 import { KanbanColumn } from '@/components/projects/kanban-column';
 import { ProjectKanbanCard } from '@/components/projects/project-kanban-card';
-import { kanbanDummy } from '@/components/projects/mock-kanban';
+import {
+  kanbanDummy,
+  type KanbanDummyCard,
+} from '@/components/projects/mock-kanban';
 
 const STATUS_ORDER: ProjectStatus[] = ['PLANNED', 'ACTIVE', 'COMPLETED'];
+
+const CARD_GAP = 10; // px — matches the column body gap-2.5
 
 /**
  * Projects Kanban view — mirrors the Kanban board in shipyard.pen: three
  * columns (Planned / Active / Completed), each a status column populated with
- * project cards. Driven by dummy data until the live query is wired in. Card
- * click bubbles up through `onOpenProject` to drive the detail panel.
+ * project cards.
+ *
+ * Drag-and-drop (mock data), built on framer-motion:
+ *  - Pointer-down on a card lifts it out of its column and mounts a floating
+ *    overlay (portaled to the body) that takes over the drag via
+ *    `useDragControls`. Because the overlay lives outside the board, the
+ *    grabbed card is unclipped, sits above every other UI element, and is
+ *    free to move across columns.
+ *  - The lifted card is removed from its column, so the remaining cards
+ *    reflow with a shared-layout animation to fill the vacated slot.
+ *  - While dragging, the hovered column is highlighted (amber ring) and a
+ *    drop-slot placeholder shows exactly where the card will land.
+ *  - On drop, the pointer x is resolved against the three column bounds. A
+ *    different column moves the card there (status changes); the same column
+ *    reorders it to the drop position.
+ *  - Selection only fires on a quick click — a drag never opens the detail
+ *    panel.
  */
 export function ProjectKanbanView({
   onOpenProject,
 }: {
   onOpenProject?: (id: string) => void;
 }) {
+  const [columns, setColumns] = useState<
+    Record<ProjectStatus, KanbanDummyCard[]>
+  >(() => ({
+    PLANNED: [...kanbanDummy.PLANNED],
+    ACTIVE: [...kanbanDummy.ACTIVE],
+    COMPLETED: [...kanbanDummy.COMPLETED],
+  }));
+
+  // Column wrapper elements (viewport-space bounds) — drop-target resolution.
+  const columnRefs = useRef<Record<ProjectStatus, HTMLElement | null>>({
+    PLANNED: null,
+    ACTIVE: null,
+    COMPLETED: null,
+  });
+  const boardRef = useRef<HTMLDivElement>(null);
+
+  // Active drag state — the lifted card shown in the floating layer.
+  const dragRef = useRef<{ card: KanbanDummyCard; from: ProjectStatus } | null>(
+    null,
+  );
+  const dragEventRef = useRef<PointerEvent | null>(null);
+  const [dragging, setDragging] = useState<{
+    card: KanbanDummyCard;
+    from: ProjectStatus;
+  } | null>(null);
+  const [overlayRect, setOverlayRect] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  // Drop-target feedback: which column is hovered + the insertion slot index.
+  const [dropTarget, setDropTarget] = useState<ProjectStatus | null>(null);
+  const [dropIndex, setDropIndex] = useState(0);
+  // Set once a real drag begins; consumed by the click handler so a drag
+  // never triggers selection.
+  const movedRef = useRef(false);
+
+  const dragControls = useDragControls();
+
+  const startDrag = (
+    event: React.PointerEvent<HTMLElement>,
+    card: KanbanDummyCard,
+    from: ProjectStatus,
+  ) => {
+    const el = event.currentTarget;
+    const rect = el.getBoundingClientRect();
+    dragRef.current = { card, from };
+    dragEventRef.current = event.nativeEvent;
+    setOverlayRect({
+      x: rect.left,
+      y: rect.top,
+      width: rect.width,
+      height: rect.height,
+    });
+    // Lifts the card out of its column (siblings reflow) and mounts the
+    // overlay, which starts the framer drag session on mount.
+    setDragging({ card, from });
+  };
+
+  // Start the drag session once the overlay is mounted, using the original
+  // pointer event captured at pointer-down.
+  const overlayStartedRef = useRef<{ started: boolean; at?: number }>({
+    started: false,
+  });
+  useEffect(() => {
+    if (!dragging) return;
+    if (overlayStartedRef.current.started) return;
+    const event = dragEventRef.current;
+    if (!event) return;
+    overlayStartedRef.current.started = true;
+    const frame = requestAnimationFrame(() => dragControls.start(event));
+    return () => cancelAnimationFrame(frame);
+  }, [dragging, dragControls]);
+
+  // Resolve which column + insertion slot a pointer lands on. Returns null
+  // when the pointer is not over any column.
+  const resolveDrop = (
+    x: number,
+    y: number,
+  ): { status: ProjectStatus; index: number } | null => {
+    const drag = dragRef.current;
+    if (!drag || !overlayRect) return null;
+
+    let target: ProjectStatus | null = null;
+    for (const status of STATUS_ORDER) {
+      const el = columnRefs.current[status];
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        if (x >= rect.left && x <= rect.right) {
+          target = status;
+          break;
+        }
+      }
+    }
+    if (!target) return null;
+
+    const sameColumn = target === drag.from;
+    const pool = sameColumn
+      ? columns[drag.from].filter((c) => c.id !== drag.card.id)
+      : columns[target];
+    let insertIndex = pool.length;
+    const bodyEl =
+      columnRefs.current[target]?.querySelector('[data-column-body]');
+    if (bodyEl) {
+      const bodyRect = bodyEl.getBoundingClientRect();
+      const slotHeight = overlayRect.height + CARD_GAP;
+      const slot = Math.round((y - bodyRect.top) / slotHeight);
+      insertIndex = Math.max(0, Math.min(pool.length, slot));
+    }
+    return { status: target, index: insertIndex };
+  };
+
+  const handleDragEnd = (info: { point: { x: number; y: number } }) => {
+    const drag = dragRef.current;
+    // Resolve the drop target BEFORE clearing the refs — resolveDrop reads
+    // dragRef to know which card/column is being dragged.
+    const drop =
+      drag && overlayRect ? resolveDrop(info.point.x, info.point.y) : null;
+
+    dragRef.current = null;
+    dragEventRef.current = null;
+    overlayStartedRef.current = { started: false };
+    setDropTarget(null);
+    if (!drag || !overlayRect) {
+      setDragging(null);
+      setOverlayRect(null);
+      return;
+    }
+
+    const targetStatus = drop?.status ?? drag.from;
+    const insertIndex = drop?.index ?? 0;
+
+    setColumns((prev) => {
+      const sourceList = prev[drag.from].filter((c) => c.id !== drag.card.id);
+      const sameColumn = targetStatus === drag.from;
+
+      if (sameColumn) {
+        return {
+          ...prev,
+          [targetStatus]: [
+            ...sourceList.slice(0, insertIndex),
+            drag.card,
+            ...sourceList.slice(insertIndex),
+          ],
+        };
+      }
+      return {
+        ...prev,
+        [drag.from]: sourceList,
+        [targetStatus]: [
+          ...prev[targetStatus].slice(0, insertIndex),
+          drag.card,
+          ...prev[targetStatus].slice(insertIndex),
+        ],
+      };
+    });
+
+    setDragging(null);
+    setOverlayRect(null);
+    // Allow the next quick click to select normally.
+    window.setTimeout(() => {
+      movedRef.current = false;
+    }, 0);
+  };
+
+  const renderColumn = (status: ProjectStatus) => {
+    const cards = columns[status].filter((c) => c.id !== dragging?.card.id);
+    const isDropTarget = dragging !== null && dropTarget === status;
+    let insertIndex = dropIndex;
+    if (isDropTarget) {
+      // Clamp the indicator against the actual list length (the dropped card
+      // is excluded while dragging).
+      insertIndex = Math.max(0, Math.min(cards.length, dropIndex));
+    }
+
+    const slot =
+      isDropTarget && overlayRect ? (
+        <div
+          key={`drop-slot-${status}`}
+          className="w-full shrink-0"
+          style={{ height: overlayRect.height, minHeight: overlayRect.height }}
+        >
+          <div className="flex h-full w-full items-center justify-center rounded-xl border-2 border-dashed border-ds-brand bg-ds-brand-soft/40">
+            <span className="font-mono text-[10px] font-bold uppercase tracking-[1px] text-ds-brand">
+              Drop here
+            </span>
+          </div>
+        </div>
+      ) : null;
+
+    const items: (KanbanDummyCard | { slot: true })[] = [...cards];
+    if (isDropTarget) items.splice(insertIndex, 0, { slot: true });
+
+    return (
+      <div
+        key={status}
+        ref={(el) => {
+          columnRefs.current[status] = el;
+        }}
+        className="h-full min-w-0 flex-1"
+      >
+        <KanbanColumn
+          status={status}
+          count={cards.length}
+          isDropTarget={isDropTarget}
+        >
+          {items.map((item, index) =>
+            'slot' in item ? (
+              <Fragment key={`drop-slot-${status}-${index}`}>{slot}</Fragment>
+            ) : (
+              <CardItem
+                key={item.id}
+                card={item}
+                onPointerDown={(event) => startDrag(event, item, status)}
+                onOpenProject={onOpenProject}
+                movedRef={movedRef}
+              />
+            ),
+          )}
+        </KanbanColumn>
+      </div>
+    );
+  };
+
   return (
-    <div className="flex h-full w-full gap-4 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      {STATUS_ORDER.map((status) => {
-        const cards = kanbanDummy[status];
-        return (
-          <KanbanColumn key={status} status={status} count={cards.length}>
-            {cards.map((card) => (
+    <>
+      <div
+        ref={boardRef}
+        className="flex h-full w-full gap-4 overflow-x-auto overflow-y-hidden pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {STATUS_ORDER.map(renderColumn)}
+      </div>
+
+      {/* Floating drag layer — portaled above everything so the grabbed card
+          is unclipped, on top, and free to move across columns. */}
+      {dragging && overlayRect
+        ? createPortal(
+            <motion.div
+              style={{
+                position: 'fixed',
+                left: overlayRect.x,
+                top: overlayRect.y,
+                width: overlayRect.width,
+                zIndex: 9999,
+              }}
+              drag
+              dragControls={dragControls}
+              dragMomentum={false}
+              dragElastic={0.12}
+              onDragStart={() => {
+                movedRef.current = true;
+              }}
+              onDrag={(_, info) => {
+                const drop = resolveDrop(info.point.x, info.point.y);
+                setDropTarget(drop?.status ?? null);
+                setDropIndex(drop?.index ?? 0);
+              }}
+              onDragEnd={(_, info) => handleDragEnd(info)}
+              className="cursor-grabbing"
+            >
               <ProjectKanbanCard
-                key={card.id}
                 project={{
-                  id: card.id,
+                  id: dragging.card.id,
                   workspaceId: 'ws_mock',
-                  name: card.name,
-                  status: card.status,
+                  name: dragging.card.name,
+                  status: dragging.card.status,
                   owner: {
                     memberId: 'mb_x',
                     userId: 'usr_x',
-                    name: card.members[0] ?? 'Unassigned',
+                    name: dragging.card.members[0] ?? 'Unassigned',
                     email: 'owner@shipyard.dev',
                     image: null,
                   },
                   startDate: null,
-                  targetDate: card.targetDate,
+                  targetDate: dragging.card.targetDate,
                   archivedAt: null,
                   createdAt: '2025-11-02T10:00:00.000Z',
                   updatedAt: '2025-11-02T10:00:00.000Z',
                 }}
-                description={card.description}
-                members={card.members}
-                onOpen={
-                  onOpenProject ? () => onOpenProject(card.id) : () => undefined
-                }
+                description={dragging.card.description}
+                members={dragging.card.members}
+                onOpen={() => onOpenProject?.(dragging.card.id)}
               />
-            ))}
-          </KanbanColumn>
-        );
-      })}
-    </div>
+            </motion.div>,
+            document.body,
+          )
+        : null}
+    </>
+  );
+}
+
+/**
+ * A single rendered kanban card (extracted to avoid duplicating the project
+ * object construction in the list slices above/below the drop slot).
+ */
+function CardItem({
+  card,
+  onPointerDown,
+  onOpenProject,
+  movedRef,
+}: {
+  card: KanbanDummyCard;
+  onPointerDown: (event: React.PointerEvent<HTMLElement>) => void;
+  onOpenProject?: (id: string) => void;
+  movedRef: React.MutableRefObject<boolean>;
+}) {
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.18 }}
+      className="w-full"
+    >
+      <ProjectKanbanCard
+        project={{
+          id: card.id,
+          workspaceId: 'ws_mock',
+          name: card.name,
+          status: card.status,
+          owner: {
+            memberId: 'mb_x',
+            userId: 'usr_x',
+            name: card.members[0] ?? 'Unassigned',
+            email: 'owner@shipyard.dev',
+            image: null,
+          },
+          startDate: null,
+          targetDate: card.targetDate,
+          archivedAt: null,
+          createdAt: '2025-11-02T10:00:00.000Z',
+          updatedAt: '2025-11-02T10:00:00.000Z',
+        }}
+        description={card.description}
+        members={card.members}
+        onPointerDown={onPointerDown}
+        onOpen={() => {
+          if (movedRef.current) {
+            movedRef.current = false;
+            return;
+          }
+          onOpenProject?.(card.id);
+        }}
+      />
+    </motion.div>
   );
 }

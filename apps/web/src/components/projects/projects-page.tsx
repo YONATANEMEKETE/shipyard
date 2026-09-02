@@ -11,6 +11,7 @@ import {
 } from '@/hooks/use-projects';
 import { CreateProjectDialog } from '@/components/projects/create-project-dialog';
 import { ProjectListView } from '@/components/projects/project-list-view';
+import { ProjectKanbanView } from '@/components/projects/project-kanban-view';
 import { ProjectDetailPanel } from '@/components/projects/project-detail-panel';
 import {
   ProjectsToolbar,
@@ -28,6 +29,7 @@ import {
 export function ProjectsPage({ slug }: { slug: string }) {
   const { data: workspace } = useWorkspace(slug);
   const { data: viewPref } = useViewPreference(slug, 'PROJECT');
+  const view = viewPref?.view ?? 'LIST';
   const canCreate = workspace?.role !== 'MEMBER';
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
@@ -92,7 +94,7 @@ export function ProjectsPage({ slug }: { slug: string }) {
       <div className="flex min-h-0 flex-1 gap-4">
         {/* Active view — 70% */}
         <div className="flex min-h-0 w-[70%] flex-col">
-          {(viewPref?.view ?? 'LIST') === 'LIST' ? (
+          {view === 'LIST' ? (
             <ProjectListView
               filters={filters}
               projects={projectsQuery.data?.projects ?? []}
@@ -101,7 +103,11 @@ export function ProjectsPage({ slug }: { slug: string }) {
               onRetry={projectsQuery.refetch}
               onOpenProject={(project) => setSelectedProjectId(project.id)}
             />
-          ) : null}
+          ) : (
+            <ProjectKanbanView
+              onOpenProject={(id) => setSelectedProjectId(id)}
+            />
+          )}
         </div>
 
         {/* Detail panel — 30% (empty prompt until a project is selected) */}

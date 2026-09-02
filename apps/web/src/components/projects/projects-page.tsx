@@ -18,6 +18,7 @@ import { CreateProjectDialog } from '@/components/projects/create-project-dialog
 import { ProjectListView } from '@/components/projects/project-list-view';
 import { ProjectKanbanView } from '@/components/projects/project-kanban-view';
 import { ProjectDetailPanel } from '@/components/projects/project-detail-panel';
+import { ArchivedProjectsList } from '@/components/projects/archived-projects-list';
 import {
   ProjectsToolbar,
   type ProjectFilters,
@@ -54,6 +55,8 @@ export function ProjectsPage({ slug }: { slug: string }) {
     sort: 'createdAt',
     order: 'desc',
   });
+  // Archived scope — read-only list of archived projects with Restore.
+  const [archived, setArchived] = useState(false);
 
   // Fetch the workspace's projects here (parent) so the list and kanban views
   // share one query. Filter params are passed server-side where the endpoint
@@ -61,25 +64,27 @@ export function ProjectsPage({ slug }: { slug: string }) {
   //
   // Status is a list-only filter — the board always shows every status, so
   // it's dropped from the query in Kanban; owner/date/sort still apply (server
-  // sorted, grouped per column).
+  // sorted, grouped per column). Archived is a separate read-only scope.
   const projectsQuery = useProjects(
     slug,
-    view === 'KANBAN'
-      ? {
-          ownerId: filters.ownerId,
-          startDate: filters.startDate,
-          targetDate: filters.targetDate,
-          sort: filters.sort,
-          order: filters.order,
-        }
-      : {
-          status: filters.status,
-          ownerId: filters.ownerId,
-          startDate: filters.startDate,
-          targetDate: filters.targetDate,
-          sort: filters.sort,
-          order: filters.order,
-        },
+    archived
+      ? { archived: 'true' }
+      : view === 'KANBAN'
+        ? {
+            ownerId: filters.ownerId,
+            startDate: filters.startDate,
+            targetDate: filters.targetDate,
+            sort: filters.sort,
+            order: filters.order,
+          }
+        : {
+            status: filters.status,
+            ownerId: filters.ownerId,
+            startDate: filters.startDate,
+            targetDate: filters.targetDate,
+            sort: filters.sort,
+            order: filters.order,
+          },
   );
 
   // Detail query — fetched on selection and passed to the always-present
@@ -132,50 +137,69 @@ export function ProjectsPage({ slug }: { slug: string }) {
       </div>
 
       {/* Toolbar row — search + view switch + filter/sort controls */}
-      <ProjectsToolbar slug={slug} filters={filters} onChange={setFilters} />
+      <ProjectsToolbar
+        slug={slug}
+        filters={filters}
+        onChange={setFilters}
+        archived={archived}
+        onArchivedChange={setArchived}
+      />
 
-      {/* Content area — 70/30 split: active view (List/Kanban) + always-present
-          detail panel. Independent of the chosen view. */}
-      <div className="flex min-h-0 flex-1 gap-4">
-        {/* Active view — 70% */}
-        <div className="flex min-h-0 w-[70%] flex-col">
-          {view === 'LIST' ? (
-            <ProjectListView
-              filters={filters}
-              projects={projectsQuery.data?.projects ?? []}
-              loading={projectsQuery.isPending}
-              error={projectsQuery.isError}
-              onRetry={projectsQuery.refetch}
-              onOpenProject={(project) => setSelectedProjectId(project.id)}
-            />
-          ) : (
-            <ProjectKanbanView
-              projects={projectsQuery.data?.projects ?? []}
-              search={filters.search}
-              onOpenProject={(id) => setSelectedProjectId(id)}
-              onAddProject={(status) => openCreate(status)}
-              onStatusChange={(projectId, status) =>
-                updateProjectMutation.mutate({ projectId, body: { status } })
-              }
-              loading={projectsQuery.isPending}
-              error={projectsQuery.isError}
-              onRetry={projectsQuery.refetch}
-            />
-          )}
-        </div>
-
-        {/* Detail panel — 30% (empty prompt until a project is selected) */}
-        <div className="flex min-h-0 w-[30%] flex-col">
-          <ProjectDetailPanel
+      {/* Content area — active views + detail panel. In archived mode it's a
+          read-only list (with Restore) spanning the full width. */}
+      {archived ? (
+        <div className="flex min-h-0 flex-1">
+          <ArchivedProjectsList
             slug={slug}
-            project={projectQuery.data ?? null}
-            loading={selectedProjectId !== null && projectQuery.isPending}
-            error={selectedProjectId !== null && projectQuery.isError}
-            onRetry={projectQuery.refetch}
-            onArchived={() => setSelectedProjectId(null)}
+            projects={projectsQuery.data?.projects ?? []}
+            search={filters.search}
+            loading={projectsQuery.isPending}
+            error={projectsQuery.isError}
+            onRetry={projectsQuery.refetch}
           />
         </div>
-      </div>
+      ) : (
+        <div className="flex min-h-0 flex-1 gap-4">
+          {/* Active view — 70% */}
+          <div className="flex min-h-0 w-[70%] flex-col">
+            {view === 'LIST' ? (
+              <ProjectListView
+                filters={filters}
+                projects={projectsQuery.data?.projects ?? []}
+                loading={projectsQuery.isPending}
+                error={projectsQuery.isError}
+                onRetry={projectsQuery.refetch}
+                onOpenProject={(project) => setSelectedProjectId(project.id)}
+              />
+            ) : (
+              <ProjectKanbanView
+                projects={projectsQuery.data?.projects ?? []}
+                search={filters.search}
+                onOpenProject={(id) => setSelectedProjectId(id)}
+                onAddProject={(status) => openCreate(status)}
+                onStatusChange={(projectId, status) =>
+                  updateProjectMutation.mutate({ projectId, body: { status } })
+                }
+                loading={projectsQuery.isPending}
+                error={projectsQuery.isError}
+                onRetry={projectsQuery.refetch}
+              />
+            )}
+          </div>
+
+          {/* Detail panel — 30% (empty prompt until a project is selected) */}
+          <div className="flex min-h-0 w-[30%] flex-col">
+            <ProjectDetailPanel
+              slug={slug}
+              project={projectQuery.data ?? null}
+              loading={selectedProjectId !== null && projectQuery.isPending}
+              error={selectedProjectId !== null && projectQuery.isError}
+              onRetry={projectQuery.refetch}
+              onArchived={() => setSelectedProjectId(null)}
+            />
+          </div>
+        </div>
+      )}
 
       <CreateProjectDialog
         open={createOpen}

@@ -70,10 +70,15 @@ export function ProjectsToolbar({
   slug,
   filters,
   onChange,
+  archived = false,
+  onArchivedChange,
 }: {
   slug: string;
   filters: ProjectFilters;
   onChange: (filters: ProjectFilters) => void;
+  /** Archived mode — read-only list of archived projects with Restore. */
+  archived?: boolean;
+  onArchivedChange?: (archived: boolean) => void;
 }) {
   const { data: viewPref } = useViewPreference(slug, 'PROJECT');
   const setViewPref = useSetViewPreference(slug);
@@ -105,131 +110,167 @@ export function ProjectsToolbar({
 
       {/* View switch + filter controls — Projects Toolbar Right */}
       <div className="flex items-center gap-3">
-        {/* View switch — Tabs (mirrors Members page tab pattern) */}
-        <Tabs
-          value={activeView}
-          onValueChange={(details) => setView(details.value as ViewType)}
-        >
-          <TabsList className="gap-0.5 border border-ds-border bg-ds-surface p-0.5">
-            <TabsTrigger
-              value="LIST"
-              className="size-[30px] px-0"
-              aria-label="List view"
-              title="List view"
+        {/* Active / Archived scope — archived is a read-only list (no board,
+            no filters), so the rest of the controls hide while it's on. */}
+        {onArchivedChange ? (
+          <div className="flex items-center rounded-lg border border-ds-border bg-ds-surface p-0.5">
+            <button
+              type="button"
+              onClick={() => onArchivedChange(false)}
+              className={cn(
+                'h-[26px] rounded-md px-2.5 text-[11px] font-semibold transition-colors',
+                !archived
+                  ? 'bg-ds-bg text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
             >
-              <LayoutList className="size-4" />
-            </TabsTrigger>
-            <TabsTrigger
-              value="KANBAN"
-              className="size-[30px] px-0"
-              aria-label="Kanban view"
-              title="Kanban view"
+              Active
+            </button>
+            <button
+              type="button"
+              onClick={() => onArchivedChange(true)}
+              className={cn(
+                'h-[26px] rounded-md px-2.5 text-[11px] font-semibold transition-colors',
+                archived
+                  ? 'bg-ds-bg text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
             >
-              <Kanban className="size-4" />
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+              Archived
+            </button>
+          </div>
+        ) : null}
 
-        {/* Filter + sort controls */}
-        <div className="flex items-center gap-2">
-          {/* Status is a list-only concept — the board always shows every
-              status, so the pill is hidden (not just ignored) in Kanban. */}
-          {activeView === 'LIST' ? (
+        {/* View switch — Tabs (mirrors Members page tab pattern). The board
+            is meaningless for archived projects, so it hides in that mode. */}
+        {!archived ? (
+          <Tabs
+            value={activeView}
+            onValueChange={(details) => setView(details.value as ViewType)}
+          >
+            <TabsList className="gap-0.5 border border-ds-border bg-ds-surface p-0.5">
+              <TabsTrigger
+                value="LIST"
+                className="size-[30px] px-0"
+                aria-label="List view"
+                title="List view"
+              >
+                <LayoutList className="size-4" />
+              </TabsTrigger>
+              <TabsTrigger
+                value="KANBAN"
+                className="size-[30px] px-0"
+                aria-label="Kanban view"
+                title="Kanban view"
+              >
+                <Kanban className="size-4" />
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        ) : null}
+
+        {/* Filter + sort controls — hidden in archived mode (read-only). */}
+        {!archived ? (
+          <div className="flex items-center gap-2">
+            {/* Status is a list-only concept — the board always shows every
+                status, so the pill is hidden (not just ignored) in Kanban. */}
+            {activeView === 'LIST' ? (
+              <Select
+                value={filters.status ?? 'ALL'}
+                onValueChange={(value) =>
+                  set({
+                    status:
+                      value === 'ALL' ? undefined : (value as ProjectStatus),
+                  })
+                }
+              >
+                <SelectTrigger className="h-[34px] gap-1.5 border-ds-border bg-ds-surface px-3 text-xs text-muted-foreground hover:border-ds-border">
+                  <Filter className="size-[14px]" />
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All statuses</SelectItem>
+                  <SelectItem value="PLANNED">Planned</SelectItem>
+                  <SelectItem value="ACTIVE">Active</SelectItem>
+                  <SelectItem value="COMPLETED">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : null}
+
             <Select
-              value={filters.status ?? 'ALL'}
+              value={filters.ownerId ?? 'ALL'}
               onValueChange={(value) =>
-                set({
-                  status:
-                    value === 'ALL' ? undefined : (value as ProjectStatus),
-                })
+                set({ ownerId: value === 'ALL' ? undefined : value })
               }
             >
               <SelectTrigger className="h-[34px] gap-1.5 border-ds-border bg-ds-surface px-3 text-xs text-muted-foreground hover:border-ds-border">
-                <Filter className="size-[14px]" />
-                <SelectValue placeholder="All statuses" />
+                <User className="size-[14px]" />
+                <SelectValue placeholder="All owners" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">All statuses</SelectItem>
-                <SelectItem value="PLANNED">Planned</SelectItem>
-                <SelectItem value="ACTIVE">Active</SelectItem>
-                <SelectItem value="COMPLETED">Completed</SelectItem>
+                <SelectItem value="ALL">All owners</SelectItem>
+                {(roster?.members ?? []).map((member) => (
+                  // Use the user id (not the membership id) — the list endpoint
+                  // filters Project.ownerId, which references User.id.
+                  <SelectItem key={member.userId} value={member.userId}>
+                    {member.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-          ) : null}
 
-          <Select
-            value={filters.ownerId ?? 'ALL'}
-            onValueChange={(value) =>
-              set({ ownerId: value === 'ALL' ? undefined : value })
-            }
-          >
-            <SelectTrigger className="h-[34px] gap-1.5 border-ds-border bg-ds-surface px-3 text-xs text-muted-foreground hover:border-ds-border">
-              <User className="size-[14px]" />
-              <SelectValue placeholder="All owners" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All owners</SelectItem>
-              {(roster?.members ?? []).map((member) => (
-                // Use the user id (not the membership id) — the list endpoint
-                // filters Project.ownerId, which references User.id.
-                <SelectItem key={member.userId} value={member.userId}>
-                  {member.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <DateFilter
+              value={filters.startDate}
+              onChange={(value) => set({ startDate: value })}
+              icon={<CalendarDays className="size-[14px]" />}
+              placeholder="Any start"
+            />
 
-          <DateFilter
-            value={filters.startDate}
-            onChange={(value) => set({ startDate: value })}
-            icon={<CalendarDays className="size-[14px]" />}
-            placeholder="Any start"
-          />
+            <DateFilter
+              value={filters.targetDate}
+              onChange={(value) => set({ targetDate: value })}
+              icon={<CalendarRange className="size-[14px]" />}
+              placeholder="Any target"
+            />
 
-          <DateFilter
-            value={filters.targetDate}
-            onChange={(value) => set({ targetDate: value })}
-            icon={<CalendarRange className="size-[14px]" />}
-            placeholder="Any target"
-          />
+            <Select
+              value={filters.sort}
+              onValueChange={(value) =>
+                set({ sort: value as ProjectFilters['sort'] })
+              }
+            >
+              <SelectTrigger className="h-[34px] gap-1.5 border-ds-border bg-ds-surface px-3 text-xs text-muted-foreground hover:border-ds-border">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SORT_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          <Select
-            value={filters.sort}
-            onValueChange={(value) =>
-              set({ sort: value as ProjectFilters['sort'] })
-            }
-          >
-            <SelectTrigger className="h-[34px] gap-1.5 border-ds-border bg-ds-surface px-3 text-xs text-muted-foreground hover:border-ds-border">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SORT_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Sort direction toggle — flips asc/desc (previously decorative). */}
-          <button
-            type="button"
-            aria-label={`Sort ${
-              filters.order === 'asc' ? 'descending' : 'ascending'
-            }`}
-            title={`Sort ${filters.order === 'asc' ? 'descending' : 'ascending'}`}
-            onClick={() =>
-              set({ order: filters.order === 'asc' ? 'desc' : 'asc' })
-            }
-            className="grid size-[34px] shrink-0 place-items-center rounded-md border border-ds-border bg-ds-surface text-muted-foreground transition-colors hover:border-ds-border hover:text-foreground"
-          >
-            {filters.order === 'asc' ? (
-              <ArrowUpAZ className="size-[14px]" />
-            ) : (
-              <ArrowDownAZ className="size-[14px]" />
-            )}
-          </button>
-        </div>
+            {/* Sort direction toggle — flips asc/desc (previously decorative). */}
+            <button
+              type="button"
+              aria-label={`Sort ${
+                filters.order === 'asc' ? 'descending' : 'ascending'
+              }`}
+              title={`Sort ${filters.order === 'asc' ? 'descending' : 'ascending'}`}
+              onClick={() =>
+                set({ order: filters.order === 'asc' ? 'desc' : 'asc' })
+              }
+              className="grid size-[34px] shrink-0 place-items-center rounded-md border border-ds-border bg-ds-surface text-muted-foreground transition-colors hover:border-ds-border hover:text-foreground"
+            >
+              {filters.order === 'asc' ? (
+                <ArrowUpAZ className="size-[14px]" />
+              ) : (
+                <ArrowDownAZ className="size-[14px]" />
+              )}
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

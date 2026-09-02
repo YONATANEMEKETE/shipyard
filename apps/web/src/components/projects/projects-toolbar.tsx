@@ -133,7 +133,7 @@ export function ProjectsToolbar({
         {/* Filter + sort controls */}
         <div className="flex items-center gap-2">
           <Select
-            value={filters.status}
+            value={filters.status ?? 'ALL'}
             onValueChange={(value) =>
               set({
                 status: value === 'ALL' ? undefined : (value as ProjectStatus),
@@ -153,7 +153,7 @@ export function ProjectsToolbar({
           </Select>
 
           <Select
-            value={filters.ownerId}
+            value={filters.ownerId ?? 'ALL'}
             onValueChange={(value) =>
               set({ ownerId: value === 'ALL' ? undefined : value })
             }

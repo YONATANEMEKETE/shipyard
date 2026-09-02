@@ -96,8 +96,9 @@ export function ProjectsToolbar({
 
   return (
     <div className="flex w-full flex-wrap items-center justify-between gap-3">
-      {/* Left group — search + Active/Archived scope (reads left-to-right). */}
-      <div className="flex items-center gap-3">
+      {/* Left group — search + Active/Archived scope (reads left-to-right).
+          Wraps on narrow screens. */}
+      <div className="flex flex-wrap items-center gap-3">
         <Input
           value={filters.search}
           onChange={(value) => set({ search: value })}
@@ -105,7 +106,7 @@ export function ProjectsToolbar({
           leftIcon={<Search className="size-[14px] text-muted-foreground" />}
           classNames={{
             field:
-              'h-[34px] w-[240px] rounded-lg border-ds-border bg-ds-surface',
+              'h-[34px] w-full rounded-lg border-ds-border bg-ds-surface sm:w-[240px]',
             input: 'text-xs',
           }}
         />
@@ -128,8 +129,9 @@ export function ProjectsToolbar({
         ) : null}
       </div>
 
-      {/* Right group — view switch + filter controls. */}
-      <div className="flex items-center gap-3">
+      {/* Right group — view switch + filter controls. Wraps below the left
+          group and internally when narrow. */}
+      <div className="flex flex-wrap items-center gap-3">
         {/* View switch — Tabs (mirrors Members page tab pattern). The board
             is meaningless for archived projects, so it hides in that mode. */}
         {!archived ? (
@@ -160,7 +162,7 @@ export function ProjectsToolbar({
 
         {/* Filter + sort controls — hidden in archived mode (read-only). */}
         {!archived ? (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {/* Status is a list-only concept — the board always shows every
                 status, so the pill is hidden (not just ignored) in Kanban. */}
             {activeView === 'LIST' ? (

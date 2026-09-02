@@ -410,7 +410,7 @@ export function ProjectKanbanView({
         ref={(el) => {
           columnRefs.current[status] = el;
         }}
-        className="h-full min-w-0 flex-1"
+        className="h-full min-w-[280px] flex-1"
       >
         <KanbanColumn
           status={status}

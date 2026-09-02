@@ -4,6 +4,7 @@ import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import type { ProjectStatus } from '@shipyard/shared';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { useWorkspace } from '@/hooks/use-workspaces';
 import {
   useProjects,
@@ -164,8 +165,8 @@ export function ProjectsPage({ slug }: { slug: string }) {
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 gap-4">
-          {/* Active view — 70% */}
-          <div className="flex min-h-0 w-[70%] flex-col">
+          {/* Active view — full width on mobile; 70% at md+. */}
+          <div className="flex min-h-0 w-full flex-col md:w-[70%]">
             {view === 'LIST' ? (
               <ProjectListView
                 filters={filters}
@@ -189,8 +190,18 @@ export function ProjectsPage({ slug }: { slug: string }) {
             )}
           </div>
 
-          {/* Detail panel — 30% (empty prompt until a project is selected) */}
-          <div className="flex min-h-0 w-[30%] flex-col">
+          {/* Detail panel — inline 30% column at md+; on mobile (< md) it slides
+              in as a right-sided drawer over the full-width view. One instance,
+              responsive classes only. */}
+          <div
+            className={cn(
+              'fixed inset-y-2 right-2 z-40 w-[90%] transform-gpu transition-transform duration-300 ease-out',
+              'md:static md:inset-auto md:z-auto md:w-[30%] md:transition-none',
+              selectedProjectId !== null
+                ? 'translate-x-0'
+                : 'pointer-events-none translate-x-[calc(100%+24px)] md:pointer-events-auto md:translate-x-0',
+            )}
+          >
             <ProjectDetailPanel
               slug={slug}
               project={projectQuery.data ?? null}
@@ -199,10 +210,20 @@ export function ProjectsPage({ slug }: { slug: string }) {
               onRetry={projectQuery.refetch}
               onArchived={() => setSelectedProjectId(null)}
               onDeleted={() => setSelectedProjectId(null)}
+              onClose={() => setSelectedProjectId(null)}
             />
           </div>
         </div>
       )}
+
+      {/* Mobile backdrop for the detail drawer — md+ uses the inline panel. */}
+      {selectedProjectId !== null ? (
+        <div
+          aria-hidden
+          onClick={() => setSelectedProjectId(null)}
+          className="fixed inset-0 z-30 bg-[#16151259] backdrop-blur-[1px] md:hidden"
+        />
+      ) : null}
 
       <CreateProjectDialog
         open={createOpen}

@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/ui/error-state';
 import { EditProjectDialog } from '@/components/projects/edit-project-dialog';
 import { TransferProjectDialog } from '@/components/projects/transfer-project-dialog';
+import { ArchiveProjectDialog } from '@/components/projects/archive-project-dialog';
 import { useSession } from '@/hooks/use-session';
 import { useWorkspace } from '@/hooks/use-workspaces';
 import {
@@ -71,15 +72,19 @@ export function ProjectDetailPanel({
   loading = false,
   error = false,
   onRetry,
+  onArchived,
 }: {
   slug: string;
   project: ProjectDetail | null;
   loading?: boolean;
   error?: boolean;
   onRetry?: () => void;
+  /** Fired after a successful archive so the parent clears the selection. */
+  onArchived?: () => void;
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
 
   // Transfer visibility: workspace OWNERs can change ownership of any project;
   // ADMINs only of projects they own. MEMBERs never see the button (and must
@@ -284,6 +289,7 @@ export function ProjectDetailPanel({
                 variant="outline"
                 size="icon"
                 disabled={!canEdit}
+                onClick={() => setArchiveOpen(true)}
                 className="size-9 rounded-md border-ds-border bg-ds-surface text-muted-foreground"
               >
                 <Archive className="size-4" />
@@ -323,6 +329,16 @@ export function ProjectDetailPanel({
         onOpenChange={setTransferOpen}
         slug={slug}
         project={project}
+      />
+
+      {/* Archive — confirm; on success the parent clears the selection and the
+          project leaves boards/lists. */}
+      <ArchiveProjectDialog
+        open={archiveOpen}
+        onOpenChange={setArchiveOpen}
+        slug={slug}
+        project={project}
+        onArchived={onArchived}
       />
     </aside>
   );

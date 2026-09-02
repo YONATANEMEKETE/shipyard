@@ -196,6 +196,7 @@ export function ProjectsPage({ slug }: { slug: string }) {
               error={selectedProjectId !== null && projectQuery.isError}
               onRetry={projectQuery.refetch}
               onArchived={() => setSelectedProjectId(null)}
+              onDeleted={() => setSelectedProjectId(null)}
             />
           </div>
         </div>

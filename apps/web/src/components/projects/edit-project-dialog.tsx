@@ -1,20 +1,29 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Folder, Plus, X } from 'lucide-react';
+import { Check, Folder, X } from 'lucide-react';
 import { Dialog as DialogPrimitive } from 'radix-ui';
 import { useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
+import { z } from 'zod';
 
 import {
-  createProjectSchema,
-  type CreateProjectRequest,
+  projectDateSchema,
+  projectNameSchema,
+  projectStatusSchema,
+  type ProjectDetail,
   type ProjectStatus,
 } from '@shipyard/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/motion/select';
 
-import { DatePickerField } from '@/components/projects/date-picker-field';
 import {
   Form,
   FormControl,
@@ -23,84 +32,108 @@ import {
   FormLabel,
 } from '@/components/ui/form';
 import { StatefulButton } from '@/components/motion/button/stateful';
-import { useCreateProject } from '@/hooks/use-projects';
+import { useUpdateProject } from '@/hooks/use-projects';
 import { useToast } from '@/components/providers/toast-provider';
+import { DatePickerField } from '@/components/projects/date-picker-field';
 import { cn } from '@/lib/utils';
 
-export interface CreateProjectDialogProps {
+export interface EditProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   slug: string;
-  /**
-   * Status the new project is created in (e.g. the board column the + was
-   * clicked in). Omitted → server defaults to ACTIVE. Not rendered as a field.
-   */
-  defaultStatus?: ProjectStatus;
+  /** The project being edited — drives the form's initial values. */
+  project: ProjectDetail | null;
 }
 
-// Form-only contract: start/target dates are required in this dialog, but the
-// shared createProjectSchema keeps them optional (used by other callers).
-// Refine locally so the shared schema is never mutated. The refine keeps the
-// same zod shape (dates stay optional in the type) so react-hook-form generics
-// stay aligned.
-const createProjectFormSchema = createProjectSchema
-  .refine((value) => !!value.startDate, {
-    path: ['startDate'],
-    message: 'Start date is required',
-  })
-  .refine((value) => !!value.targetDate, {
-    path: ['targetDate'],
-    message: 'Target date is required',
-  });
+// Form contract — name + status are required in the dialog; dates and
+// description are optional and clearable (explicit null on update). Mirrors
+// Element / Edit Project Modal in shipyard.pen.
+const editProjectFormSchema = z.object({
+  name: projectNameSchema,
+  description: z
+    .string()
+    .max(10000, 'Description must be 10,000 characters or less')
+    .optional(),
+  status: projectStatusSchema,
+  startDate: projectDateSchema.optional(),
+  targetDate: projectDateSchema.optional(),
+});
+
+type EditProjectFormValues = z.infer<typeof editProjectFormSchema>;
+
+const STATUS_OPTIONS: { value: ProjectStatus; label: string }[] = [
+  { value: 'PLANNED', label: 'Planned' },
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'COMPLETED', label: 'Completed' },
+];
+
+const STATUS_DOT: Record<ProjectStatus, string> = {
+  ACTIVE: 'bg-ds-brand',
+  COMPLETED: 'bg-ds-success',
+  PLANNED: 'bg-ds-text-muted',
+};
 
 /**
- * Create Project Dialog — matches Element / Create Project Modal in shipyard.pen
- * (Hprkb → Create Project Dialog oSCPQ): 500w, rounded-16, p-6, gap-20,
- * header 17/700/-0.4 + 12 muted, X 32, name + description + date row,
- * footer Cancel (Ghost/X) + Create (Primary/Plus).
- * Validates against the shared createProjectSchema (zod) with start/target date
- * required in the form, then creates the project via useCreateProject and
- * shows success/error toasts (mirrors create-workspace-dialog).
+ * Edit Project Dialog — mirrors Element / Edit Project Modal (Sgz99) in
+ * shipyard.pen: 500w modal, header (17/700 title + 12 muted subcopy + X),
+ * Project name input, Description textarea, Status select (dot + label +
+ * chevron), Start/Target date row, footer Cancel (Ghost/X) + Save changes
+ * (Primary/Check). Saves via useUpdateProject; success/error toasts (same
+ * pattern as create-project-dialog).
  */
-export function CreateProjectDialog({
+export function EditProjectDialog({
   open,
   onOpenChange,
   slug,
-  defaultStatus,
-}: CreateProjectDialogProps) {
+  project,
+}: EditProjectDialogProps) {
   const { showToast } = useToast();
 
-  const form = useForm<CreateProjectRequest>({
-    resolver: zodResolver(createProjectFormSchema),
+  const form = useForm<EditProjectFormValues>({
+    resolver: zodResolver(editProjectFormSchema),
     mode: 'all',
     defaultValues: {
-      name: '',
-      description: '',
-      startDate: undefined,
-      targetDate: undefined,
+      name: project?.name ?? '',
+      description: project?.description ?? '',
+      status: project?.status ?? 'ACTIVE',
+      startDate: project?.startDate ?? undefined,
+      targetDate: project?.targetDate ?? undefined,
     },
   });
 
   const values = useWatch({ control: form.control });
-  const canSubmit = createProjectFormSchema.safeParse(values).success;
+  const canSubmit = editProjectFormSchema.safeParse(values).success;
 
-  const createMutation = useCreateProject(slug, {
-    onSuccess: (project) => {
+  const updateMutation = useUpdateProject(slug, {
+    onSuccess: (updated) => {
       showToast({
         status: 'success',
-        title: 'Project created',
-        description: `${project.name} is ready.`,
+        title: 'Project updated',
+        description: `${updated.name} is saved.`,
       });
       onOpenChange(false);
     },
     onError: (error) => {
       showToast({
         status: 'error',
-        title: 'Failed to create project',
+        title: 'Failed to update project',
         description: error.message || 'Please try again.',
       });
     },
   });
+
+  // Hydrate the form from the selected project every time the dialog opens
+  // (and whenever the project object changes while open).
+  useEffect(() => {
+    if (!open) return;
+    form.reset({
+      name: project?.name ?? '',
+      description: project?.description ?? '',
+      status: project?.status ?? 'ACTIVE',
+      startDate: project?.startDate ?? undefined,
+      targetDate: project?.targetDate ?? undefined,
+    });
+  }, [open, project, form]);
 
   useEffect(() => {
     if (!open) return;
@@ -108,18 +141,19 @@ export function CreateProjectDialog({
     return () => clearTimeout(t);
   }, [open, form]);
 
-  useEffect(() => {
-    if (!open)
-      form.reset({
-        name: '',
-        description: '',
-        startDate: undefined,
-        targetDate: undefined,
-      });
-  }, [open, form]);
+  if (!project) return null;
 
   const onSubmit = form.handleSubmit((vals) => {
-    createMutation.mutate({ ...vals, status: defaultStatus });
+    updateMutation.mutate({
+      projectId: project.id,
+      body: {
+        name: vals.name,
+        description: vals.description ?? null,
+        status: vals.status,
+        startDate: vals.startDate ?? null,
+        targetDate: vals.targetDate ?? null,
+      },
+    });
   });
 
   return (
@@ -137,11 +171,11 @@ export function CreateProjectDialog({
           <div className="flex w-full items-center gap-3">
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <DialogPrimitive.Title className="text-[17px] font-bold leading-none tracking-[-0.4px] text-foreground">
-                Create new project
+                Edit project
               </DialogPrimitive.Title>
               <p className="text-[12px] leading-[1.55] text-muted-foreground">
-                Name it and set an optional target. You&apos;ll be the project
-                owner.
+                Update the project&apos;s details or change its operational
+                status.
               </p>
             </div>
             <DialogPrimitive.Close asChild>
@@ -183,7 +217,7 @@ export function CreateProjectDialog({
                         }}
                         placeholder="Ship Payroll"
                         leftIcon={<Folder className="size-4" />}
-                        disabled={createMutation.isPending}
+                        disabled={updateMutation.isPending}
                         error={fieldState.error?.message}
                         classNames={{
                           field:
@@ -205,27 +239,60 @@ export function CreateProjectDialog({
                       Description
                     </FormLabel>
                     <FormControl>
-                      <div className="flex flex-col">
-                        <textarea
-                          value={field.value ?? ''}
-                          onChange={(e) => field.onChange(e.target.value)}
-                          onBlur={field.onBlur}
-                          placeholder="A short summary of what this project is working toward…"
-                          rows={3}
-                          disabled={createMutation.isPending}
-                          className={cn(
-                            'min-h-[76px] w-full resize-none rounded-md border bg-ds-surface px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                            fieldState.error
-                              ? 'border-destructive'
-                              : 'border-ds-border',
-                          )}
-                        />
-                        {fieldState.error?.message ? (
-                          <p className="mt-1.5 text-xs text-destructive">
-                            {fieldState.error.message}
-                          </p>
-                        ) : null}
-                      </div>
+                      <textarea
+                        value={field.value ?? ''}
+                        onChange={(e) => field.onChange(e.target.value)}
+                        onBlur={field.onBlur}
+                        placeholder="A short summary of what this project is working toward…"
+                        rows={2}
+                        disabled={updateMutation.isPending}
+                        className={cn(
+                          'min-h-[64px] w-full resize-none rounded-md border bg-ds-surface px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                          fieldState.error
+                            ? 'border-destructive'
+                            : 'border-ds-border',
+                        )}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem className="gap-1.5">
+                    <FormLabel className="text-[11px] font-semibold text-foreground">
+                      Status
+                    </FormLabel>
+                    <FormControl>
+                      <Select
+                        value={field.value}
+                        onValueChange={(value) =>
+                          field.onChange(value as ProjectStatus)
+                        }
+                      >
+                        <SelectTrigger className="h-9 rounded-md border-ds-border bg-ds-surface text-sm">
+                          <span className="flex items-center gap-2">
+                            <span
+                              aria-hidden
+                              className={cn(
+                                'size-[7px] shrink-0 rounded-full',
+                                STATUS_DOT[field.value],
+                              )}
+                            />
+                            <SelectValue placeholder="Select status" />
+                          </span>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STATUS_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </FormControl>
                   </FormItem>
                 )}
@@ -277,7 +344,7 @@ export function CreateProjectDialog({
                   <Button
                     type="button"
                     variant="ghost"
-                    disabled={createMutation.isPending}
+                    disabled={updateMutation.isPending}
                     className="h-9 gap-1.5"
                   >
                     <X className="size-3.5" />
@@ -287,13 +354,13 @@ export function CreateProjectDialog({
                 <StatefulButton
                   type="submit"
                   className="h-9 gap-2 rounded-md bg-ds-brand px-4 text-sm font-semibold text-white hover:bg-ds-brand/90 disabled:opacity-50"
-                  state={createMutation.isPending ? 'loading' : 'idle'}
-                  loadingText="Creating…"
-                  successText="Created"
-                  icon={<Plus className="size-4" />}
-                  disabled={!canSubmit || createMutation.isPending}
+                  state={updateMutation.isPending ? 'loading' : 'idle'}
+                  loadingText="Saving…"
+                  successText="Saved"
+                  icon={<Check className="size-4" />}
+                  disabled={!canSubmit || updateMutation.isPending}
                 >
-                  Create project
+                  Save changes
                 </StatefulButton>
               </div>
             </form>

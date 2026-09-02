@@ -4,24 +4,29 @@ import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useWorkspace } from '@/hooks/use-workspaces';
+import { useViewPreference } from '@/hooks/use-projects';
 import { CreateProjectDialog } from '@/components/projects/create-project-dialog';
+import { ProjectListView } from '@/components/projects/project-list-view';
 import {
   ProjectsToolbar,
   type ProjectFilters,
 } from '@/components/projects/projects-toolbar';
 
 /**
- * Projects page — header + toolbar (step 2).
+ * Projects page — header + toolbar + list view.
  * Mirrors Screen / Projects - List in shipyard.pen:
  *  - Title 24px / 700 / -0.5 tracking, subtitle 13px muted
  *  - Primary "New project" button (Button / Primary, plus icon, 12px 600)
  *  - Toolbar row: search left, List/Kanban view switch + filter/sort controls right
+ *  - Projects list table, driven by mock data until the live query is wired in
  *  - Permission-gated: MEMBER cannot create (api-design #3)
- * Filter/view state is lifted here so the (upcoming) list/board view can
- * consume it; the toolbar persists the view choice server-side.
+ * Filter/view state is lifted here so the list/board view can consume it; the
+ * toolbar persists the view choice server-side, and the page renders the list
+ * view when LIST is active.
  */
 export function ProjectsPage({ slug }: { slug: string }) {
   const { data: workspace } = useWorkspace(slug);
+  const { data: viewPref } = useViewPreference(slug, 'PROJECT');
   const canCreate = workspace?.role !== 'MEMBER';
   const [createOpen, setCreateOpen] = useState(false);
   const [filters, setFilters] = useState<ProjectFilters>({
@@ -62,7 +67,12 @@ export function ProjectsPage({ slug }: { slug: string }) {
       {/* Toolbar row — search + view switch + filter/sort controls */}
       <ProjectsToolbar slug={slug} filters={filters} onChange={setFilters} />
 
-      {/* List/board view lands here (next step) */}
+      {/* List view (mock data) — rendered when LIST view is active */}
+      {(viewPref?.view ?? 'LIST') === 'LIST' ? (
+        <div className="flex min-h-0 flex-1 flex-col">
+          <ProjectListView filters={filters} />
+        </div>
+      ) : null}
 
       <CreateProjectDialog
         open={createOpen}

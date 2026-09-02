@@ -54,6 +54,10 @@ export const createProjectSchema = z.object({
     .optional(),
   startDate: projectDateSchema.optional(),
   targetDate: projectDateSchema.optional(),
+  // Optional — the column the project is created in. Omitted → defaults to
+  // ACTIVE server-side (spec §3.1). Not a form field; threaded through so the
+  // board + button can create directly into a status column.
+  status: projectStatusSchema.optional(),
 });
 
 export type CreateProjectRequest = z.infer<typeof createProjectSchema>;
@@ -126,12 +130,15 @@ export const projectOwnerCardSchema = z.object({
 export type ProjectOwnerCard = z.infer<typeof projectOwnerCardSchema>;
 
 // Card shape — what list/board/detail all render from. Dates are strings.
+// Description ships on the list payload too (board cards render it), so
+// card ≈ detail today; detail stays a named schema for future growth.
 export const projectCardSchema = z.object({
   id: z.string(),
   workspaceId: z.string(),
   name: z.string(),
   status: projectStatusSchema,
   owner: projectOwnerCardSchema,
+  description: z.string().nullable(),
   startDate: projectDateSchema.nullable(),
   targetDate: projectDateSchema.nullable(),
   archivedAt: z.string().datetime().nullable(),
@@ -141,10 +148,9 @@ export const projectCardSchema = z.object({
 
 export type ProjectCard = z.infer<typeof projectCardSchema>;
 
-// Detail = card + description (list/board omit description to keep payloads lean).
-export const projectDetailSchema = projectCardSchema.extend({
-  description: z.string().nullable(),
-});
+// Detail = card today (description already ships on the card). Named alias so
+// a future detail-only field doesn't ripple through list consumers.
+export const projectDetailSchema = projectCardSchema;
 
 export type ProjectDetail = z.infer<typeof projectDetailSchema>;
 

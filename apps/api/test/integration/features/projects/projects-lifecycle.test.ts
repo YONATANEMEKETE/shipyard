@@ -100,6 +100,7 @@ interface ProjectCard {
   name: string;
   status: 'PLANNED' | 'ACTIVE' | 'COMPLETED';
   owner: OwnerCard;
+  description: string | null;
   startDate: string | null;
   targetDate: string | null;
   archivedAt: string | null;
@@ -107,9 +108,8 @@ interface ProjectCard {
   updatedAt: string;
 }
 
-interface ProjectDetail extends ProjectCard {
-  description: string | null;
-}
+// Description now ships on the card/list payload; detail is the same shape.
+type ProjectDetail = ProjectCard;
 
 interface MemberCard {
   id: string;
@@ -321,7 +321,10 @@ describe('projects lifecycle (integration)', () => {
   // ── List (#1) ──────────────────────────────────────────────────────────
 
   it('lists non-archived projects by default', async () => {
-    await createProject(owner.cookies, { name: 'Alpha' });
+    await createProject(owner.cookies, {
+      name: 'Alpha',
+      description: 'First project',
+    });
     await createProject(owner.cookies, { name: 'Beta' });
 
     const res = await request
@@ -330,6 +333,13 @@ describe('projects lifecycle (integration)', () => {
     expect(res.status).toBe(200);
     const list = dataOf<{ projects: ProjectCard[] }>(res);
     expect(list.projects.map((p) => p.name).sort()).toEqual(['Alpha', 'Beta']);
+    // Description ships on the list payload so board cards can render it.
+    expect(list.projects.find((p) => p.name === 'Alpha')?.description).toBe(
+      'First project',
+    );
+    expect(
+      list.projects.find((p) => p.name === 'Beta')?.description,
+    ).toBeNull();
   });
 
   it('list filters by status and ownerId', async () => {

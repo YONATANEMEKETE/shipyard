@@ -62,6 +62,7 @@ function toCard(row: ProjectRow): ProjectCard {
       email: row.owner.email,
       image: row.owner.image,
     },
+    description: row.description ?? null,
     startDate: toDateString(row.startDate),
     targetDate: toDateString(row.targetDate),
     archivedAt: row.archivedAt ? row.archivedAt.toISOString() : null,
@@ -71,7 +72,7 @@ function toCard(row: ProjectRow): ProjectCard {
 }
 
 function toDetail(row: ProjectRow): ProjectDetail {
-  return { ...toCard(row), description: row.description ?? null };
+  return toCard(row);
 }
 
 function requireProject(row: ProjectRow | null): ProjectRow {
@@ -159,7 +160,7 @@ export const projectsService = {
         projectsRepository.create(tx, {
           workspaceId: context.workspaceId,
           name: input.name,
-          status: 'ACTIVE',
+          status: input.status ?? 'ACTIVE',
           ownerId: userId,
           description: input.description ?? null,
           startDate: input.startDate ? new Date(input.startDate) : null,

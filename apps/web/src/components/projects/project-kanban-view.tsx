@@ -4,7 +4,7 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Inbox, RotateCw } from 'lucide-react';
 import { motion, useDragControls } from 'motion/react';
-import type { ProjectStatus } from '@shipyard/shared';
+import type { ProjectCard, ProjectStatus } from '@shipyard/shared';
 
 import { KanbanColumn } from '@/components/projects/kanban-column';
 import { ProjectKanbanCard } from '@/components/projects/project-kanban-card';
@@ -12,21 +12,28 @@ import { Loader } from '@/components/motion/loader';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
-import {
-  kanbanDummy,
-  type KanbanDummyCard,
-} from '@/components/projects/mock-kanban';
 
 const STATUS_ORDER: ProjectStatus[] = ['PLANNED', 'ACTIVE', 'COMPLETED'];
 
 const CARD_GAP = 10; // px — matches the column body gap-2.5
 
+/** Group the live list into the three board columns by status. */
+function groupByStatus(
+  projects: ProjectCard[],
+): Record<ProjectStatus, ProjectCard[]> {
+  return {
+    PLANNED: projects.filter((p) => p.status === 'PLANNED'),
+    ACTIVE: projects.filter((p) => p.status === 'ACTIVE'),
+    COMPLETED: projects.filter((p) => p.status === 'COMPLETED'),
+  };
+}
+
 /**
  * Projects Kanban view — mirrors the Kanban board in shipyard.pen: three
  * columns (Planned / Active / Completed), each a status column populated with
- * project cards.
+ * the live project list grouped by `status`.
  *
- * Drag-and-drop (mock data), built on framer-motion:
+ * Drag-and-drop, built on framer-motion:
  *  - Pointer-down on a card lifts it out of its column and mounts a floating
  *    overlay (portaled to the body) that takes over the drag via
  *    `useDragControls`. Because the overlay lives outside the board, the
@@ -37,10 +44,15 @@ const CARD_GAP = 10; // px — matches the column body gap-2.5
  *  - While dragging, the hovered column is highlighted (amber ring) and a
  *    drop-slot placeholder shows exactly where the card will land.
  *  - On drop, the pointer x is resolved against the three column bounds. A
- *    different column moves the card there (status changes); the same column
- *    reorders it to the drop position.
+ *    different column moves the card there (status changes, persisted via
+ *    `onStatusChange`); the same column reorders it to the drop position
+ *    (local only — the API has no position field yet).
  *  - Selection only fires on a quick click — a drag never opens the detail
  *    panel.
+ *
+ * Data: the parent's live `useProjects` query is passed in as `projects` and
+ * grouped into columns here; the server is authoritative, so a refetch
+ * re-groups the board.
  *
  * Status UI:
  *  - `loading` renders a full-area centered spinner in place of the board
@@ -50,23 +62,37 @@ const CARD_GAP = 10; // px — matches the column body gap-2.5
  *    dotted "No projects in this state" placeholder.
  */
 export function ProjectKanbanView({
+  projects,
   onOpenProject,
+  onAddProject,
+  onStatusChange,
   loading = false,
   error = false,
   onRetry,
 }: {
+  projects: ProjectCard[];
   onOpenProject?: (id: string) => void;
+  /** + button in a column — create a new project in that column's status. */
+  onAddProject?: (status: ProjectStatus) => void;
+  /** Persist a card dropped onto another column (status switch). */
+  onStatusChange?: (projectId: string, status: ProjectStatus) => void;
   loading?: boolean;
   error?: boolean;
   onRetry?: () => void;
 }) {
-  const [columns, setColumns] = useState<
-    Record<ProjectStatus, KanbanDummyCard[]>
-  >(() => ({
-    PLANNED: [...kanbanDummy.PLANNED],
-    ACTIVE: [...kanbanDummy.ACTIVE],
-    COMPLETED: [...kanbanDummy.COMPLETED],
-  }));
+  const [columns, setColumns] = useState<Record<ProjectStatus, ProjectCard[]>>(
+    () => groupByStatus(projects),
+  );
+
+  // Keep the board grouped from the live list query — the server is
+  // authoritative. Re-group whenever the fetched projects change (create,
+  // persisted drag, refetch) via the React "adjust state when a prop changes"
+  // pattern, while local drag reordering still applies on top between syncs.
+  const [syncedProjects, setSyncedProjects] = useState(projects);
+  if (syncedProjects !== projects) {
+    setSyncedProjects(projects);
+    setColumns(groupByStatus(projects));
+  }
 
   // Column wrapper elements (viewport-space bounds) — drop-target resolution.
   const columnRefs = useRef<Record<ProjectStatus, HTMLElement | null>>({
@@ -77,12 +103,12 @@ export function ProjectKanbanView({
   const boardRef = useRef<HTMLDivElement>(null);
 
   // Active drag state — the lifted card shown in the floating layer.
-  const dragRef = useRef<{ card: KanbanDummyCard; from: ProjectStatus } | null>(
+  const dragRef = useRef<{ card: ProjectCard; from: ProjectStatus } | null>(
     null,
   );
   const dragEventRef = useRef<PointerEvent | null>(null);
   const [dragging, setDragging] = useState<{
-    card: KanbanDummyCard;
+    card: ProjectCard;
     from: ProjectStatus;
   } | null>(null);
   const [overlayRect, setOverlayRect] = useState<{
@@ -102,7 +128,7 @@ export function ProjectKanbanView({
 
   const startDrag = (
     event: React.PointerEvent<HTMLElement>,
-    card: KanbanDummyCard,
+    card: ProjectCard,
     from: ProjectStatus,
   ) => {
     const el = event.currentTarget;
@@ -218,6 +244,11 @@ export function ProjectKanbanView({
       };
     });
 
+    // Cross-column drop = a status switch — persist it so the board stays in
+    // sync with the DB (the parent refetch re-groups the board afterwards).
+    if (targetStatus !== drag.from)
+      onStatusChange?.(drag.card.id, targetStatus);
+
     setDragging(null);
     setOverlayRect(null);
     // Allow the next quick click to select normally.
@@ -251,7 +282,7 @@ export function ProjectKanbanView({
         </div>
       ) : null;
 
-    const items: (KanbanDummyCard | { slot: true })[] = [...cards];
+    const items: (ProjectCard | { slot: true })[] = [...cards];
     if (isDropTarget) items.splice(insertIndex, 0, { slot: true });
 
     // Empty status — the column still renders; its body shows a dotted
@@ -270,6 +301,7 @@ export function ProjectKanbanView({
           status={status}
           count={cards.length}
           isDropTarget={isDropTarget}
+          onAdd={() => onAddProject?.(status)}
         >
           {showEmpty ? (
             <EmptyState
@@ -373,26 +405,8 @@ export function ProjectKanbanView({
               className="cursor-grabbing"
             >
               <ProjectKanbanCard
-                project={{
-                  id: dragging.card.id,
-                  workspaceId: 'ws_mock',
-                  name: dragging.card.name,
-                  status: dragging.card.status,
-                  owner: {
-                    memberId: 'mb_x',
-                    userId: 'usr_x',
-                    name: dragging.card.members[0] ?? 'Unassigned',
-                    email: 'owner@shipyard.dev',
-                    image: null,
-                  },
-                  startDate: null,
-                  targetDate: dragging.card.targetDate,
-                  archivedAt: null,
-                  createdAt: '2025-11-02T10:00:00.000Z',
-                  updatedAt: '2025-11-02T10:00:00.000Z',
-                }}
+                project={dragging.card}
                 description={dragging.card.description}
-                members={dragging.card.members}
                 onOpen={() => onOpenProject?.(dragging.card.id)}
               />
             </motion.div>,
@@ -413,7 +427,7 @@ function CardItem({
   onOpenProject,
   movedRef,
 }: {
-  card: KanbanDummyCard;
+  card: ProjectCard;
   onPointerDown: (event: React.PointerEvent<HTMLElement>) => void;
   onOpenProject?: (id: string) => void;
   movedRef: React.MutableRefObject<boolean>;
@@ -427,26 +441,8 @@ function CardItem({
       className="w-full"
     >
       <ProjectKanbanCard
-        project={{
-          id: card.id,
-          workspaceId: 'ws_mock',
-          name: card.name,
-          status: card.status,
-          owner: {
-            memberId: 'mb_x',
-            userId: 'usr_x',
-            name: card.members[0] ?? 'Unassigned',
-            email: 'owner@shipyard.dev',
-            image: null,
-          },
-          startDate: null,
-          targetDate: card.targetDate,
-          archivedAt: null,
-          createdAt: '2025-11-02T10:00:00.000Z',
-          updatedAt: '2025-11-02T10:00:00.000Z',
-        }}
+        project={card}
         description={card.description}
-        members={card.members}
         onPointerDown={onPointerDown}
         onOpen={() => {
           if (movedRef.current) {

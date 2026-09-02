@@ -24,6 +24,7 @@ import { BloomMenu } from '@/components/motion/bloom-menu';
 import { Float } from '@/components/ui/float';
 import { Input } from '@/components/ui/input';
 import { CreateWorkspaceDialog } from '@/components/workspace/create-workspace-dialog';
+import { CreateProjectDialog } from '@/components/projects/create-project-dialog';
 import { LeaveWorkspaceDialog } from '@/components/members/leave-workspace-dialog';
 import { useWorkspace } from '@/hooks/use-workspaces';
 import { isArchived } from '@/lib/workspace/is-archived';
@@ -63,6 +64,7 @@ export function WorkspaceHeader({
   onToggleSidebar: () => void;
 }) {
   const [createOpen, setCreateOpen] = useState(false);
+  const [projectCreateOpen, setProjectCreateOpen] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
   const label = usePageContext(slug);
   const { data: workspace } = useWorkspace(slug);
@@ -181,10 +183,16 @@ export function WorkspaceHeader({
           items={createItems as never}
           onSelect={(label) => {
             if (label === 'Workspace') setCreateOpen(true);
+            if (label === 'Project') setProjectCreateOpen(true);
           }}
         />
       </div>
       <CreateWorkspaceDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <CreateProjectDialog
+        open={projectCreateOpen}
+        onOpenChange={setProjectCreateOpen}
+        slug={slug}
+      />
       <LeaveWorkspaceDialog
         slug={slug}
         workspaceName={workspace?.name ?? 'this workspace'}

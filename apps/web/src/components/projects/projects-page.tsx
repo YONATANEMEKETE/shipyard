@@ -5,18 +5,30 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useWorkspace } from '@/hooks/use-workspaces';
 import { CreateProjectDialog } from '@/components/projects/create-project-dialog';
+import {
+  ProjectsToolbar,
+  type ProjectFilters,
+} from '@/components/projects/projects-toolbar';
 
 /**
- * Projects page — header only (step 1).
+ * Projects page — header + toolbar (step 2).
  * Mirrors Screen / Projects - List in shipyard.pen:
  *  - Title 24px / 700 / -0.5 tracking, subtitle 13px muted
  *  - Primary "New project" button (Button / Primary, plus icon, 12px 600)
+ *  - Toolbar row: search left, List/Kanban view switch + filter/sort controls right
  *  - Permission-gated: MEMBER cannot create (api-design #3)
+ * Filter/view state is lifted here so the (upcoming) list/board view can
+ * consume it; the toolbar persists the view choice server-side.
  */
 export function ProjectsPage({ slug }: { slug: string }) {
   const { data: workspace } = useWorkspace(slug);
   const canCreate = workspace?.role !== 'MEMBER';
   const [createOpen, setCreateOpen] = useState(false);
+  const [filters, setFilters] = useState<ProjectFilters>({
+    search: '',
+    sort: 'createdAt',
+    order: 'desc',
+  });
 
   return (
     <div className="flex h-full w-full flex-col gap-6">
@@ -46,6 +58,11 @@ export function ProjectsPage({ slug }: { slug: string }) {
           </Button>
         ) : null}
       </div>
+
+      {/* Toolbar row — search + view switch + filter/sort controls */}
+      <ProjectsToolbar slug={slug} filters={filters} onChange={setFilters} />
+
+      {/* List/board view lands here (next step) */}
 
       <CreateProjectDialog
         open={createOpen}

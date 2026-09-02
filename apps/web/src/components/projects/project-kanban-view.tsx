@@ -2,11 +2,16 @@
 
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Inbox, RotateCw } from 'lucide-react';
 import { motion, useDragControls } from 'motion/react';
 import type { ProjectStatus } from '@shipyard/shared';
 
 import { KanbanColumn } from '@/components/projects/kanban-column';
 import { ProjectKanbanCard } from '@/components/projects/project-kanban-card';
+import { Loader } from '@/components/motion/loader';
+import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorState } from '@/components/ui/error-state';
 import {
   kanbanDummy,
   type KanbanDummyCard,
@@ -36,11 +41,24 @@ const CARD_GAP = 10; // px — matches the column body gap-2.5
  *    reorders it to the drop position.
  *  - Selection only fires on a quick click — a drag never opens the detail
  *    panel.
+ *
+ * Status UI:
+ *  - `loading` renders a full-area centered spinner in place of the board
+ *    (unlike the list view's skeleton rows).
+ *  - `error` renders the ErrorState with a retry action in the same space.
+ *  - An empty status still renders its column; the column body shows a
+ *    dotted "No projects in this state" placeholder.
  */
 export function ProjectKanbanView({
   onOpenProject,
+  loading = false,
+  error = false,
+  onRetry,
 }: {
   onOpenProject?: (id: string) => void;
+  loading?: boolean;
+  error?: boolean;
+  onRetry?: () => void;
 }) {
   const [columns, setColumns] = useState<
     Record<ProjectStatus, KanbanDummyCard[]>
@@ -236,6 +254,10 @@ export function ProjectKanbanView({
     const items: (KanbanDummyCard | { slot: true })[] = [...cards];
     if (isDropTarget) items.splice(insertIndex, 0, { slot: true });
 
+    // Empty status — the column still renders; its body shows a dotted
+    // placeholder (unless a card is being dropped into it).
+    const showEmpty = !isDropTarget && cards.length === 0;
+
     return (
       <div
         key={status}
@@ -249,23 +271,70 @@ export function ProjectKanbanView({
           count={cards.length}
           isDropTarget={isDropTarget}
         >
-          {items.map((item, index) =>
-            'slot' in item ? (
-              <Fragment key={`drop-slot-${status}-${index}`}>{slot}</Fragment>
-            ) : (
-              <CardItem
-                key={item.id}
-                card={item}
-                onPointerDown={(event) => startDrag(event, item, status)}
-                onOpenProject={onOpenProject}
-                movedRef={movedRef}
-              />
-            ),
+          {showEmpty ? (
+            <EmptyState
+              icon={Inbox}
+              title="No projects here"
+              description="Drag a card into this column or use the + to add one."
+              className="py-8"
+            />
+          ) : (
+            <Fragment>
+              {items.map((item, index) =>
+                'slot' in item ? (
+                  <Fragment key={`drop-slot-${status}-${index}`}>
+                    {slot}
+                  </Fragment>
+                ) : (
+                  <CardItem
+                    key={item.id}
+                    card={item}
+                    onPointerDown={(event) => startDrag(event, item, status)}
+                    onOpenProject={onOpenProject}
+                    movedRef={movedRef}
+                  />
+                ),
+              )}
+            </Fragment>
           )}
         </KanbanColumn>
       </div>
     );
   };
+
+  // Loading — full-area centered spinner in place of the board.
+  if (loading) {
+    return (
+      <div className="flex h-full w-full items-center justify-center rounded-xl border border-ds-border bg-ds-surface">
+        <Loader size={32} variant="spinner" label="Loading projects" />
+      </div>
+    );
+  }
+
+  // Error — full-area error state with a retry action.
+  if (error) {
+    return (
+      <div className="flex h-full w-full items-center justify-center rounded-xl border border-ds-border bg-ds-surface">
+        <ErrorState
+          title="Couldn't load projects"
+          description="We ran into a problem fetching the project board. Try again in a moment."
+          action={
+            onRetry ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onRetry}
+                className="h-8 gap-2 rounded-md border-ds-border bg-ds-surface px-3 text-xs font-semibold text-foreground"
+              >
+                <RotateCw className="size-3.5" />
+                Try again
+              </Button>
+            ) : undefined
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <>

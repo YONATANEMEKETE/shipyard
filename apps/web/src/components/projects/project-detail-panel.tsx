@@ -15,6 +15,7 @@ import { Loader } from '@/components/motion/loader';
 import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/ui/error-state';
 import { EditProjectDialog } from '@/components/projects/edit-project-dialog';
+import { TransferProjectDialog } from '@/components/projects/transfer-project-dialog';
 import {
   Tooltip,
   TooltipContent,
@@ -76,6 +77,7 @@ export function ProjectDetailPanel({
   onRetry?: () => void;
 }) {
   const [editOpen, setEditOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
   // Loading — centered loader inside the card.
   if (loading) {
     return (
@@ -250,6 +252,7 @@ export function ProjectDetailPanel({
                 aria-label="Transfer ownership"
                 variant="outline"
                 size="icon"
+                onClick={() => setTransferOpen(true)}
                 className="size-9 rounded-md border-ds-border bg-ds-surface text-muted-foreground"
               >
                 <UserRoundPlus className="size-4" />
@@ -292,6 +295,14 @@ export function ProjectDetailPanel({
       <EditProjectDialog
         open={editOpen}
         onOpenChange={setEditOpen}
+        slug={slug}
+        project={project}
+      />
+
+      {/* Change ownership — transfers the selected project to a workspace member. */}
+      <TransferProjectDialog
+        open={transferOpen}
+        onOpenChange={setTransferOpen}
         slug={slug}
         project={project}
       />

@@ -89,6 +89,8 @@ export function ProjectDetailPanel({
   const canTransfer =
     workspace?.role === 'OWNER' ||
     (workspace?.role === 'ADMIN' && project?.owner.userId === session?.user.id);
+  // Members are read-only on a project — every write action is disabled.
+  const canEdit = workspace?.role === 'OWNER' || workspace?.role === 'ADMIN';
   // Loading — centered loader inside the card.
   if (loading) {
     return (
@@ -250,7 +252,8 @@ export function ProjectDetailPanel({
         <Button
           type="button"
           onClick={() => setEditOpen(true)}
-          className="h-9 flex-1 gap-2 rounded-md bg-ds-brand px-4 text-sm font-semibold text-white hover:bg-ds-brand/90"
+          disabled={!canEdit}
+          className="h-9 flex-1 gap-2 rounded-md bg-ds-brand px-4 text-sm font-semibold text-white hover:bg-ds-brand/90 disabled:bg-ds-surface-subtle disabled:text-muted-foreground disabled:hover:bg-ds-surface-subtle"
         >
           <Pencil className="size-3.5" />
           Edit
@@ -280,6 +283,7 @@ export function ProjectDetailPanel({
                 aria-label="Archive project"
                 variant="outline"
                 size="icon"
+                disabled={!canEdit}
                 className="size-9 rounded-md border-ds-border bg-ds-surface text-muted-foreground"
               >
                 <Archive className="size-4" />
@@ -294,6 +298,7 @@ export function ProjectDetailPanel({
                 aria-label="Delete project"
                 variant="outline"
                 size="icon"
+                disabled={!canEdit}
                 className="size-9 rounded-md border-ds-border bg-ds-surface text-ds-danger"
               >
                 <Trash2 className="size-4" />

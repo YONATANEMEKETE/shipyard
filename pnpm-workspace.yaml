@@ -31,3 +31,14 @@ overrides:
   # lodash <=4.17.23: code injection via _.template (high) and prototype
   # pollution (moderate) — force only vulnerable copies to the patched release.
   'lodash@<=4.17.23': ^4.17.24
+  # fast-uri <3.1.6: SSRF / host confusion via percent-decoding and scheme
+  # normalization (GHSA-f65p-4m7j-42xc, GHSA-fph4-wmhf-6fwf, GHSA-jqff-g426-
+  # hqxp) — pulled transitively by ajv (commitlint, prisma@7 stream tooling).
+  'fast-uri@<3.1.6': ^3.1.6
+  # mysql2 <3.22.0: auth-plugin downgrade to mysql_clear_password leaks
+  # credentials (GHSA-3f6p-5ww8-9rcr) + unbounded zlib inflate (moderate) —
+  # pulled by prisma@7 and drizzle-orm (better-auth's driver chain).
+  'mysql2@<3.22.0': ^3.22.0
+  # qs <6.16.0: array-limit bypass and DoS via attacker-controlled isBuffer
+  # (transitive of express→body-parser and supertest→superagent).
+  'qs@<6.16.0': ^6.16.0

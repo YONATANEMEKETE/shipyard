@@ -116,7 +116,7 @@ function MemberRow({
               {member.name}
             </span>
             {isCurrentUser ? (
-              <span className="inline-flex h-[18px] shrink-0 items-center rounded-full bg-foreground px-1.5 font-mono text-[8px] font-bold leading-none text-white">
+              <span className="inline-flex h-[18px] shrink-0 items-center rounded-full bg-foreground px-1.5 font-mono text-[8px] font-bold leading-none text-background">
                 YOU
               </span>
             ) : null}

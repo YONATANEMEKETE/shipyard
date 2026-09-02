@@ -129,7 +129,7 @@ function TransferOwnershipDialogContent({
         <div className="flex w-full items-center gap-3.5">
           <span
             aria-hidden
-            className="grid size-11 shrink-0 place-items-center rounded-lg border border-[#EDD9A8] bg-ds-warning-soft"
+            className="grid size-11 shrink-0 place-items-center rounded-lg border border-ds-warning/30 bg-ds-warning-soft"
           >
             <Shield className="size-[22px] text-ds-warning" aria-hidden />
           </span>
@@ -172,7 +172,7 @@ function TransferOwnershipDialogContent({
                 className="size-7 shrink-0 rounded-full border object-cover"
               />
             ) : (
-              <span className="grid size-7 shrink-0 place-items-center rounded-full border border-[#C9DAFF] bg-ds-info-soft font-mono text-xs font-bold text-ds-info">
+              <span className="grid size-7 shrink-0 place-items-center rounded-full border border-ds-info/30 bg-ds-info-soft font-mono text-xs font-bold text-ds-info">
                 {initialsOf(member.name)}
               </span>
             )}
@@ -222,16 +222,16 @@ function TransferOwnershipDialogContent({
             aria-hidden
           />
 
-          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-[10px] border border-[#EED8A8] bg-ds-brand-soft px-3 py-2.5">
+          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-[10px] border border-ds-brand/40 bg-ds-brand-soft px-3 py-2.5">
             {member.image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={member.image}
                 alt=""
-                className="size-7 shrink-0 rounded-full border border-[#EED8A8] object-cover"
+                className="size-7 shrink-0 rounded-full border border-ds-brand/40 object-cover"
               />
             ) : (
-              <span className="grid size-7 shrink-0 place-items-center rounded-full border border-[#EED8A8] bg-ds-surface font-mono text-[11px] font-bold text-ds-brand">
+              <span className="grid size-7 shrink-0 place-items-center rounded-full border border-ds-brand/40 bg-ds-surface font-mono text-[11px] font-bold text-ds-brand">
                 {initialsOf(member.name)}
               </span>
             )}
@@ -247,7 +247,7 @@ function TransferOwnershipDialogContent({
         </div>
 
         {/* Warning note */}
-        <div className="flex w-full items-center gap-2 rounded-lg border border-[#EDD9A8] bg-ds-warning-soft px-3 py-2.5">
+        <div className="flex w-full items-center gap-2 rounded-lg border border-ds-warning/30 bg-ds-warning-soft px-3 py-2.5">
           <ShieldAlert
             className="size-[13px] shrink-0 text-ds-warning"
             aria-hidden

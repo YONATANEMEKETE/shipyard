@@ -7,6 +7,7 @@ import type { WorkspaceMemberCard } from '@shipyard/shared';
 
 import { useToast } from '@/components/providers/toast-provider';
 import { useRemoveMember } from '@/hooks/use-members';
+import { useOwnedProjectCount } from '@/hooks/use-projects';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -44,6 +45,7 @@ export function RemoveMemberDialog({
           member={member}
           slug={slug}
           workspaceName={workspaceName}
+          open={open}
           onOpenChange={onOpenChange}
           stats={stats}
         />
@@ -56,12 +58,14 @@ function RemoveMemberDialogContent({
   member,
   slug,
   workspaceName,
+  open,
   onOpenChange,
   stats,
 }: {
   member: WorkspaceMemberCard;
   slug: string;
   workspaceName: string;
+  open: boolean;
   onOpenChange: (open: boolean) => void;
   stats?: { projectsOwned?: number };
 }) {
@@ -91,12 +95,22 @@ function RemoveMemberDialogContent({
 
   const busy = removeMutation.isPending;
 
+  // Real owned-project count including archived (Checkpoint B, spec rule 6).
+  // Fetch only when no explicit stats override is provided — keeps the
+  // existing prop-based tests green without a network round-trip. While
+  // loading we keep the generic fallback to avoid flicker.
+  const shouldFetchCount =
+    open && stats?.projectsOwned === undefined && Boolean(member.userId);
+  const { data: fetchedCount } = useOwnedProjectCount(slug, member.userId, {
+    enabled: shouldFetchCount,
+  });
+
+  const projectsOwned = fetchedCount ?? stats?.projectsOwned ?? 0;
+
   const confirm = () => {
     if (busy) return;
     removeMutation.mutate({ memberId: member.id });
   };
-
-  const projectsOwned = stats?.projectsOwned ?? 0;
 
   return (
     <>

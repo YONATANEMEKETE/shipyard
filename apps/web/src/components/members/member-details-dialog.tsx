@@ -6,6 +6,7 @@ import { Dialog as DialogPrimitive } from 'radix-ui';
 import type { WorkspaceMemberCard, WorkspaceRole } from '@shipyard/shared';
 
 import { MemberBadge } from '@/components/members/member-badge';
+import { useOwnedProjectCount } from '@/hooks/use-projects';
 import { cn } from '@/lib/utils';
 
 /**
@@ -55,6 +56,7 @@ export interface MemberStats {
 
 interface MemberDetailsDialogProps {
   member: WorkspaceMemberCard;
+  slug?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onChangeRole: () => void;
@@ -64,12 +66,14 @@ interface MemberDetailsDialogProps {
   /** Viewer's role on this workspace — drives which action sections render. */
   viewerRole?: WorkspaceRole;
   currentUserId?: string;
-  /** Display counts from the details endpoint — UI-only until it exists. */
+  /** Display counts — when omitted the dialog fetches real owned-project
+   *  counts (including archived) from the projects API. Kept for tests. */
   stats?: Partial<MemberStats>;
 }
 
 export function MemberDetailsDialog({
   member,
+  slug,
   open,
   onOpenChange,
   onChangeRole,
@@ -84,6 +88,16 @@ export function MemberDetailsDialog({
   const isOwner = member.role === 'OWNER';
   const viewerCanManage = viewerRole === 'OWNER' && !isOwner && !isSelf;
 
+  // Real owned-project count including archived (Checkpoint B). Fetched only
+  // when the dialog is open and no explicit stats override was provided.
+  const shouldFetchCount = open && stats?.projectsOwned === undefined;
+  const { data: fetchedProjectsOwned } = useOwnedProjectCount(
+    slug,
+    member.userId,
+    { enabled: shouldFetchCount },
+  );
+  const projectsOwned = fetchedProjectsOwned ?? stats?.projectsOwned ?? 0;
+
   // Remove is the only action Admins get, and only against Members.
   const viewerCanRemove =
     (viewerRole === 'OWNER' && !isOwner && !isSelf) ||
@@ -96,7 +110,7 @@ export function MemberDetailsDialog({
     },
     {
       label: 'Projects',
-      value: `${stats?.projectsOwned ?? 0} owned`,
+      value: `${projectsOwned} owned`,
       divider: true,
     },
     {

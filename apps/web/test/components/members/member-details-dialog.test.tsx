@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -27,27 +28,33 @@ function renderDetails({
   target = member('MEMBER'),
   viewerRole = 'OWNER',
   currentUserId = 'usr_1',
+  slug = 'harbor',
 }: {
   target?: WorkspaceMemberCard;
   viewerRole?: WorkspaceRole;
   currentUserId?: string;
+  slug?: string;
 } = {}) {
   const onChangeRole = vi.fn();
   const onTransferOwnership = vi.fn();
   const onRemoveMember = vi.fn();
   const onOpenChange = vi.fn();
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const utils = render(
-    <MemberDetailsDialog
-      member={target}
-      open
-      onOpenChange={onOpenChange}
-      onChangeRole={onChangeRole}
-      onTransferOwnership={onTransferOwnership}
-      onRemoveMember={onRemoveMember}
-      workspaceName="Harbor Labs"
-      viewerRole={viewerRole}
-      currentUserId={currentUserId}
-    />,
+    <QueryClientProvider client={qc}>
+      <MemberDetailsDialog
+        member={target}
+        slug={slug}
+        open
+        onOpenChange={onOpenChange}
+        onChangeRole={onChangeRole}
+        onTransferOwnership={onTransferOwnership}
+        onRemoveMember={onRemoveMember}
+        workspaceName="Harbor Labs"
+        viewerRole={viewerRole}
+        currentUserId={currentUserId}
+      />
+    </QueryClientProvider>,
   );
   return {
     onChangeRole,

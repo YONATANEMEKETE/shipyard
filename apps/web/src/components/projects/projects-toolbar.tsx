@@ -110,35 +110,21 @@ export function ProjectsToolbar({
 
       {/* View switch + filter controls — Projects Toolbar Right */}
       <div className="flex items-center gap-3">
-        {/* Active / Archived scope — archived is a read-only list (no board,
-            no filters), so the rest of the controls hide while it's on. */}
+        {/* Active / Archived scope — same Tabs component as the view switch.
+            Archived is a read-only list (no board, no filters), so the rest of
+            the controls hide while it's on. */}
         {onArchivedChange ? (
-          <div className="flex items-center rounded-lg border border-ds-border bg-ds-surface p-0.5">
-            <button
-              type="button"
-              onClick={() => onArchivedChange(false)}
-              className={cn(
-                'h-[26px] rounded-md px-2.5 text-[11px] font-semibold transition-colors',
-                !archived
-                  ? 'bg-ds-bg text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              Active
-            </button>
-            <button
-              type="button"
-              onClick={() => onArchivedChange(true)}
-              className={cn(
-                'h-[26px] rounded-md px-2.5 text-[11px] font-semibold transition-colors',
-                archived
-                  ? 'bg-ds-bg text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              Archived
-            </button>
-          </div>
+          <Tabs
+            value={archived ? 'ARCHIVED' : 'ACTIVE'}
+            onValueChange={(details) =>
+              onArchivedChange(details.value === 'ARCHIVED')
+            }
+          >
+            <TabsList className="gap-0.5 border border-ds-border bg-ds-surface p-0.5">
+              <TabsTrigger value="ACTIVE">Active</TabsTrigger>
+              <TabsTrigger value="ARCHIVED">Archived</TabsTrigger>
+            </TabsList>
+          </Tabs>
         ) : null}
 
         {/* View switch — Tabs (mirrors Members page tab pattern). The board

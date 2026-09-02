@@ -46,7 +46,7 @@ function MemberRowSkeleton() {
     <div
       aria-hidden
       data-testid="member-row-skeleton"
-      className="flex h-12 items-center gap-3 border-b border-ds-border/70 px-4 last:border-b-0"
+      className="flex h-12 min-w-[640px] items-center gap-3 border-b border-ds-border/70 px-4 last:border-b-0 md:min-w-0"
     >
       {/* Identity — avatar + name/email placeholders */}
       <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -89,7 +89,7 @@ function MemberRow({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={onOpen}
-      className="flex h-12 cursor-pointer items-center gap-3 border-b border-ds-border/70 px-4 transition-colors hover:bg-ds-bg last:border-b-0"
+      className="flex h-12 min-w-[640px] cursor-pointer items-center gap-3 border-b border-ds-border/70 px-4 transition-colors hover:bg-ds-bg last:border-b-0 md:min-w-0"
     >
       {/* Identity — avatar + name/email */}
       <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -111,8 +111,8 @@ function MemberRow({
           </span>
         )}
         <div className="flex min-w-0 flex-col gap-[3px]">
-          <span className="flex min-w-0 items-center gap-1.5">
-            <span className="truncate text-[12.5px] font-semibold leading-none text-foreground">
+          <span className="flex min-w-0 flex-1 items-center gap-1.5">
+            <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold leading-none text-foreground">
               {member.name}
             </span>
             {isCurrentUser ? (
@@ -182,9 +182,9 @@ export function MembersTable({
   const centered = (showEmpty || error) && !loading;
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-ds-border bg-ds-surface">
+    <div className="flex h-full w-full flex-col overflow-x-auto rounded-xl border border-ds-border bg-ds-surface">
       {/* Mono column header */}
-      <div className="flex h-9 shrink-0 items-center gap-3 border-b border-ds-border bg-ds-bg px-4">
+      <div className="flex h-9 min-w-[640px] shrink-0 items-center gap-3 border-b border-ds-border bg-ds-bg px-4 md:min-w-0">
         <span className="flex-1 font-mono text-[10px] font-semibold uppercase tracking-[0.8px] text-muted-foreground">
           Member
         </span>
@@ -255,7 +255,7 @@ export function MembersTable({
       </div>
 
       {/* Pagination footer — UI only for now */}
-      <div className="flex h-[52px] shrink-0 items-center justify-between gap-4 px-4">
+      <div className="flex h-[52px] min-w-[640px] shrink-0 items-center justify-between gap-4 px-4 md:min-w-0">
         <div className="flex items-center gap-1.5">
           <button
             type="button"

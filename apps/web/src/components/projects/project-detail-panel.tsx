@@ -8,11 +8,13 @@ import {
   Trash2,
   UserRoundPlus,
 } from 'lucide-react';
+import { useState } from 'react';
 import type { ProjectDetail } from '@shipyard/shared';
 
 import { Loader } from '@/components/motion/loader';
 import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/ui/error-state';
+import { EditProjectDialog } from '@/components/projects/edit-project-dialog';
 import {
   Tooltip,
   TooltipContent,
@@ -61,16 +63,19 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 }
 
 export function ProjectDetailPanel({
+  slug,
   project,
   loading = false,
   error = false,
   onRetry,
 }: {
+  slug: string;
   project: ProjectDetail | null;
   loading?: boolean;
   error?: boolean;
   onRetry?: () => void;
 }) {
+  const [editOpen, setEditOpen] = useState(false);
   // Loading — centered loader inside the card.
   if (loading) {
     return (
@@ -231,6 +236,7 @@ export function ProjectDetailPanel({
       <div className="flex w-full items-center gap-2">
         <Button
           type="button"
+          onClick={() => setEditOpen(true)}
           className="h-9 flex-1 gap-2 rounded-md bg-ds-brand px-4 text-sm font-semibold text-white hover:bg-ds-brand/90"
         >
           <Pencil className="size-3.5" />
@@ -281,6 +287,14 @@ export function ProjectDetailPanel({
           </Tooltip>
         </TooltipProvider>
       </div>
+
+      {/* Edit project — the selected project drives the form's initial state. */}
+      <EditProjectDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        slug={slug}
+        project={project}
+      />
     </aside>
   );
 }

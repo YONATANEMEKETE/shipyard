@@ -167,6 +167,7 @@ export function ProjectsPage({ slug }: { slug: string }) {
         {/* Detail panel — 30% (empty prompt until a project is selected) */}
         <div className="flex min-h-0 w-[30%] flex-col">
           <ProjectDetailPanel
+            slug={slug}
             project={projectQuery.data ?? null}
             loading={selectedProjectId !== null && projectQuery.isPending}
             error={selectedProjectId !== null && projectQuery.isError}

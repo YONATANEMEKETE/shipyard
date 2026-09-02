@@ -3,14 +3,17 @@
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import type { ProjectStatus } from '@shipyard/shared';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { useWorkspace } from '@/hooks/use-workspaces';
 import {
+  projectKeys,
   useProjects,
   useProject,
   useViewPreference,
   useUpdateProject,
 } from '@/hooks/use-projects';
+import { useToast } from '@/components/providers/toast-provider';
 import { CreateProjectDialog } from '@/components/projects/create-project-dialog';
 import { ProjectListView } from '@/components/projects/project-list-view';
 import { ProjectKanbanView } from '@/components/projects/project-kanban-view';
@@ -77,8 +80,21 @@ export function ProjectsPage({ slug }: { slug: string }) {
   // detail panel, which shows a centered loader while it resolves.
   const projectQuery = useProject(slug, selectedProjectId);
 
-  // Status switch — a kanban card dragged onto another column.
-  const updateProjectMutation = useUpdateProject(slug);
+  // Status switch — a kanban card dragged onto another column. Persisted via
+  // the update API; on failure the board rolls back to server truth (refetch)
+  // and the user is told why.
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const updateProjectMutation = useUpdateProject(slug, {
+    onError: (error) => {
+      void queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+      showToast({
+        status: 'error',
+        title: "Couldn't move project",
+        description: error.message || 'Please try again.',
+      });
+    },
+  });
 
   return (
     <div className="flex h-full w-full flex-col gap-6">

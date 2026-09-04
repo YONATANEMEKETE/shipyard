@@ -28,6 +28,10 @@ import {
   workspaceProjectsRouter,
   workspaceViewPreferencesRouter,
 } from './features/projects/routes.js';
+import {
+  workspaceIssuesRouter,
+  workspaceLabelsRouter,
+} from './features/issues/routes.js';
 
 export interface CreateAppOptions {
   /**
@@ -107,6 +111,12 @@ export function createApp(options: CreateAppOptions = {}): express.Express {
     '/api/v1/workspaces/:slug/view-preferences',
     workspaceViewPreferencesRouter,
   );
+
+  // Issues module (F5)
+  //  - /workspaces/:slug/issues          (CRUD + lifecycle + history + labels)
+  //  - /workspaces/:slug/labels          (label CRUD)
+  app.use('/api/v1/workspaces/:slug/issues', workspaceIssuesRouter);
+  app.use('/api/v1/workspaces/:slug/labels', workspaceLabelsRouter);
   if (env.NODE_ENV !== 'production') {
     app.use('/api/v1/test', testRouter);
   }

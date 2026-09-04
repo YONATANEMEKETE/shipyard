@@ -46,6 +46,7 @@ import {
   type HistoryRow,
   type IssueRow,
 } from './repository.js';
+import { cyclesService } from '../cycles/service.js';
 import type { ListHistoryQuery, ListIssuesQuery } from './schemas.js';
 
 /**
@@ -124,9 +125,7 @@ function toCard(row: IssueRow): IssueCard {
     priority: row.priority,
     assignee: toAssigneeCard(row.assignee),
     projectId: row.projectId,
-    // F7 placeholder: issue.cycleId lands with the schema migration; until
-    // then the column cannot exist, so the contract field reads null.
-    cycleId: null,
+    cycleId: row.cycleId,
     dueDate: toDateString(row.dueDate),
     blocked: row.blocked,
     blockedReason: row.blockedReason,
@@ -294,6 +293,8 @@ export const issuesService = {
         query.assigneeId === 'me' ? actorUserId : query.assigneeId;
     }
     if (query.projectId) where.projectId = query.projectId;
+    // F7: cycle filter ANDs with every other filter/sort/search/cursor.
+    if (query.cycleId) where.cycleId = query.cycleId;
     if (query.labels && query.labels.length > 0) {
       where.AND = query.labels.map((labelId) => ({
         labels: { some: { labelId } },
@@ -516,6 +517,21 @@ export const issuesService = {
       ) {
         await assertProjectAssignable(tx, context.workspaceId, input.projectId);
       }
+      // F7 issues-leg (api-design §8.6): attach asserts same-workspace +
+      // non-archived cycle via the cycles-owned contract, evaluated in-tx.
+      // COMPLETED passes (locked correction path); detach (null) is always
+      // allowed; same-cycle set is a no-op below.
+      if (
+        input.cycleId !== undefined &&
+        input.cycleId !== null &&
+        input.cycleId !== fresh.cycleId
+      ) {
+        await cyclesService.assertCycleAssignable(
+          context.workspaceId,
+          input.cycleId,
+          tx,
+        );
+      }
 
       // ── Blocked matrix (spec §3.3, rule 6) ──
       const newStatus = input.status ?? fresh.status;
@@ -592,6 +608,9 @@ export const issuesService = {
       ) {
         data.projectId = input.projectId;
       }
+      if (input.cycleId !== undefined && input.cycleId !== fresh.cycleId) {
+        data.cycleId = input.cycleId;
+      }
       if (input.dueDate !== undefined) {
         const next = input.dueDate ? new Date(input.dueDate) : null;
         const current = toDateString(fresh.dueDate);
@@ -613,6 +632,7 @@ export const issuesService = {
           | 'UNASSIGNED'
           | 'PRIORITY_CHANGED'
           | 'PROJECT_CHANGED'
+          | 'CYCLE_CHANGED'
           | 'DUE_DATE_CHANGED'
           | 'TITLE_CHANGED';
         oldValue: string | null;
@@ -678,6 +698,16 @@ export const issuesService = {
           event: 'PROJECT_CHANGED',
           oldValue: fresh.projectId,
           newValue: data.projectId,
+        });
+      }
+      if (data.cycleId !== undefined) {
+        history.push({
+          workspaceId: context.workspaceId,
+          issueId,
+          actorId: actorUserId,
+          event: 'CYCLE_CHANGED',
+          oldValue: fresh.cycleId,
+          newValue: data.cycleId,
         });
       }
       if (data.dueDate !== undefined) {
@@ -1247,6 +1277,50 @@ export const issuesService = {
     logger.info(
       { workspaceId, projectId, unassignedIssues: attached.length },
       'issue.unassigned_on_project_delete',
+    );
+    return attached.length;
+  },
+
+  // ── F7 cycle-delete contract (cycles data-model §6.6 / api-design §8.5) ──
+  //
+  // Owned by issues, called by cycles inside the caller's transaction.
+  // Detaches every issue (archived included — no archivedAt filter) from the
+  // deleted cycle and emits one CYCLE_CHANGED row per affected issue.
+
+  /**
+   * Clears `cycleId` on every issue of the deleted cycle and emits one
+   * CYCLE_CHANGED row per affected issue. Runs inside the caller's
+   * transaction. Returns the number of detached issues.
+   */
+  async unassignOnCycleDelete(
+    workspaceId: string,
+    cycleId: string,
+    tx: DbClient,
+    actorId: string | null = null,
+  ): Promise<number> {
+    const attached = await tx.issue.findMany({
+      where: { workspaceId, cycleId },
+      select: { id: true },
+    });
+    if (attached.length === 0) return 0;
+    await tx.issue.updateMany({
+      where: { workspaceId, cycleId },
+      data: { cycleId: null },
+    });
+    await issuesRepository.createManyHistory(
+      tx,
+      attached.map((row) => ({
+        workspaceId,
+        issueId: row.id,
+        actorId,
+        event: 'CYCLE_CHANGED' as const,
+        oldValue: cycleId,
+        newValue: null,
+      })),
+    );
+    logger.info(
+      { workspaceId, cycleId, unassignedIssues: attached.length },
+      'issue.unassigned_on_cycle_delete',
     );
     return attached.length;
   },

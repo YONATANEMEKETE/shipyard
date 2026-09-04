@@ -118,6 +118,7 @@ export const issuesRepository = {
       priority?: 'NO_PRIORITY' | 'URGENT' | 'HIGH' | 'MEDIUM' | 'LOW';
       assigneeId?: string | null;
       projectId?: string | null;
+      cycleId?: string | null;
       dueDate?: Date | null;
       blocked?: boolean;
       blockedReason?: string | null;
@@ -267,7 +268,8 @@ export const issuesRepository = {
         | 'ARCHIVED'
         | 'RESTORED'
         | 'LABEL_ADDED'
-        | 'LABEL_REMOVED';
+        | 'LABEL_REMOVED'
+        | 'CYCLE_CHANGED';
       oldValue: string | null;
       newValue: string | null;
     },
@@ -295,7 +297,8 @@ export const issuesRepository = {
         | 'ARCHIVED'
         | 'RESTORED'
         | 'LABEL_ADDED'
-        | 'LABEL_REMOVED';
+        | 'LABEL_REMOVED'
+        | 'CYCLE_CHANGED';
       oldValue: string | null;
       newValue: string | null;
     }>,

@@ -47,6 +47,7 @@ import {
   type IssueRow,
 } from './repository.js';
 import { cyclesService } from '../cycles/service.js';
+import { commentsService } from '../comments/service.js';
 import type { ListHistoryQuery, ListIssuesQuery } from './schemas.js';
 
 /**
@@ -877,7 +878,12 @@ export const issuesService = {
       if (confirmIdentifier.trim() !== identifierOf(fresh.seqNumber)) {
         throw new ConfirmIdentifierMismatchError();
       }
-      // Cascades issue_label + issue_history (+ F6/F8 descendants per §7).
+      // F8 leg: delete the issue's comments (joins cascade; their mention
+      // notifications retract via the comments-owned contract) before the
+      // issue row itself goes.
+      await commentsService.removeForIssue(issueId, tx);
+      // Cascades issue_label + issue_history (+ F6 assignment notifications
+      // per §7, F8 comments above).
       await issuesRepository.removeIssue(tx, issueId);
     });
 

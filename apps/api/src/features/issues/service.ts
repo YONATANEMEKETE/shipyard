@@ -48,6 +48,7 @@ import {
 } from './repository.js';
 import { cyclesService } from '../cycles/service.js';
 import { commentsService } from '../comments/service.js';
+import { notificationsService } from '../notifications/service.js';
 import type { ListHistoryQuery, ListIssuesQuery } from './schemas.js';
 
 /**
@@ -463,6 +464,24 @@ export const issuesService = {
         newValue: null,
       });
 
+      // F6 hook: create-with-assignee is an actual change from unset —
+      // self-assign suppressed (D8). Same-person/unassign cannot occur here.
+      if (
+        input.assigneeId !== undefined &&
+        input.assigneeId !== null &&
+        input.assigneeId !== actorUserId
+      ) {
+        await notificationsService.createAssignment(
+          {
+            workspaceId: context.workspaceId,
+            issueId: created.id,
+            newAssigneeId: input.assigneeId,
+            actorId: actorUserId,
+          },
+          tx,
+        );
+      }
+
       // Re-read with the full include graph (joins were added after insert).
       return requireIssue(
         await issuesRepository.findByIdScoped(
@@ -758,6 +777,25 @@ export const issuesService = {
 
       const updated = await issuesRepository.updateIssue(tx, issueId, data);
       await issuesRepository.createManyHistory(tx, history);
+
+      // F6 hook: actual-change reassign notifies the new assignee only.
+      // data.assigneeId is set only on real change (same-person is a no-op
+      // above); null (unassign) and self-assign emit nothing (D8).
+      if (
+        data.assigneeId !== undefined &&
+        data.assigneeId !== null &&
+        data.assigneeId !== actorUserId
+      ) {
+        await notificationsService.createAssignment(
+          {
+            workspaceId: context.workspaceId,
+            issueId,
+            newAssigneeId: data.assigneeId,
+            actorId: actorUserId,
+          },
+          tx,
+        );
+      }
       return updated;
     });
 
@@ -882,6 +920,9 @@ export const issuesService = {
       // notifications retract via the comments-owned contract) before the
       // issue row itself goes.
       await commentsService.removeForIssue(issueId, tx);
+      // F6 §8.6 direct leg: assignment rows (+ any stragglers). The comment
+      // path above converges on the same mention rows via cascade.
+      await notificationsService.deleteForIssue(issueId, tx);
       // Cascades issue_label + issue_history (+ F6 assignment notifications
       // per §7, F8 comments above).
       await issuesRepository.removeIssue(tx, issueId);

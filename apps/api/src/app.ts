@@ -32,6 +32,7 @@ import {
   workspaceIssuesRouter,
   workspaceLabelsRouter,
 } from './features/issues/routes.js';
+import { workspaceCyclesRouter } from './features/cycles/routes.js';
 
 export interface CreateAppOptions {
   /**
@@ -117,6 +118,10 @@ export function createApp(options: CreateAppOptions = {}): express.Express {
   //  - /workspaces/:slug/labels          (label CRUD)
   app.use('/api/v1/workspaces/:slug/issues', workspaceIssuesRouter);
   app.use('/api/v1/workspaces/:slug/labels', workspaceLabelsRouter);
+
+  // Cycles module (F7)
+  //  - /workspaces/:slug/cycles  (CRUD + Start/Complete/Reopen/Archive/Restore/Delete)
+  app.use('/api/v1/workspaces/:slug/cycles', workspaceCyclesRouter);
   if (env.NODE_ENV !== 'production') {
     app.use('/api/v1/test', testRouter);
   }

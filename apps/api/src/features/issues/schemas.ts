@@ -81,6 +81,7 @@ export const listIssuesQuerySchema = z.object({
   projectId: z.string().cuid().optional(),
   labels: labelsFilterSchema,
   blocked: z.enum(['true', 'false']).optional(),
+  cycleId: z.string().cuid().optional(),
   dueDateFrom: issueDateSchema.optional(),
   dueDateTo: issueDateSchema.optional(),
   // F5 basic search: ILIKE title/description + exact SHIP-###. Trimmed

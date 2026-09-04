@@ -133,7 +133,8 @@ export const createIssueSchema = z.object({
   projectId: z.string().cuid().nullable().optional(),
   labelIds: z.array(z.string().cuid()).max(20).optional(),
   dueDate: issueDateSchema.nullable().optional(),
-  // NOTE: no cycleId in F5 — added by F7 (data-model D5).
+  // NOTE: create stays cycle-free by design (cycles api-design §5.2) —
+  // assignment is an issue-level PATCH action, even at creation time.
 });
 
 export type CreateIssueRequest = z.infer<typeof createIssueSchema>;

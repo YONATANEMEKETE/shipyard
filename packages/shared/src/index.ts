@@ -22,3 +22,4 @@ export * from './workspace/index.js';
 export * from './members/index.js';
 export * from './projects/index.js';
 export * from './issues/index.js';
+export * from './cycles/index.js';

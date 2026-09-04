@@ -40,7 +40,7 @@ export type IssuePriority = z.infer<typeof issuePrioritySchema>;
 
 // Append-only audit events (data-model D7). One row per changed concern — a
 // multi-field PATCH emits one row per concern. Description edits emit nothing
-// (bounded noise). F7 widens this additively with CYCLE_CHANGED.
+// (bounded noise). F7 widened this additively with CYCLE_CHANGED.
 export const issueHistoryEventSchema = z.enum([
   'CREATED',
   'STATUS_CHANGED',
@@ -56,6 +56,7 @@ export const issueHistoryEventSchema = z.enum([
   'RESTORED',
   'LABEL_ADDED',
   'LABEL_REMOVED',
+  'CYCLE_CHANGED',
 ]);
 
 export type IssueHistoryEvent = z.infer<typeof issueHistoryEventSchema>;
@@ -152,6 +153,10 @@ export const updateIssueSchema = z.object({
   assigneeId: z.string().min(1).nullable().optional(),
   // null ⇒ detach from project.
   projectId: z.string().cuid().nullable().optional(),
+  // F7: null ⇒ detach from cycle. Omitted ⇒ leave as is; same-cycle set is a
+  // no-op (no write, no history — mirrors assignee/project discipline).
+  // Attach asserts same-workspace + non-archived cycle (cycles contract).
+  cycleId: z.string().cuid().nullable().optional(),
   dueDate: issueDateSchema.nullable().optional(),
   blocked: z.boolean().optional(),
   blockedReason: blockedReasonSchema.nullable().optional(),
@@ -228,7 +233,7 @@ export const issueCardSchema = z.object({
   priority: issuePrioritySchema,
   assignee: issueAssigneeCardSchema.nullable(),
   projectId: z.string().nullable(),
-  // F7 adds: cycleId
+  cycleId: z.string().nullable(),
   dueDate: issueDateSchema.nullable(),
   blocked: z.boolean(),
   blockedReason: z.string().nullable(),

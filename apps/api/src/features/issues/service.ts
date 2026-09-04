@@ -124,6 +124,9 @@ function toCard(row: IssueRow): IssueCard {
     priority: row.priority,
     assignee: toAssigneeCard(row.assignee),
     projectId: row.projectId,
+    // F7 placeholder: issue.cycleId lands with the schema migration; until
+    // then the column cannot exist, so the contract field reads null.
+    cycleId: null,
     dueDate: toDateString(row.dueDate),
     blocked: row.blocked,
     blockedReason: row.blockedReason,

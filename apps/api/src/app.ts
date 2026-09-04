@@ -34,6 +34,7 @@ import {
 } from './features/issues/routes.js';
 import { workspaceCyclesRouter } from './features/cycles/routes.js';
 import { issueCommentsRouter } from './features/comments/routes.js';
+import { notificationsRouter } from './features/notifications/routes.js';
 
 export interface CreateAppOptions {
   /**
@@ -130,6 +131,9 @@ export function createApp(options: CreateAppOptions = {}): express.Express {
     '/api/v1/workspaces/:slug/issues/:issueId/comments',
     issueCommentsRouter,
   );
+
+  // Notifications module (F6) — global recipient scope (no :slug), no create route.
+  app.use('/api/v1/notifications', notificationsRouter);
   if (env.NODE_ENV !== 'production') {
     app.use('/api/v1/test', testRouter);
   }

@@ -130,9 +130,7 @@ describe('cycles scheduling (integration)', () => {
     ws = dataOf<WsResp>(res);
   });
 
-  async function createCycle(
-    body: Record<string, unknown>,
-  ): Promise<{
+  async function createCycle(body: Record<string, unknown>): Promise<{
     status: number;
     res: { status: number; body: unknown };
     detail: CycleDetail;

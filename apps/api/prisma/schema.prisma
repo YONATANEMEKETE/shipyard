@@ -31,6 +31,8 @@ model User {
   issueHistoryActions IssueHistory[]
   authoredComments Comment[]      @relation("AuthoredComments")
   commentMentions  CommentMention[] @relation("CommentMentions")
+  receivedNotifications Notification[] @relation("ReceivedNotifications")
+  sentNotifications     Notification[] @relation("SentNotifications")
 
   @@unique([email])
   @@map("user")
@@ -129,6 +131,7 @@ model Workspace {
   issueSequence   WorkspaceIssueSequence?
   cycles          Cycle[]
   comments        Comment[]
+  notifications Notification[]
 
   @@map("workspace")
 }
@@ -284,6 +287,7 @@ model Issue {
   labels  IssueLabel[]
   history IssueHistory[]
   comments Comment[]
+  notifications Notification[]
 
   // D2: display identifier SHIP-{seqNumber}, unique per workspace, never reused.
   @@unique([workspaceId, seqNumber])
@@ -376,6 +380,7 @@ model Comment {
   issue     Issue            @relation(fields: [issueId], references: [id], onDelete: Cascade)
   author    User             @relation("AuthoredComments", fields: [authorId], references: [id], onDelete: Restrict)
   mentions  CommentMention[]
+  notifications Notification[]
 
   @@index([workspaceId])
   @@index([issueId])
@@ -395,6 +400,44 @@ model CommentMention {
   @@id([commentId, mentionedUserId])
   @@index([mentionedUserId])
   @@map("comment_mention")
+}
+
+// ── Notifications (F6) ─────────────────────────────────────────────────────
+// Prisma-owned (hand-modeled, like workspace/members/projects/issues/cycles/
+// comments). See shipyard-design/04-Engineering/features/notifications/
+// data-model.md §2.
+
+enum NotificationType {
+  ASSIGNMENT
+  MENTION
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  workspaceId String
+  recipientId String
+  actorId     String?
+  issueId     String
+  commentId   String?
+  type        NotificationType
+  readAt      DateTime?
+  createdAt   DateTime         @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  recipient User      @relation("ReceivedNotifications", fields: [recipientId], references: [id], onDelete: Cascade)
+  actor     User?     @relation("SentNotifications", fields: [actorId], references: [id], onDelete: SetNull)
+  issue     Issue     @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  comment   Comment?  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  // D7: the unread badge poll is served by the raw-SQL partial index
+  // notification_unread_idx appended to the migration (Prisma cannot
+  // express partial indexes).
+  @@index([workspaceId])
+  @@index([recipientId])
+  @@index([recipientId, createdAt])
+  @@index([issueId])
+  @@index([commentId])
+  @@map("notification")
 }
 
 model IssueLabel {

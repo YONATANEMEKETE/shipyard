@@ -1167,8 +1167,6 @@ export const issuesService = {
   // ── F3 membership-exit contract (api-design §8.7) ───────────────────────
   //
   // Owned by issues, called by members inside the caller's transaction.
-  // NOT wired into members yet (deferred per scope) — exposed here so the
-  // remove/leave patch is a call-site change only.
 
   /**
    * Unassign every issue (archived included — no archivedAt filter) owned by
@@ -1204,6 +1202,50 @@ export const issuesService = {
       'issue.unassigned_on_member_exit',
     );
     return assigned.length;
+  },
+
+  // ── F4 project-delete contract (projects data-model §6.4/§7) ─────────────
+  //
+  // Owned by issues, called by projects inside the caller's transaction.
+  // Detaches every issue (archived included — no archivedAt filter) from the
+  // deleted project and emits one PROJECT_CHANGED row per affected issue.
+
+  /**
+   * Clears `projectId` on every issue of the deleted project and emits one
+   * PROJECT_CHANGED row per affected issue. Runs inside the caller's
+   * transaction. Returns the number of detached issues.
+   */
+  async unassignOnProjectDelete(
+    workspaceId: string,
+    projectId: string,
+    tx: DbClient,
+    actorId: string | null = null,
+  ): Promise<number> {
+    const attached = await tx.issue.findMany({
+      where: { workspaceId, projectId },
+      select: { id: true },
+    });
+    if (attached.length === 0) return 0;
+    await tx.issue.updateMany({
+      where: { workspaceId, projectId },
+      data: { projectId: null },
+    });
+    await issuesRepository.createManyHistory(
+      tx,
+      attached.map((row) => ({
+        workspaceId,
+        issueId: row.id,
+        actorId,
+        event: 'PROJECT_CHANGED' as const,
+        oldValue: projectId,
+        newValue: null,
+      })),
+    );
+    logger.info(
+      { workspaceId, projectId, unassignedIssues: attached.length },
+      'issue.unassigned_on_project_delete',
+    );
+    return attached.length;
   },
 };
 

@@ -185,6 +185,7 @@ export function deleteProjectController(
       const body = request.body as unknown as DeleteProjectRequest;
       const result = await projectsService.remove(
         context,
+        userIdOf(request),
         String(request.params.projectId),
         body.confirmName,
       );

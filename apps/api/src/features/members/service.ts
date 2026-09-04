@@ -34,6 +34,7 @@ import {
 } from '../workspace/errors.js';
 import { membersRepository } from './repository.js';
 import { projectsService } from '../projects/service.js';
+import { issuesService } from '../issues/service.js';
 
 /**
  * Members service — owns roles, invitation lifecycle, and membership
@@ -160,7 +161,11 @@ export const membersService = {
     context: WorkspaceRequestContext,
     memberId: string,
     confirm: unknown,
-  ): Promise<{ removedMemberId: string; transferredProjects: number }> {
+  ): Promise<{
+    removedMemberId: string;
+    transferredProjects: number;
+    unassignedIssues: number;
+  }> {
     if (confirm !== true)
       throw new (
         await import('../workspace/errors.js')
@@ -183,23 +188,40 @@ export const membersService = {
     // F4 Checkpoint B: transfer the removed member's owned projects to the
     // current workspace OWNER inside the same transaction as the removal —
     // all-or-nothing (api-design §8.7 / §6.6). Covers archived projects too.
+    // F5 leg: unassign the removed member's issues (archived included) with
+    // one UNASSIGNED row per issue, actor = the remover.
     const owner = await membersRepository.findOwnerMember(
       prisma,
       context.workspaceId,
     );
-    const transferredProjects = await prisma.$transaction(async (tx) => {
-      let transferred = 0;
-      if (owner && target.userId !== owner.userId) {
-        transferred = await projectsService.transferOwnedProjects(
+    const { transferredProjects, unassignedIssues } = await prisma.$transaction(
+      async (tx) => {
+        let transferred = 0;
+        if (owner && target.userId !== owner.userId) {
+          transferred = await projectsService.transferOwnedProjects(
+            context.workspaceId,
+            target.userId,
+            owner.userId,
+            tx,
+          );
+        }
+        const caller = await membersRepository.findMemberById(
+          tx,
+          context.memberId,
+        );
+        const unassigned = await issuesService.unassignOnMemberExit(
           context.workspaceId,
           target.userId,
-          owner.userId,
           tx,
+          caller?.userId ?? null,
         );
-      }
-      await membersRepository.deleteMember(tx, memberId);
-      return transferred;
-    });
+        await membersRepository.deleteMember(tx, memberId);
+        return {
+          transferredProjects: transferred,
+          unassignedIssues: unassigned,
+        };
+      },
+    );
 
     logger.info(
       {
@@ -209,11 +231,12 @@ export const membersService = {
         actorMemberId: context.memberId,
         actorRole: context.role,
         transferredProjects,
+        unassignedIssues,
       },
       'member.removed',
     );
 
-    return { removedMemberId: memberId, transferredProjects };
+    return { removedMemberId: memberId, transferredProjects, unassignedIssues };
   },
 
   // ── Leave ──────────────────────────────────────────────────────────────
@@ -221,7 +244,7 @@ export const membersService = {
   async leaveWorkspace(
     context: WorkspaceRequestContext,
     confirm: unknown,
-  ): Promise<{ transferredProjects: number }> {
+  ): Promise<{ transferredProjects: number; unassignedIssues: number }> {
     if (confirm !== true)
       throw new (
         await import('../workspace/errors.js')
@@ -231,6 +254,7 @@ export const membersService = {
 
     // F4 Checkpoint B: transfer the leaving member's owned projects to the
     // current workspace OWNER inside the same transaction as the leave.
+    // F5 leg: unassign the leaver's issues (archived included), actor = leaver.
     const owner = await membersRepository.findOwnerMember(
       prisma,
       context.workspaceId,
@@ -239,19 +263,33 @@ export const membersService = {
       prisma,
       context.memberId,
     );
-    const transferredProjects = await prisma.$transaction(async (tx) => {
-      let transferred = 0;
-      if (owner && leaver && leaver.userId !== owner.userId) {
-        transferred = await projectsService.transferOwnedProjects(
-          context.workspaceId,
-          leaver.userId,
-          owner.userId,
-          tx,
-        );
-      }
-      await membersRepository.deleteMember(tx, context.memberId);
-      return transferred;
-    });
+    const { transferredProjects, unassignedIssues } = await prisma.$transaction(
+      async (tx) => {
+        let transferred = 0;
+        if (owner && leaver && leaver.userId !== owner.userId) {
+          transferred = await projectsService.transferOwnedProjects(
+            context.workspaceId,
+            leaver.userId,
+            owner.userId,
+            tx,
+          );
+        }
+        let unassigned = 0;
+        if (leaver) {
+          unassigned = await issuesService.unassignOnMemberExit(
+            context.workspaceId,
+            leaver.userId,
+            tx,
+            leaver.userId,
+          );
+        }
+        await membersRepository.deleteMember(tx, context.memberId);
+        return {
+          transferredProjects: transferred,
+          unassignedIssues: unassigned,
+        };
+      },
+    );
 
     logger.info(
       {
@@ -259,11 +297,12 @@ export const membersService = {
         workspaceSlug: context.slug,
         memberId: context.memberId,
         transferredProjects,
+        unassignedIssues,
       },
       'member.left_workspace',
     );
 
-    return { transferredProjects };
+    return { transferredProjects, unassignedIssues };
   },
 
   // ── Transfer ownership ─────────────────────────────────────────────────

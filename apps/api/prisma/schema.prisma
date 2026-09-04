@@ -29,6 +29,8 @@ model User {
   assignedIssues   Issue[]        @relation("AssignedIssues")
   createdIssues    Issue[]        @relation("CreatedIssues")
   issueHistoryActions IssueHistory[]
+  authoredComments Comment[]      @relation("AuthoredComments")
+  commentMentions  CommentMention[] @relation("CommentMentions")
 
   @@unique([email])
   @@map("user")
@@ -126,6 +128,7 @@ model Workspace {
   issueHistories  IssueHistory[]
   issueSequence   WorkspaceIssueSequence?
   cycles          Cycle[]
+  comments        Comment[]
 
   @@map("workspace")
 }
@@ -280,6 +283,7 @@ model Issue {
 
   labels  IssueLabel[]
   history IssueHistory[]
+  comments Comment[]
 
   // D2: display identifier SHIP-{seqNumber}, unique per workspace, never reused.
   @@unique([workspaceId, seqNumber])
@@ -352,6 +356,45 @@ model Label {
   // functional index (label_name_unique) appended to the migration.
   @@index([workspaceId])
   @@map("label")
+}
+
+// ── Comments + mentions (F8) ───────────────────────────────────────────────
+// Prisma-owned (hand-modeled, like workspace/members/projects/issues/cycles).
+// See shipyard-design/04-Engineering/features/comments/data-model.md §2.
+
+model Comment {
+  id          String    @id @default(cuid())
+  workspaceId String
+  issueId     String
+  authorId    String
+  content     String    @db.Text
+  editedAt    DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workspace Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  issue     Issue            @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  author    User             @relation("AuthoredComments", fields: [authorId], references: [id], onDelete: Restrict)
+  mentions  CommentMention[]
+
+  @@index([workspaceId])
+  @@index([issueId])
+  @@index([authorId])
+  @@index([issueId, createdAt])
+  @@map("comment")
+}
+
+model CommentMention {
+  commentId       String
+  mentionedUserId String
+  createdAt       DateTime @default(now())
+
+  comment       Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  mentionedUser User    @relation("CommentMentions", fields: [mentionedUserId], references: [id], onDelete: Cascade)
+
+  @@id([commentId, mentionedUserId])
+  @@index([mentionedUserId])
+  @@map("comment_mention")
 }
 
 model IssueLabel {

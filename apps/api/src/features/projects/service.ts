@@ -31,6 +31,7 @@ import {
   type DbClient,
   type ProjectRow,
 } from './repository.js';
+import { issuesService } from '../issues/service.js';
 import type { ListProjectsQuery } from './schemas.js';
 
 /**
@@ -346,6 +347,7 @@ export const projectsService = {
 
   async remove(
     context: WorkspaceRequestContext,
+    actorUserId: string,
     projectId: string,
     confirmName: string,
   ): Promise<{ deletedProjectId: string; unassignedIssues: number }> {
@@ -354,11 +356,17 @@ export const projectsService = {
     if (confirmName.trim() !== project.name)
       throw new ConfirmNameMismatchError();
 
-    await prisma.$transaction(async (tx) => {
-      // F5 leg (data-model §6.4/§7): clear every issue's projectId here.
-      //   await tx.issue.updateMany({ where: { projectId }, data: { projectId: null } })
-      // In F4 there is no `issue.projectId`, so the row delete is the whole leg.
+    const unassignedIssues = await prisma.$transaction(async (tx) => {
+      // F5 leg (data-model §6.4/§7): detach every issue (archived included)
+      // with one PROJECT_CHANGED row each — issues survive the delete.
+      const unassigned = await issuesService.unassignOnProjectDelete(
+        context.workspaceId,
+        projectId,
+        tx,
+        actorUserId,
+      );
       await projectsRepository.remove(tx, projectId);
+      return unassigned;
     });
 
     logger.info(
@@ -367,10 +375,11 @@ export const projectsService = {
         projectId,
         name: project.name,
         actorMemberId: context.memberId,
+        unassignedIssues,
       },
       'project.deleted',
     );
-    return { deletedProjectId: projectId, unassignedIssues: 0 };
+    return { deletedProjectId: projectId, unassignedIssues };
   },
 
   // ── F3 Checkpoint B integration (api-design §8.7 / §6.6) ───────────────

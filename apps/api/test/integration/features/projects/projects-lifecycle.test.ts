@@ -740,7 +740,7 @@ describe('projects lifecycle (integration)', () => {
       res,
     );
     expect(body.deletedProjectId).toBe(created.detail.id);
-    // 0 until F5 wires the issue-unassign leg.
+    // No issues attached, so the F5 detach leg reports 0.
     expect(body.unassignedIssues).toBe(0);
 
     const gone = await prisma.project.findUnique({

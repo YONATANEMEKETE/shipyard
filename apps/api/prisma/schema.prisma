@@ -125,6 +125,7 @@ model Workspace {
   labels          Label[]
   issueHistories  IssueHistory[]
   issueSequence   WorkspaceIssueSequence?
+  cycles          Cycle[]
 
   @@map("workspace")
 }
@@ -249,6 +250,7 @@ enum IssueHistoryEvent {
   RESTORED
   LABEL_ADDED
   LABEL_REMOVED
+  CYCLE_CHANGED
 }
 
 model Issue {
@@ -262,6 +264,7 @@ model Issue {
   assigneeId    String?
   creatorId     String
   projectId     String?
+  cycleId       String?
   dueDate       DateTime?     @db.Date
   blocked       Boolean       @default(false)
   blockedReason String?       @db.VarChar(500)
@@ -273,6 +276,7 @@ model Issue {
   assignee  User?     @relation("AssignedIssues", fields: [assigneeId], references: [id], onDelete: SetNull)
   creator   User      @relation("CreatedIssues", fields: [creatorId], references: [id], onDelete: Restrict)
   project   Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  cycle     Cycle?    @relation(fields: [cycleId], references: [id], onDelete: SetNull)
 
   labels  IssueLabel[]
   history IssueHistory[]
@@ -291,7 +295,46 @@ model Issue {
   @@index([workspaceId, status])
   @@index([workspaceId, assigneeId])
   @@index([workspaceId, projectId])
+  @@index([cycleId])
+  @@index([workspaceId, cycleId])
   @@map("issue")
+}
+
+// ── Cycles (F7) ────────────────────────────────────────────────────────────
+// Prisma-owned (hand-modeled, like workspace/members/projects/issues). See
+// shipyard-design/04-Engineering/features/cycles/data-model.md §2.
+
+enum CycleStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+}
+
+model Cycle {
+  id          String      @id @default(cuid())
+  workspaceId String
+  name        String      @db.VarChar(120)
+  goal        String?     @db.Text
+  status      CycleStatus @default(PLANNED)
+  startDate   DateTime    @db.Date
+  endDate     DateTime    @db.Date
+  archivedAt  DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  issues    Issue[]
+
+  // D3: case-insensitive, workspace-scoped name uniqueness is a raw SQL
+  // functional index (cycle_name_unique) appended to the migration.
+  // D5/D6: the no-overlap exclusion constraint (cycle_no_overlap) and the
+  // single-active partial index (cycle_single_active) are raw SQL too —
+  // Prisma cannot express either.
+  @@index([workspaceId])
+  @@index([status])
+  @@index([archivedAt])
+  @@index([workspaceId, status])
+  @@map("cycle")
 }
 
 model Label {

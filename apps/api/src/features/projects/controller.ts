@@ -5,6 +5,7 @@ import type {
   SetViewPreferenceRequest,
   TransferProjectOwnerRequest,
   UpdateProjectRequest,
+  ViewScope,
 } from '@shipyard/shared';
 import { sendSuccess } from '../../common/http/responses.js';
 import { projectsService } from './service.js';
@@ -205,7 +206,7 @@ export function getViewPreferenceController(
     try {
       const context = contextOf(request);
       // :scope validated against ViewScope at the route boundary.
-      const scope = String(request.params.scope) as 'PROJECT';
+      const scope = String(request.params.scope) as ViewScope;
       const preference = await projectsService.getViewPreference(
         context,
         userIdOf(request),
@@ -228,7 +229,7 @@ export function setViewPreferenceController(
       const context = contextOf(request);
       const body = request.body as unknown as SetViewPreferenceRequest;
       // The path :scope is the authority; the body shadows it (api-design §3.2).
-      const scope = String(request.params.scope) as 'PROJECT';
+      const scope = String(request.params.scope) as ViewScope;
       const preference = await projectsService.setViewPreference(
         context,
         userIdOf(request),

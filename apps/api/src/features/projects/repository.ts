@@ -1,3 +1,4 @@
+import type { ViewScope, ViewType } from '@shipyard/shared';
 import { prisma } from '../../common/db/client.js';
 import type { Prisma } from '../../generated/client.js';
 
@@ -148,7 +149,7 @@ export const projectsRepository = {
     client: DbClient,
     workspaceId: string,
     userId: string,
-    scope: 'PROJECT',
+    scope: ViewScope,
   ) {
     return client.viewPreference.findUnique({
       where: { workspaceId_userId_scope: { workspaceId, userId, scope } },
@@ -160,8 +161,8 @@ export const projectsRepository = {
     client: DbClient,
     workspaceId: string,
     userId: string,
-    scope: 'PROJECT',
-    view: 'LIST' | 'KANBAN',
+    scope: ViewScope,
+    view: ViewType,
   ) {
     return client.viewPreference.upsert({
       where: { workspaceId_userId_scope: { workspaceId, userId, scope } },

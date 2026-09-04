@@ -18,8 +18,9 @@ export const projectStatusSchema = z.enum(['PLANNED', 'ACTIVE', 'COMPLETED']);
 export type ProjectStatus = z.infer<typeof projectStatusSchema>;
 
 // Generic per-user-per-workspace view preference, shared with Issues (F5).
-// PROJECT ships here; F5 widens this string with 'ISSUE' (additive enum widen).
-export const viewScopeSchema = z.enum(['PROJECT']);
+// PROJECT shipped in F4; F5 widens additively with ISSUE (rule 12 — toggling
+// issues never touches a PROJECT row and vice versa).
+export const viewScopeSchema = z.enum(['PROJECT', 'ISSUE']);
 
 export type ViewScope = z.infer<typeof viewScopeSchema>;
 

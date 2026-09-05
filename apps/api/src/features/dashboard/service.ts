@@ -7,6 +7,7 @@ import type {
 } from '@shipyard/shared';
 import type { ActivityEventCard, ActivityKind } from '@shipyard/shared';
 import { prisma } from '../../common/db/client.js';
+import { resolveImageUrl } from '../../common/storage/imageUrl.js';
 import { issuesService } from '../issues/service.js';
 import { cyclesService } from '../cycles/service.js';
 import { projectsService } from '../projects/service.js';
@@ -164,7 +165,7 @@ async function activityItemsOf(
         userId: user.id,
         name: user.name,
         email: user.email,
-        image: user.image,
+        image: resolveImageUrl(user.image),
       },
     ]),
   );

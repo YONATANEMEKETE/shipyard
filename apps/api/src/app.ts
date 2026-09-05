@@ -38,6 +38,11 @@ import { notificationsRouter } from './features/notifications/routes.js';
 import { workspaceActivityRouter } from './features/activity/routes.js';
 import { workspaceSearchRouter } from './features/search/routes.js';
 import { workspaceDashboardRouter } from './features/dashboard/routes.js';
+import {
+  defaultAvatarStorage,
+  setAvatarStorage,
+  type AvatarStorage,
+} from './features/settings/r2.js';
 
 export interface CreateAppOptions {
   /**
@@ -45,9 +50,15 @@ export interface CreateAppOptions {
    * HTTP server via server.ts, which is where setReady(true) normally runs).
    */
   ready?: boolean;
+  /**
+   * Avatar object storage adapter (settings F11). Defaults to the real R2
+   * client; tests inject the in-memory fake (data-model §8).
+   */
+  avatarStorage?: AvatarStorage;
 }
 
 export function createApp(options: CreateAppOptions = {}): express.Express {
+  setAvatarStorage(options.avatarStorage ?? defaultAvatarStorage());
   const app = express();
 
   app.set(

@@ -11,6 +11,7 @@ import { INVITATION_TTL_DAYS } from '@shipyard/shared';
 import { env } from '../../common/config/env.js';
 import { prisma } from '../../common/db/client.js';
 import { logger } from '../../common/logger/index.js';
+import { resolveImageUrl } from '../../common/storage/imageUrl.js';
 import { renderWorkspaceInvitationEmail } from '@shipyard/email';
 import { sendEmail } from '../../lib/mailer.js';
 import type { WorkspaceRequestContext } from '../../common/guards/workspace-context.js';
@@ -65,7 +66,7 @@ function toMemberCard(row: {
     workspaceId: row.workspaceId,
     name: row.user.name,
     email: row.user.email,
-    image: row.user.image,
+    image: resolveImageUrl(row.user.image),
     role: row.role as WorkspaceMemberCard['role'],
     createdAt: row.createdAt.toISOString(),
   };

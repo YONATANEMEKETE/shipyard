@@ -24,6 +24,7 @@ export * from './projects/index.js';
 export * from './issues/index.js';
 export * from './cycles/index.js';
 export * from './comments/index.js';
+export * from './search/index.js';
 export * from './notifications/index.js';
 export * from './activity/index.js';
 export * from './dashboard/index.js';

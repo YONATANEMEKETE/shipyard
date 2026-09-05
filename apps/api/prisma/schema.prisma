@@ -33,6 +33,7 @@ model User {
   commentMentions  CommentMention[] @relation("CommentMentions")
   receivedNotifications Notification[] @relation("ReceivedNotifications")
   sentNotifications     Notification[] @relation("SentNotifications")
+  activityActions       ActivityEvent[]
 
   @@unique([email])
   @@map("user")
@@ -132,6 +133,7 @@ model Workspace {
   cycles          Cycle[]
   comments        Comment[]
   notifications Notification[]
+  activityEvents ActivityEvent[]
 
   @@map("workspace")
 }
@@ -438,6 +440,85 @@ model Notification {
   @@index([issueId])
   @@index([commentId])
   @@map("notification")
+}
+
+// ── Activity Log ─────────────────────────────────────────────────────────
+// Prisma-owned (hand-modeled, like all prior features). See
+// shipyard-design/04-Engineering/features/activity/data-model.md §2.
+//
+// Inverse of notifications: rows OUTLIVE their source (a deleted entity's
+// story is the point). Targets are plain strings, never FKs (D3) — deleting
+// an issue/project/cycle/comment/invitation touches zero log rows.
+
+enum ActivityKind {
+  WORKSPACE_CREATED
+  WORKSPACE_UPDATED
+  WORKSPACE_ARCHIVED
+  WORKSPACE_RESTORED
+  MEMBER_INVITED
+  MEMBER_JOINED
+  MEMBER_DECLINED
+  MEMBER_INVITE_REVOKED
+  MEMBER_REMOVED
+  MEMBER_LEFT
+  MEMBER_ROLE_CHANGED
+  OWNERSHIP_TRANSFERRED
+  PROJECT_CREATED
+  PROJECT_RENAMED
+  PROJECT_STATUS_CHANGED
+  PROJECT_OWNER_TRANSFERRED
+  PROJECT_ARCHIVED
+  PROJECT_RESTORED
+  PROJECT_DELETED
+  ISSUE_CREATED
+  ISSUE_STATUS_CHANGED
+  ISSUE_ASSIGNED
+  ISSUE_BLOCKED_SET
+  ISSUE_BLOCKED_CLEARED
+  ISSUE_ARCHIVED
+  ISSUE_RESTORED
+  ISSUE_DELETED
+  COMMENT_CREATED
+  COMMENT_DELETED
+  CYCLE_CREATED
+  CYCLE_STARTED
+  CYCLE_COMPLETED
+  CYCLE_REOPENED
+  CYCLE_ARCHIVED
+  CYCLE_RESTORED
+  CYCLE_DELETED
+}
+
+enum ActivityEntityType {
+  WORKSPACE
+  MEMBER
+  INVITATION
+  PROJECT
+  ISSUE
+  COMMENT
+  CYCLE
+}
+
+model ActivityEvent {
+  id          String             @id @default(cuid())
+  workspaceId String
+  actorId     String?
+  actorName   String             @db.VarChar(255)
+  kind        ActivityKind
+  entityType  ActivityEntityType
+  entityId    String?
+  entityTitle String?            @db.Text
+  summary     String             @db.Text
+  createdAt   DateTime           @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  actor     User?     @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+  @@index([workspaceId, createdAt])
+  @@index([kind])
+  @@index([actorId])
+  @@map("activity_event")
 }
 
 model IssueLabel {

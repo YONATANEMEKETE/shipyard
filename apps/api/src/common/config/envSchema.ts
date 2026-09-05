@@ -45,6 +45,18 @@ export const envSchema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().min(1, 'GOOGLE_CLIENT_SECRET is required'),
   GITHUB_CLIENT_ID: z.string().min(1, 'GITHUB_CLIENT_ID is required'),
   GITHUB_CLIENT_SECRET: z.string().min(1, 'GITHUB_CLIENT_SECRET is required'),
+
+  // R2 public asset storage (S3-compatible; settings F11, data-model §2.2).
+  // `shipyard-bucket` is PUBLIC-READ by design — access control is unguessable
+  // keys. Only non-secret objects (avatars/, future public prefixes) go in it;
+  // private/confidential objects must use a separate private bucket.
+  // Required at boot outside tests — integration tests inject an in-memory
+  // fake adapter instead of touching real storage.
+  R2_ENDPOINT: z.string().url('R2_ENDPOINT must be a valid URL'),
+  R2_PUBLIC_BUCKET: z.string().min(1, 'R2_PUBLIC_BUCKET is required'),
+  R2_ACCESS_KEY_ID: z.string().min(1, 'R2_ACCESS_KEY_ID is required'),
+  R2_SECRET_ACCESS_KEY: z.string().min(1, 'R2_SECRET_ACCESS_KEY is required'),
+  R2_PUBLIC_BASE_URL: z.string().url('R2_PUBLIC_BASE_URL must be a valid URL'),
 });
 
 export type Env = z.infer<typeof envSchema>;

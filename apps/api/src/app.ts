@@ -35,6 +35,7 @@ import {
 import { workspaceCyclesRouter } from './features/cycles/routes.js';
 import { issueCommentsRouter } from './features/comments/routes.js';
 import { notificationsRouter } from './features/notifications/routes.js';
+import { workspaceActivityRouter } from './features/activity/routes.js';
 
 export interface CreateAppOptions {
   /**
@@ -134,6 +135,10 @@ export function createApp(options: CreateAppOptions = {}): express.Express {
 
   // Notifications module (F6) — global recipient scope (no :slug), no create route.
   app.use('/api/v1/notifications', notificationsRouter);
+
+  // Activity module — workspace-scoped page walk, readable-when-archived,
+  // no create route (emission is internal-only via record()).
+  app.use('/api/v1/workspaces/:slug/activity', workspaceActivityRouter);
   if (env.NODE_ENV !== 'production') {
     app.use('/api/v1/test', testRouter);
   }

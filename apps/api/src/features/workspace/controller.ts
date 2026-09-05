@@ -92,6 +92,7 @@ export function updateWorkspaceController(
         context.workspaceId,
         context.role,
         body,
+        userIdOf(request),
       );
       sendSuccess(response, detail);
     } catch (error) {
@@ -112,6 +113,7 @@ export function archiveWorkspaceController(
         context.workspaceId,
         context.role,
         (request.body as { confirm?: unknown } | undefined)?.confirm,
+        userIdOf(request),
       );
       sendSuccess(response, detail);
     } catch (error) {
@@ -132,6 +134,7 @@ export function restoreWorkspaceController(
         context.workspaceId,
         context.role,
         (request.body as { confirm?: unknown } | undefined)?.confirm,
+        userIdOf(request),
       );
       sendSuccess(response, detail);
     } catch (error) {

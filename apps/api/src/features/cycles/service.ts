@@ -35,6 +35,7 @@ import {
   type DbClient,
 } from './repository.js';
 import { issuesService } from '../issues/service.js';
+import { activityService } from '../activity/service.js';
 import type { ListCyclesQuery } from './schemas.js';
 
 /**
@@ -223,6 +224,7 @@ export const cyclesService = {
 
   async create(
     context: WorkspaceRequestContext,
+    actorUserId: string,
     input: CreateCycleRequest,
   ): Promise<CycleDetail> {
     assertCanManage(context);
@@ -254,15 +256,31 @@ export const cyclesService = {
     }
 
     try {
-      const row = await prisma.$transaction((tx) =>
-        cyclesRepository.create(tx, {
+      const row = await prisma.$transaction(async (tx) => {
+        const created = await cyclesRepository.create(tx, {
           workspaceId: context.workspaceId,
           name,
           goal: input.goal ?? null,
           startDate,
           endDate,
-        }),
-      );
+        });
+        const actor = await cyclesRepository.findUserName(tx, actorUserId);
+        const actorName = actor?.name ?? 'Someone';
+        await activityService.record(
+          {
+            workspaceId: context.workspaceId,
+            actorId: actorUserId,
+            actorName,
+            kind: 'CYCLE_CREATED',
+            entityType: 'CYCLE',
+            entityId: created.id,
+            entityTitle: created.name,
+            summary: `${actorName} created cycle \u201c${created.name}\u201d`,
+          },
+          tx,
+        );
+        return created;
+      });
       logger.info(
         {
           workspaceId: context.workspaceId,
@@ -402,24 +420,27 @@ export const cyclesService = {
 
   async start(
     context: WorkspaceRequestContext,
+    actorUserId: string,
     cycleId: string,
     confirm: unknown,
   ): Promise<CycleDetail> {
-    return activate(context, cycleId, confirm, 'PLANNED');
+    return activate(context, actorUserId, cycleId, confirm, 'PLANNED');
   },
 
   async reopen(
     context: WorkspaceRequestContext,
+    actorUserId: string,
     cycleId: string,
     confirm: unknown,
   ): Promise<CycleDetail> {
-    return activate(context, cycleId, confirm, 'COMPLETED');
+    return activate(context, actorUserId, cycleId, confirm, 'COMPLETED');
   },
 
   // ── Complete (ACTIVE → COMPLETED; no issue writes, rule 9) ─────────────
 
   async complete(
     context: WorkspaceRequestContext,
+    actorUserId: string,
     cycleId: string,
     confirm: unknown,
   ): Promise<CycleDetail> {
@@ -435,7 +456,25 @@ export const cyclesService = {
       );
       if (fresh.archivedAt) throw new CycleArchivedError();
       if (fresh.status !== 'ACTIVE') throw new InvalidCycleTransitionError();
-      return cyclesRepository.update(tx, cycleId, { status: 'COMPLETED' });
+      const updated = await cyclesRepository.update(tx, cycleId, {
+        status: 'COMPLETED',
+      });
+      const actor = await cyclesRepository.findUserName(tx, actorUserId);
+      const actorName = actor?.name ?? 'Someone';
+      await activityService.record(
+        {
+          workspaceId: context.workspaceId,
+          actorId: actorUserId,
+          actorName,
+          kind: 'CYCLE_COMPLETED',
+          entityType: 'CYCLE',
+          entityId: cycleId,
+          entityTitle: fresh.name,
+          summary: `${actorName} completed cycle \u201c${fresh.name}\u201d`,
+        },
+        tx,
+      );
+      return updated;
     });
 
     logger.info(
@@ -454,6 +493,7 @@ export const cyclesService = {
 
   async archive(
     context: WorkspaceRequestContext,
+    actorUserId: string,
     cycleId: string,
     confirm: unknown,
   ): Promise<CycleDetail> {
@@ -463,8 +503,26 @@ export const cyclesService = {
     if (stored.archivedAt) throw new CycleAlreadyArchivedError();
     if (stored.status === 'ACTIVE') throw new CompleteFirstError();
 
-    const row = await cyclesRepository.update(prisma, cycleId, {
-      archivedAt: new Date(),
+    const row = await prisma.$transaction(async (tx) => {
+      const updated = await cyclesRepository.update(tx, cycleId, {
+        archivedAt: new Date(),
+      });
+      const actor = await cyclesRepository.findUserName(tx, actorUserId);
+      const actorName = actor?.name ?? 'Someone';
+      await activityService.record(
+        {
+          workspaceId: context.workspaceId,
+          actorId: actorUserId,
+          actorName,
+          kind: 'CYCLE_ARCHIVED',
+          entityType: 'CYCLE',
+          entityId: cycleId,
+          entityTitle: stored.name,
+          summary: `${actorName} archived cycle \u201c${stored.name}\u201d`,
+        },
+        tx,
+      );
+      return updated;
     });
     logger.info(
       {
@@ -480,6 +538,7 @@ export const cyclesService = {
 
   async restore(
     context: WorkspaceRequestContext,
+    actorUserId: string,
     cycleId: string,
     confirm: unknown,
   ): Promise<CycleDetail> {
@@ -520,7 +579,25 @@ export const cyclesService = {
           );
           throw new CycleOverlapError(await cardFor(tx, conflict));
         }
-        return cyclesRepository.update(tx, cycleId, { archivedAt: null });
+        const updated = await cyclesRepository.update(tx, cycleId, {
+          archivedAt: null,
+        });
+        const actor = await cyclesRepository.findUserName(tx, actorUserId);
+        const actorName = actor?.name ?? 'Someone';
+        await activityService.record(
+          {
+            workspaceId: context.workspaceId,
+            actorId: actorUserId,
+            actorName,
+            kind: 'CYCLE_RESTORED',
+            entityType: 'CYCLE',
+            entityId: cycleId,
+            entityTitle: stored.name,
+            summary: `${actorName} restored cycle \u201c${stored.name}\u201d`,
+          },
+          tx,
+        );
+        return updated;
       });
       logger.info(
         {
@@ -586,6 +663,23 @@ export const cyclesService = {
         actorUserId,
       );
       await cyclesRepository.remove(tx, cycleId);
+      // D3 proof: CYCLE_DELETED recorded AFTER the row goes. Plain-string
+      // target, no FK → survives the very deletion it describes.
+      const actor = await cyclesRepository.findUserName(tx, actorUserId);
+      const actorName = actor?.name ?? 'Someone';
+      await activityService.record(
+        {
+          workspaceId: context.workspaceId,
+          actorId: actorUserId,
+          actorName,
+          kind: 'CYCLE_DELETED',
+          entityType: 'CYCLE',
+          entityId: cycleId,
+          entityTitle: stored.name,
+          summary: `${actorName} deleted cycle \u201c${stored.name}\u201d`,
+        },
+        tx,
+      );
       return unassigned;
     });
 
@@ -641,6 +735,7 @@ function assertDeletable(row: CycleRow): void {
 /** Start/reopen shared path: same guards, different expected source status. */
 async function activate(
   context: WorkspaceRequestContext,
+  actorUserId: string,
   cycleId: string,
   confirm: unknown,
   from: 'PLANNED' | 'COMPLETED',
@@ -683,7 +778,27 @@ async function activate(
         );
         throw new CycleOverlapError(await cardFor(tx, conflict));
       }
-      return cyclesRepository.update(tx, cycleId, { status: 'ACTIVE' });
+      const updated = await cyclesRepository.update(tx, cycleId, {
+        status: 'ACTIVE',
+      });
+      // Activity: CYCLE_STARTED (from PLANNED) / CYCLE_REOPENED (from
+      // COMPLETED) — same in-tx path, different kind.
+      const actor = await cyclesRepository.findUserName(tx, actorUserId);
+      const actorName = actor?.name ?? 'Someone';
+      await activityService.record(
+        {
+          workspaceId: context.workspaceId,
+          actorId: actorUserId,
+          actorName,
+          kind: from === 'PLANNED' ? 'CYCLE_STARTED' : 'CYCLE_REOPENED',
+          entityType: 'CYCLE',
+          entityId: cycleId,
+          entityTitle: fresh.name,
+          summary: `${actorName} ${from === 'PLANNED' ? 'started' : 'reopened'} cycle \u201c${fresh.name}\u201d`,
+        },
+        tx,
+      );
+      return updated;
     });
 
     logger.info(

@@ -22,6 +22,7 @@ import {
   type MemberSnapshot,
 } from './repository.js';
 import { notificationsService } from '../notifications/service.js';
+import { activityService } from '../activity/service.js';
 import type { ListCommentsQuery } from './schemas.js';
 
 /**
@@ -125,7 +126,12 @@ function decodeCursorId(cursor: string): string {
 async function resolveIssue(
   issueId: string,
   context: WorkspaceRequestContext,
-): Promise<{ id: string; archivedAt: Date | null }> {
+): Promise<{
+  id: string;
+  archivedAt: Date | null;
+  seqNumber: number;
+  title: string;
+}> {
   const issue = await commentsRepository.findIssueScoped(
     prisma,
     issueId,
@@ -268,6 +274,30 @@ export const commentsService = {
           tx,
         );
       }
+
+      // Activity (D7 dual-write): COMMENT_CREATED in the same tx as the
+      // row + mention fan-out. Author name is on the created include — no
+      // extra lookup. Issue ref frozen from the in-tx issue read.
+      const identifier = `SHIP-${freshIssue.seqNumber}`;
+      const issueTitle = `${identifier} · ${freshIssue.title}`;
+      const commentAuthor = await commentsRepository.findUserName(
+        tx,
+        actorUserId,
+      );
+      const actorName = commentAuthor?.name ?? 'Someone';
+      await activityService.record(
+        {
+          workspaceId: context.workspaceId,
+          actorId: actorUserId,
+          actorName,
+          kind: 'COMMENT_CREATED',
+          entityType: 'COMMENT',
+          entityId: created.id,
+          entityTitle: issueTitle,
+          summary: `${actorName} commented on ${issueTitle}`,
+        },
+        tx,
+      );
 
       return requireComment(
         await commentsRepository.findByIdScoped(
@@ -415,6 +445,29 @@ export const commentsService = {
       // row; joins cascade. Siblings, issues, and users untouched.
       await notificationsService.deleteForComment(commentId, tx);
       await commentsRepository.remove(tx, commentId);
+      // Activity (D7 dual-write) — D3 proof: COMMENT_DELETED recorded AFTER
+      // the row goes. Plain-string target, no FK → survives and renders as
+      // frozen text with the issue ref.
+      const identifier = `SHIP-${freshIssue.seqNumber}`;
+      const issueTitle = `${identifier} · ${freshIssue.title}`;
+      const commentAuthor = await commentsRepository.findUserName(
+        tx,
+        actorUserId,
+      );
+      const actorName = commentAuthor?.name ?? 'Someone';
+      await activityService.record(
+        {
+          workspaceId: context.workspaceId,
+          actorId: actorUserId,
+          actorName,
+          kind: 'COMMENT_DELETED',
+          entityType: 'COMMENT',
+          entityId: commentId,
+          entityTitle: issueTitle,
+          summary: `${actorName} deleted a comment on ${issueTitle}`,
+        },
+        tx,
+      );
     });
 
     logger.info(

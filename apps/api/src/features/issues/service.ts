@@ -49,6 +49,7 @@ import {
 import { cyclesService } from '../cycles/service.js';
 import { commentsService } from '../comments/service.js';
 import { notificationsService } from '../notifications/service.js';
+import { activityService } from '../activity/service.js';
 import type { ListHistoryQuery, ListIssuesQuery } from './schemas.js';
 
 /**
@@ -67,6 +68,14 @@ const PRIORITY_RANK: Record<IssuePriority, number> = {
   MEDIUM: 2,
   LOW: 3,
   NO_PRIORITY: 4,
+};
+
+/** Human label for issue statuses (rendered into frozen summaries). */
+const STATUS_LABEL: Record<string, string> = {
+  BACKLOG: 'Backlog',
+  TODO: 'Todo',
+  IN_PROGRESS: 'In Progress',
+  DONE: 'Done',
 };
 
 /** Day-precision dates are stored as Postgres DATE and returned as YYYY-MM-DD. */
@@ -464,6 +473,24 @@ export const issuesService = {
         newValue: null,
       });
 
+      // Activity (D7 dual-write): ISSUE_CREATED alongside the history row.
+      const actor = await issuesRepository.findUserName(tx, actorUserId);
+      const actorName = actor?.name ?? 'Someone';
+      const identifier = identifierOf(created.seqNumber);
+      await activityService.record(
+        {
+          workspaceId: context.workspaceId,
+          actorId: actorUserId,
+          actorName,
+          kind: 'ISSUE_CREATED',
+          entityType: 'ISSUE',
+          entityId: created.id,
+          entityTitle: `${identifier} · ${created.title}`,
+          summary: `${actorName} created ${identifier} \u201c${created.title}\u201d`,
+        },
+        tx,
+      );
+
       // F6 hook: create-with-assignee is an actual change from unset —
       // self-assign suppressed (D8). Same-person/unassign cannot occur here.
       if (
@@ -778,6 +805,95 @@ export const issuesService = {
       const updated = await issuesRepository.updateIssue(tx, issueId, data);
       await issuesRepository.createManyHistory(tx, history);
 
+      // Activity (D7 dual-write) — only the taxonomy kinds emit; title /
+      // priority / project / cycle / due-date edits are spec §3.1 exclusions.
+      // Blocked-reason tweaks on an already-blocked issue also stay quiet.
+      const emitsStatus =
+        data.status !== undefined && data.status !== fresh.status;
+      const emitsAssign =
+        data.assigneeId !== undefined && data.assigneeId !== null;
+      const emitsBlockedSet = newBlocked && !fresh.blocked;
+      const emitsBlockedClear = !newBlocked && fresh.blocked;
+      if (emitsStatus || emitsAssign || emitsBlockedSet || emitsBlockedClear) {
+        const actor = await issuesRepository.findUserName(tx, actorUserId);
+        const actorName = actor?.name ?? 'Someone';
+        const entityTitle = `${identifierOf(fresh.seqNumber)} · ${
+          updated.title
+        }`;
+        const statusLabel = (s: string) => STATUS_LABEL[s] ?? s;
+        if (emitsStatus) {
+          await activityService.record(
+            {
+              workspaceId: context.workspaceId,
+              actorId: actorUserId,
+              actorName,
+              kind: 'ISSUE_STATUS_CHANGED',
+              entityType: 'ISSUE',
+              entityId: issueId,
+              entityTitle,
+              summary: `${actorName} moved ${identifierOf(
+                fresh.seqNumber,
+              )} from ${statusLabel(fresh.status)} to ${statusLabel(
+                updated.status,
+              )}`,
+            },
+            tx,
+          );
+        }
+        if (emitsAssign) {
+          const assignee =
+            (await issuesRepository.findUserName(tx, data.assigneeId!))?.name ??
+            'Someone';
+          await activityService.record(
+            {
+              workspaceId: context.workspaceId,
+              actorId: actorUserId,
+              actorName,
+              kind: 'ISSUE_ASSIGNED',
+              entityType: 'ISSUE',
+              entityId: issueId,
+              entityTitle,
+              summary: `${actorName} assigned ${identifierOf(
+                fresh.seqNumber,
+              )} to ${assignee}`,
+            },
+            tx,
+          );
+        }
+        if (emitsBlockedSet) {
+          await activityService.record(
+            {
+              workspaceId: context.workspaceId,
+              actorId: actorUserId,
+              actorName,
+              kind: 'ISSUE_BLOCKED_SET',
+              entityType: 'ISSUE',
+              entityId: issueId,
+              entityTitle,
+              summary: `${actorName} blocked ${identifierOf(fresh.seqNumber)}`,
+            },
+            tx,
+          );
+        }
+        if (emitsBlockedClear) {
+          await activityService.record(
+            {
+              workspaceId: context.workspaceId,
+              actorId: actorUserId,
+              actorName,
+              kind: 'ISSUE_BLOCKED_CLEARED',
+              entityType: 'ISSUE',
+              entityId: issueId,
+              entityTitle,
+              summary: `${actorName} unblocked ${identifierOf(
+                fresh.seqNumber,
+              )}`,
+            },
+            tx,
+          );
+        }
+      }
+
       // F6 hook: actual-change reassign notifies the new assignee only.
       // data.assigneeId is set only on real change (same-person is a no-op
       // above); null (unassign) and self-assign emit nothing (D8).
@@ -840,6 +956,24 @@ export const issuesService = {
         oldValue: null,
         newValue: null,
       });
+      // Activity (D7 dual-write): ISSUE_ARCHIVED alongside the history row.
+      const actor = await issuesRepository.findUserName(tx, actorUserId);
+      const actorName = actor?.name ?? 'Someone';
+      await activityService.record(
+        {
+          workspaceId: context.workspaceId,
+          actorId: actorUserId,
+          actorName,
+          kind: 'ISSUE_ARCHIVED',
+          entityType: 'ISSUE',
+          entityId: issueId,
+          entityTitle: `${identifierOf(updated.seqNumber)} · ${updated.title}`,
+          summary: `${actorName} archived ${identifierOf(
+            updated.seqNumber,
+          )} \u201c${updated.title}\u201d`,
+        },
+        tx,
+      );
       return updated;
     });
 
@@ -881,6 +1015,24 @@ export const issuesService = {
         oldValue: null,
         newValue: null,
       });
+      // Activity (D7 dual-write): ISSUE_RESTORED alongside the history row.
+      const actor = await issuesRepository.findUserName(tx, actorUserId);
+      const actorName = actor?.name ?? 'Someone';
+      await activityService.record(
+        {
+          workspaceId: context.workspaceId,
+          actorId: actorUserId,
+          actorName,
+          kind: 'ISSUE_RESTORED',
+          entityType: 'ISSUE',
+          entityId: issueId,
+          entityTitle: `${identifierOf(updated.seqNumber)} · ${updated.title}`,
+          summary: `${actorName} restored ${identifierOf(
+            updated.seqNumber,
+          )} \u201c${updated.title}\u201d`,
+        },
+        tx,
+      );
       return updated;
     });
 
@@ -899,6 +1051,7 @@ export const issuesService = {
 
   async remove(
     context: WorkspaceRequestContext,
+    actorUserId: string,
     issueId: string,
     confirmIdentifier: string,
   ): Promise<DeleteIssueResponse> {
@@ -926,6 +1079,24 @@ export const issuesService = {
       // Cascades issue_label + issue_history (+ F6 assignment notifications
       // per §7, F8 comments above).
       await issuesRepository.removeIssue(tx, issueId);
+      // Activity (D7 dual-write) — the D3 proof: ISSUE_DELETED recorded
+      // AFTER the row goes. Plain-string target, no FK → the row survives
+      // the very deletion it describes and renders as frozen text.
+      const actor = await issuesRepository.findUserName(tx, actorUserId);
+      const actorName = actor?.name ?? 'Someone';
+      await activityService.record(
+        {
+          workspaceId: context.workspaceId,
+          actorId: actorUserId,
+          actorName,
+          kind: 'ISSUE_DELETED',
+          entityType: 'ISSUE',
+          entityId: issueId,
+          entityTitle: `${identifier} · ${fresh.title}`,
+          summary: `${actorName} deleted ${identifier} \u201c${fresh.title}\u201d`,
+        },
+        tx,
+      );
     });
 
     logger.info(

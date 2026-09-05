@@ -213,6 +213,37 @@ export const commentsService = {
     return toCard(await resolveComment(commentId, issueId, context));
   },
 
+  /**
+   * F9 dashboard contract: batch comment→issue refs for the hub activity
+   * feed (no per-item fetch). Comments whose issue is deleted drop out —
+   * the feed never renders dead links.
+   */
+  async resolveIssueRefs(
+    workspaceId: string,
+    commentIds: string[],
+  ): Promise<
+    Map<string, { issueId: string; identifier: string; title: string }>
+  > {
+    const refs = new Map<
+      string,
+      { issueId: string; identifier: string; title: string }
+    >();
+    if (commentIds.length === 0) return refs;
+    const rows = await commentsRepository.findByIdsScoped(
+      prisma,
+      workspaceId,
+      commentIds,
+    );
+    for (const row of rows) {
+      refs.set(row.id, {
+        issueId: row.issue.id,
+        identifier: `SHIP-${row.issue.seqNumber}`,
+        title: row.issue.title,
+      });
+    }
+    return refs;
+  },
+
   // ── Create (#3, spec §4.1) ─────────────────────────────────────────────
 
   async create(

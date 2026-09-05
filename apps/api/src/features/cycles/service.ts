@@ -220,6 +220,30 @@ export const cyclesService = {
     return toDetail(row, progress.get(row.id) ?? emptyProgress());
   },
 
+  /**
+   * F9 dashboard contract (api-design §3.2): the workspace's single active
+   * non-archived cycle with inline progress, or null (empty state is data).
+   * D6 guarantees ≤1 row via the partial unique index — two rows is a
+   * data-integrity bug, logged with the first row served.
+   */
+  async getActive(workspaceId: string): Promise<CycleCard | null> {
+    const rows = await cyclesRepository.list(prisma, {
+      workspaceId,
+      where: { status: 'ACTIVE', archivedAt: null },
+      orderBy: [{ createdAt: 'asc' }],
+      take: 2,
+    });
+    if (rows.length > 1) {
+      logger.error(
+        { workspaceId, actives: rows.length },
+        'cycle.multiple_active_violation',
+      );
+    }
+    const row = rows[0];
+    if (!row) return null;
+    return cardFor(prisma, row);
+  },
+
   // ── Create (spec §4.1) ─────────────────────────────────────────────────
 
   async create(

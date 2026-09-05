@@ -70,6 +70,18 @@ export const commentsRepository = {
     });
   },
 
+  /** Batch comment→issue refs for the F9 hub activity feed (no N+1). */
+  findByIdsScoped(client: DbClient, workspaceId: string, ids: string[]) {
+    if (ids.length === 0) return Promise.resolve([]);
+    return client.comment.findMany({
+      where: { workspaceId, id: { in: ids } },
+      select: {
+        id: true,
+        issue: { select: { id: true, seqNumber: true, title: true } },
+      },
+    });
+  },
+
   /** Actor display name frozen at emit time (activity D4/D5). */
   findUserName(client: DbClient, userId: string) {
     return client.user.findUnique({

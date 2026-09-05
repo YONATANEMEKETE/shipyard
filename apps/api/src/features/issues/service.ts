@@ -50,6 +50,7 @@ import { cyclesService } from '../cycles/service.js';
 import { commentsService } from '../comments/service.js';
 import { notificationsService } from '../notifications/service.js';
 import { activityService } from '../activity/service.js';
+import { dashboardRepository } from '../dashboard/repository.js';
 import type { ListHistoryQuery, ListIssuesQuery } from './schemas.js';
 
 /**
@@ -58,6 +59,9 @@ import type { ListHistoryQuery, ListIssuesQuery } from './schemas.js';
  * unassign contract. Writes run inside `$transaction` and reassert
  * archive state (defense in depth — guards already ran).
  */
+
+/** F9 My Work bound (dashboard data-model §2.2 — locked product decision). */
+const MY_WORK_LIMIT = 10;
 
 const LIST_LIMIT_DEFAULT = 25;
 const HISTORY_LIMIT_DEFAULT = 50;
@@ -240,6 +244,33 @@ async function resolveIssue(
   );
 }
 
+/**
+ * F9 recently-viewed recording (dashboard data-model §6.1/D3): best-effort
+ * side effect on the detail read — a failure here must never fail the read
+ * (spec rule 4). The recorder function lives in the dashboard module (the
+ * `issue_view` owner); this module owns the call site, so every detail-view
+ * entry point (panel click, deep-link, search, direct URL) records without
+ * clients having to remember anything.
+ */
+async function recordTrailView(
+  workspaceId: string,
+  userId: string,
+  row: IssueRow,
+): Promise<void> {
+  try {
+    await dashboardRepository.recordView(prisma, {
+      userId,
+      issueId: row.id,
+      workspaceId,
+    });
+  } catch (error) {
+    logger.warn(
+      { workspaceId, userId, issueId: row.id, err: error },
+      'dashboard.record_view_failed',
+    );
+  }
+}
+
 async function assertAssigneeMember(
   client: DbClient,
   workspaceId: string,
@@ -418,8 +449,84 @@ export const issuesService = {
   async getDetail(
     context: WorkspaceRequestContext,
     issueId: string,
+    viewerUserId?: string,
   ): Promise<IssueDetail> {
-    return toDetail(await resolveIssue(issueId, context));
+    const row = await resolveIssue(issueId, context);
+    if (viewerUserId)
+      await recordTrailView(context.workspaceId, viewerUserId, row);
+    return toDetail(row);
+  },
+
+  // ── F9 dashboard read contracts (cross-module, api-design §3.2) ────────
+
+  /**
+   * My Work — two capped, open-only groups for the signed-in user. "Open"
+   * is `archivedAt IS NULL AND status != DONE` (dashboard data-model §2.2):
+   * blocked issues stay (blocked is orthogonal work-to-do); completed and
+   * archived issues are not "work". Blocked/overdue surface as the row
+   * flags already on the card — no extra fields, no extra queries.
+   */
+  async listMyWork(
+    workspaceId: string,
+    userId: string,
+  ): Promise<{ assigned: IssueCard[]; created: IssueCard[] }> {
+    const openOnly = { archivedAt: null, status: { not: 'DONE' } } as const;
+    const [assignedRows, createdRows] = await Promise.all([
+      issuesRepository.listIssues(prisma, {
+        workspaceId,
+        where: { ...openOnly, assigneeId: userId },
+        orderBy: [{ updatedAt: 'desc' }],
+        take: MY_WORK_LIMIT,
+      }),
+      issuesRepository.listIssues(prisma, {
+        workspaceId,
+        where: { ...openOnly, creatorId: userId },
+        orderBy: [{ updatedAt: 'desc' }],
+        take: MY_WORK_LIMIT,
+      }),
+    ]);
+    return {
+      assigned: assignedRows.map(toCard),
+      created: createdRows.map(toCard),
+    };
+  },
+
+  /**
+   * Card mapping exposed for the F9 trail join: the dashboard repository
+   * reads its own `issue_view` ⨝ `issue` rows (with this module's include)
+   * and reuses THIS mapping — one card code path, no drift.
+   */
+  cardOf(row: IssueRow): IssueCard {
+    return toCard(row);
+  },
+
+  /**
+   * Batch issue refs for the hub activity feed (no per-item fetch): live
+   * issues only — deleted issues drop out naturally, and the feed never
+   * renders dead links.
+   */
+  async getIssueRefs(
+    workspaceId: string,
+    issueIds: string[],
+  ): Promise<Map<string, { id: string; identifier: string; title: string }>> {
+    const refs = new Map<
+      string,
+      { id: string; identifier: string; title: string }
+    >();
+    if (issueIds.length === 0) return refs;
+    const rows = await issuesRepository.findIssuesByIdsScoped(
+      prisma,
+      workspaceId,
+      issueIds,
+    );
+    for (const row of rows) {
+      refs.set(row.id, {
+        id: row.id,
+        identifier: identifierOf(row.seqNumber),
+        title: row.title,
+      });
+    }
+    return refs;
   },
 
   // ── Create (#3, spec §3.1) ─────────────────────────────────────────────

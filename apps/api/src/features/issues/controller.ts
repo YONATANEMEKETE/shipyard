@@ -63,6 +63,7 @@ export function getIssueController(
       const detail = await issuesService.getDetail(
         context,
         String(request.params.issueId),
+        userIdOf(request),
       );
       sendSuccess(response, detail);
     } catch (error) {

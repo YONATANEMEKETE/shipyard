@@ -9,6 +9,7 @@ import type {
 } from '@shipyard/shared';
 import { logger } from '../../common/logger/index.js';
 import { prisma } from '../../common/db/client.js';
+import { resolveImageUrl } from '../../common/storage/imageUrl.js';
 import { AppError } from '../../common/errors/AppError.js';
 import { ConfirmationRequiredError } from '../workspace/errors.js';
 import { NotificationNotFoundError } from './errors.js';
@@ -49,7 +50,11 @@ function toCard(row: NotificationRow): NotificationCard {
     workspaceId: row.workspaceId,
     type: row.type,
     actor: row.actor
-      ? { userId: row.actor.id, name: row.actor.name, image: row.actor.image }
+      ? {
+          userId: row.actor.id,
+          name: row.actor.name,
+          image: resolveImageUrl(row.actor.image),
+        }
       : null,
     issue: {
       id: row.issue.id,

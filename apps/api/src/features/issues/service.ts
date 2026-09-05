@@ -17,6 +17,7 @@ import { DEFAULT_LABEL_COLOR } from '@shipyard/shared';
 import type { Prisma } from '../../generated/client.js';
 import { logger } from '../../common/logger/index.js';
 import { prisma } from '../../common/db/client.js';
+import { resolveImageUrl } from '../../common/storage/imageUrl.js';
 import { AppError } from '../../common/errors/AppError.js';
 import type { WorkspaceRequestContext } from '../../common/guards/workspace-context.js';
 import {
@@ -111,7 +112,7 @@ function toAssigneeCard(
     userId: user.id,
     name: user.name,
     email: user.email,
-    image: user.image,
+    image: resolveImageUrl(user.image),
   };
 }
 

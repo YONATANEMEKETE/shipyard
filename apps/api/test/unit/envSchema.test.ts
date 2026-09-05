@@ -12,6 +12,11 @@ function validEnv(): Record<string, string> {
     GITHUB_CLIENT_ID: 'github-client-id',
     GITHUB_CLIENT_SECRET: 'github-client-secret',
     RESEND_API_KEY: 're_test_api_key',
+    R2_ENDPOINT: 'https://account.cloudflarestorage.com',
+    R2_PUBLIC_BUCKET: 'shipyard-bucket',
+    R2_ACCESS_KEY_ID: 'r2-access-key-id',
+    R2_SECRET_ACCESS_KEY: 'r2-secret-access-key',
+    R2_PUBLIC_BASE_URL: 'https://assets.example.com',
   };
 }
 
@@ -27,6 +32,11 @@ describe('envSchema (startup validation)', () => {
     'GITHUB_CLIENT_ID',
     'GITHUB_CLIENT_SECRET',
     'RESEND_API_KEY',
+    'R2_ENDPOINT',
+    'R2_PUBLIC_BUCKET',
+    'R2_ACCESS_KEY_ID',
+    'R2_SECRET_ACCESS_KEY',
+    'R2_PUBLIC_BASE_URL',
   ])('rejects a missing %s', (key) => {
     const env = validEnv();
     delete env[key];

@@ -6,6 +6,7 @@ import type {
 } from '@shipyard/shared';
 import { mentionTokenRegex } from '@shipyard/shared';
 import { logger } from '../../common/logger/index.js';
+import { resolveImageUrl } from '../../common/storage/imageUrl.js';
 import { prisma } from '../../common/db/client.js';
 import { AppError } from '../../common/errors/AppError.js';
 import type { WorkspaceRequestContext } from '../../common/guards/workspace-context.js';
@@ -82,13 +83,13 @@ export function toCard(row: CommentRow): CommentCard {
       userId: row.author.id,
       name: row.author.name,
       email: row.author.email,
-      image: row.author.image,
+      image: resolveImageUrl(row.author.image),
     },
     content: row.content,
     mentions: row.mentions.map((join) => ({
       userId: join.mentionedUser.id,
       name: join.mentionedUser.name,
-      image: join.mentionedUser.image,
+      image: resolveImageUrl(join.mentionedUser.image),
     })),
     editedAt: row.editedAt ? row.editedAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),

@@ -10,6 +10,7 @@ import type {
 import type { Prisma } from '../../generated/client.js';
 import { logger } from '../../common/logger/index.js';
 import { prisma } from '../../common/db/client.js';
+import { resolveImageUrl } from '../../common/storage/imageUrl.js';
 import type { WorkspaceRequestContext } from '../../common/guards/workspace-context.js';
 import {
   ForbiddenRoleError,
@@ -64,7 +65,7 @@ export function toCard(row: ProjectRow): ProjectCard {
       userId: row.owner.id,
       name: row.owner.name,
       email: row.owner.email,
-      image: row.owner.image,
+      image: resolveImageUrl(row.owner.image),
     },
     description: row.description ?? null,
     startDate: toDateString(row.startDate),

@@ -34,6 +34,7 @@ model User {
   receivedNotifications Notification[] @relation("ReceivedNotifications")
   sentNotifications     Notification[] @relation("SentNotifications")
   activityActions       ActivityEvent[]
+  issueViews            IssueView[]
 
   @@unique([email])
   @@map("user")
@@ -134,6 +135,7 @@ model Workspace {
   comments        Comment[]
   notifications Notification[]
   activityEvents ActivityEvent[]
+  issueViews IssueView[]
 
   @@map("workspace")
 }
@@ -290,6 +292,7 @@ model Issue {
   history IssueHistory[]
   comments Comment[]
   notifications Notification[]
+  views IssueView[]
 
   // D2: display identifier SHIP-{seqNumber}, unique per workspace, never reused.
   @@unique([workspaceId, seqNumber])
@@ -579,4 +582,37 @@ model ViewPreference {
   @@unique([workspaceId, userId, scope])
   @@index([workspaceId])
   @@map("view_preference")
+}
+
+// ── Dashboard (F9) ───────────────────────────────────────────────────────────
+// Prisma-owned (hand-modeled, like workspace/members/projects/issues). See
+// shipyard-design/04-Engineering/features/dashboard/data-model.md §2. The only
+// new table in F9 — every dashboard panel is derived at read time from owning
+// modules' tables (D1); this stores just the personal recently-viewed trail.
+//
+// D2: @@id([userId, issueId]) makes "one entry per (user, issue)" structural —
+// revisits upsert (bump viewedAt), never duplicate. The cap (50 per user per
+// workspace, oldest-first pruning) is a service rule enforced in the recording
+// tx, not a constraint.
+
+model IssueView {
+  userId      String
+  issueId     String
+  workspaceId String
+  // Explicit writes (not @updatedAt) so creation and bump share one code
+  // path: the upsert sets viewedAt = now() on every view. Recency position —
+  // the trail's primary order (data-model §2.1).
+  viewedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  issue     Issue     @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@id([userId, issueId])
+  @@index([userId])
+  // Serves both the top-N trail read (ORDER viewedAt DESC LIMIT 10) and the
+  // prune past 50 oldest on one index.
+  @@index([userId, workspaceId, viewedAt])
+  @@map("issue_view")
 }

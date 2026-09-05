@@ -77,7 +77,11 @@ export function createCycleController(
     try {
       const context = contextOf(request);
       const body = request.body as unknown as CreateCycleRequest;
-      const detail = await cyclesService.create(context, body);
+      const detail = await cyclesService.create(
+        context,
+        userIdOf(request),
+        body,
+      );
       sendSuccess(response, detail, 201);
     } catch (error) {
       next(error);
@@ -118,6 +122,7 @@ export function startCycleController(
       const context = contextOf(request);
       const detail = await cyclesService.start(
         context,
+        userIdOf(request),
         String(request.params.cycleId),
         confirmOf(request),
       );
@@ -138,6 +143,7 @@ export function completeCycleController(
       const context = contextOf(request);
       const detail = await cyclesService.complete(
         context,
+        userIdOf(request),
         String(request.params.cycleId),
         confirmOf(request),
       );
@@ -158,6 +164,7 @@ export function reopenCycleController(
       const context = contextOf(request);
       const detail = await cyclesService.reopen(
         context,
+        userIdOf(request),
         String(request.params.cycleId),
         confirmOf(request),
       );
@@ -178,6 +185,7 @@ export function archiveCycleController(
       const context = contextOf(request);
       const detail = await cyclesService.archive(
         context,
+        userIdOf(request),
         String(request.params.cycleId),
         confirmOf(request),
       );
@@ -198,6 +206,7 @@ export function restoreCycleController(
       const context = contextOf(request);
       const detail = await cyclesService.restore(
         context,
+        userIdOf(request),
         String(request.params.cycleId),
         confirmOf(request),
       );

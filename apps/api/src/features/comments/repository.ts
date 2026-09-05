@@ -70,10 +70,23 @@ export const commentsRepository = {
     });
   },
 
+  /** Actor display name frozen at emit time (activity D4/D5). */
+  findUserName(client: DbClient, userId: string) {
+    return client.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+  },
+
   findIssueScoped(client: DbClient, issueId: string, workspaceId: string) {
     return client.issue.findFirst({
       where: { id: issueId, workspaceId },
-      select: { id: true, archivedAt: true },
+      select: {
+        id: true,
+        archivedAt: true,
+        seqNumber: true,
+        title: true,
+      },
     });
   },
 

@@ -129,7 +129,9 @@ function toLabelCard(row: {
   };
 }
 
-function toCard(row: IssueRow): IssueCard {
+// Exported for the search module (F10): grouped hits re-render owning card
+// shapes exactly — mapping stays single-sourced here, never duplicated.
+export function toCard(row: IssueRow): IssueCard {
   return {
     id: row.id,
     workspaceId: row.workspaceId,

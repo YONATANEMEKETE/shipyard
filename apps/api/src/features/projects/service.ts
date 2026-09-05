@@ -50,7 +50,9 @@ function toDateString(date: Date | null | undefined): string | null {
   return date.toISOString().slice(0, 10);
 }
 
-function toCard(row: ProjectRow): ProjectCard {
+// Exported for the search module (F10): grouped hits re-render owning card
+// shapes exactly — mapping stays single-sourced here, never duplicated.
+export function toCard(row: ProjectRow): ProjectCard {
   const ownerMembership = row.owner.workspaceMembers[0];
   return {
     id: row.id,

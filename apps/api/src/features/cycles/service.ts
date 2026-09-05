@@ -70,7 +70,9 @@ function emptyProgress(): CycleProgress {
   return { total: 0, completed: 0, percent: null };
 }
 
-async function progressFor(
+// Exported for the search module (F10): grouped hits re-render owning card
+// shapes exactly — progress derivation and mapping stay single-sourced here.
+export async function progressFor(
   client: DbClient,
   workspaceId: string,
   cycleIds: string[],
@@ -105,7 +107,8 @@ async function progressFor(
   return result;
 }
 
-function toCard(row: CycleRow, progress: CycleProgress): CycleCard {
+// Exported for the search module (F10) — see progressFor above.
+export function toCard(row: CycleRow, progress: CycleProgress): CycleCard {
   return {
     id: row.id,
     workspaceId: row.workspaceId,

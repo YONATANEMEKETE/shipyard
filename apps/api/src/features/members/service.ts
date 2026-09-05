@@ -4,6 +4,7 @@ import type {
   InvitationCard,
   InvitationPreview,
   InviteMembersRequest,
+  RecordActivityEvent,
   WorkspaceMemberCard,
 } from '@shipyard/shared';
 import { INVITATION_TTL_DAYS } from '@shipyard/shared';
@@ -13,6 +14,7 @@ import { logger } from '../../common/logger/index.js';
 import { renderWorkspaceInvitationEmail } from '@shipyard/email';
 import { sendEmail } from '../../lib/mailer.js';
 import type { WorkspaceRequestContext } from '../../common/guards/workspace-context.js';
+import { activityService } from '../activity/service.js';
 import {
   AlreadyMemberError,
   CannotChangeOwnerRoleError,
@@ -32,7 +34,7 @@ import {
   ForbiddenRoleError,
   WorkspaceArchivedError,
 } from '../workspace/errors.js';
-import { membersRepository } from './repository.js';
+import { membersRepository, type DbClient } from './repository.js';
 import { projectsService } from '../projects/service.js';
 import { issuesService } from '../issues/service.js';
 
@@ -103,6 +105,19 @@ function requireVerified(user: { emailVerified: boolean } | null): void {
   if (!user || !user.emailVerified) throw new EmailNotVerifiedError();
 }
 
+/**
+ * Resolves the acting member's userId + display name for activity events.
+ * `actorId` follows the rest of the taxonomy (a userId, not a member id).
+ */
+async function actorOf(
+  client: DbClient,
+  memberId: string,
+): Promise<{ userId: string; name: string }> {
+  const row = await membersRepository.findMemberById(client, memberId);
+  if (!row) throw new MemberNotFoundError();
+  return { userId: row.userId, name: row.user.name };
+}
+
 export const membersService = {
   // ── Directory ──────────────────────────────────────────────────────────
 
@@ -136,11 +151,29 @@ export const membersService = {
       throw new MemberNotFoundError();
     if (target.role === 'OWNER') throw new CannotChangeOwnerRoleError();
 
-    const updated = await membersRepository.updateMemberRole(
-      prisma,
-      memberId,
-      body.role,
-    );
+    const updated = await prisma.$transaction(async (tx) => {
+      const row = await membersRepository.updateMemberRole(
+        tx,
+        memberId,
+        body.role,
+      );
+      const actor = await actorOf(tx, context.memberId);
+      const targetName = target.user.name;
+      await activityService.record(
+        {
+          workspaceId: context.workspaceId,
+          actorId: actor.userId,
+          actorName: actor.name,
+          kind: 'MEMBER_ROLE_CHANGED',
+          entityType: 'MEMBER',
+          entityId: memberId,
+          entityTitle: targetName,
+          summary: `${actor.name} changed ${targetName}'s role from ${target.role} to ${body.role}`,
+        },
+        tx,
+      );
+      return row;
+    });
     logger.info(
       {
         workspaceId: context.workspaceId,
@@ -205,17 +238,40 @@ export const membersService = {
             tx,
           );
         }
-        const caller = await membersRepository.findMemberById(
-          tx,
-          context.memberId,
-        );
+        const actor = await actorOf(tx, context.memberId);
         const unassigned = await issuesService.unassignOnMemberExit(
           context.workspaceId,
           target.userId,
           tx,
-          caller?.userId ?? null,
+          actor.userId,
         );
         await membersRepository.deleteMember(tx, memberId);
+        // Member event only — the project/issue cascade above is narrated in
+        // this row's summary, not as its own event rows (closed event list).
+        const notes: string[] = [];
+        if (transferred > 0)
+          notes.push(
+            `${transferred} ${transferred === 1 ? 'project' : 'projects'} transferred to the owner`,
+          );
+        if (unassigned > 0)
+          notes.push(
+            `${unassigned} ${unassigned === 1 ? 'issue' : 'issues'} unassigned`,
+          );
+        await activityService.record(
+          {
+            workspaceId: context.workspaceId,
+            actorId: actor.userId,
+            actorName: actor.name,
+            kind: 'MEMBER_REMOVED',
+            entityType: 'MEMBER',
+            entityId: memberId,
+            entityTitle: target.user.name,
+            summary: notes.length
+              ? `${actor.name} removed ${target.user.name} from the workspace (${notes.join(', ')})`
+              : `${actor.name} removed ${target.user.name} from the workspace`,
+          } satisfies RecordActivityEvent,
+          tx,
+        );
         return {
           transferredProjects: transferred,
           unassignedIssues: unassigned,
@@ -283,7 +339,32 @@ export const membersService = {
             leaver.userId,
           );
         }
+        const actor = await actorOf(tx, context.memberId);
         await membersRepository.deleteMember(tx, context.memberId);
+        const notes: string[] = [];
+        if (transferred > 0)
+          notes.push(
+            `${transferred} ${transferred === 1 ? 'project' : 'projects'} transferred to the owner`,
+          );
+        if (unassigned > 0)
+          notes.push(
+            `${unassigned} ${unassigned === 1 ? 'issue' : 'issues'} unassigned`,
+          );
+        await activityService.record(
+          {
+            workspaceId: context.workspaceId,
+            actorId: actor.userId,
+            actorName: actor.name,
+            kind: 'MEMBER_LEFT',
+            entityType: 'MEMBER',
+            entityId: context.memberId,
+            entityTitle: actor.name,
+            summary: notes.length
+              ? `${actor.name} left the workspace (${notes.join(', ')})`
+              : `${actor.name} left the workspace`,
+          } satisfies RecordActivityEvent,
+          tx,
+        );
         return {
           transferredProjects: transferred,
           unassignedIssues: unassigned,
@@ -353,6 +434,23 @@ export const membersService = {
       await tx.$executeRawUnsafe(
         `UPDATE workspace_member SET role = 'OWNER'::"WorkspaceRole" WHERE id = $1`,
         targetMemberId,
+      );
+
+      // One OWNERSHIP_TRANSFERRED row, not two MEMBER_ROLE_CHANGED rows.
+      const actor = await actorOf(tx, context.memberId);
+      const newOwner = await actorOf(tx, targetMemberId);
+      await activityService.record(
+        {
+          workspaceId: context.workspaceId,
+          actorId: actor.userId,
+          actorName: actor.name,
+          kind: 'OWNERSHIP_TRANSFERRED',
+          entityType: 'MEMBER',
+          entityId: targetMemberId,
+          entityTitle: newOwner.name,
+          summary: `${actor.name} transferred ownership to ${newOwner.name}`,
+        },
+        tx,
       );
 
       const rows = await tx.workspaceMember.findMany({
@@ -441,6 +539,21 @@ export const membersService = {
               expiresAt,
               createdById: callerUserId,
             });
+            // One MEMBER_INVITED row per invitation; the invitee is
+            // identified by email (D4) — they are never a member yet.
+            await activityService.record(
+              {
+                workspaceId: context.workspaceId,
+                actorId: callerUserId,
+                actorName: caller.name,
+                kind: 'MEMBER_INVITED',
+                entityType: 'INVITATION',
+                entityId: row.id,
+                entityTitle: email,
+                summary: `${caller.name} invited ${email} as ${body.role}`,
+              },
+              tx,
+            );
             created.push(toInvitationCard(row));
             break;
           } catch (error) {
@@ -519,6 +632,9 @@ export const membersService = {
   },
 
   // ── Resend ─────────────────────────────────────────────────────────────
+
+  // No activity event on purpose: a resend is a re-touch, not a lifecycle
+  // state change, and the kind list is closed (spec §3.1).
 
   async resendInvitation(
     context: WorkspaceRequestContext,
@@ -617,11 +733,28 @@ export const membersService = {
       throw new InvitationNotFoundError();
     if (inv.status !== 'PENDING') throw new InvitationNotUsableError();
 
-    const revoked = await membersRepository.updateInvitationStatus(
-      prisma,
-      invitationId,
-      'REVOKED',
-    );
+    const revoked = await prisma.$transaction(async (tx) => {
+      const row = await membersRepository.updateInvitationStatus(
+        tx,
+        invitationId,
+        'REVOKED',
+      );
+      const actor = await actorOf(tx, context.memberId);
+      await activityService.record(
+        {
+          workspaceId: context.workspaceId,
+          actorId: actor.userId,
+          actorName: actor.name,
+          kind: 'MEMBER_INVITE_REVOKED',
+          entityType: 'INVITATION',
+          entityId: invitationId,
+          entityTitle: inv.email,
+          summary: `${actor.name} revoked ${inv.email}'s invitation`,
+        },
+        tx,
+      );
+      return row;
+    });
     logger.info(
       {
         workspaceId: context.workspaceId,
@@ -715,6 +848,22 @@ export const membersService = {
 
       await membersRepository.updateInvitationStatus(tx, inv.id, 'ACCEPTED');
 
+      // D4: the joiner is identified by the invitation email — the email
+      // matches the invitation row even when the user row has a name.
+      await activityService.record(
+        {
+          workspaceId: inv.workspaceId,
+          actorId: callerUserId,
+          actorName: inv.email,
+          kind: 'MEMBER_JOINED',
+          entityType: 'INVITATION',
+          entityId: inv.id,
+          entityTitle: inv.email,
+          summary: `${inv.email} joined the workspace as ${inv.role}`,
+        },
+        tx,
+      );
+
       logger.info(
         {
           workspaceId: inv.workspaceId,
@@ -748,11 +897,27 @@ export const membersService = {
     if (isExpired(inv.expiresAt)) throw new InvitationExpiredError();
     if (inv.status !== 'PENDING') throw new InvitationNotUsableError();
 
-    const declined = await membersRepository.updateInvitationStatus(
-      prisma,
-      inv.id,
-      'DECLINED',
-    );
+    const declined = await prisma.$transaction(async (tx) => {
+      const row = await membersRepository.updateInvitationStatus(
+        tx,
+        inv.id,
+        'DECLINED',
+      );
+      await activityService.record(
+        {
+          workspaceId: inv.workspaceId,
+          actorId: callerUserId,
+          actorName: inv.email,
+          kind: 'MEMBER_DECLINED',
+          entityType: 'INVITATION',
+          entityId: inv.id,
+          entityTitle: inv.email,
+          summary: `${inv.email} declined the invitation`,
+        },
+        tx,
+      );
+      return row;
+    });
     logger.info(
       {
         workspaceId: inv.workspaceId,

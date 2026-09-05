@@ -27,4 +27,5 @@ export * from './comments/index.js';
 export * from './search/index.js';
 export * from './notifications/index.js';
 export * from './activity/index.js';
+export * from './settings/index.js';
 export * from './dashboard/index.js';

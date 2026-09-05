@@ -167,6 +167,7 @@ export function deleteIssueController(
       const body = request.body as unknown as DeleteIssueRequest;
       const result = await issuesService.remove(
         context,
+        userIdOf(request),
         String(request.params.issueId),
         body.confirmIdentifier,
       );

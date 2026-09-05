@@ -310,6 +310,16 @@ export const issuesRepository = {
   // ── Cross-module lookups (service invariants) ───────────────────────────
 
   /** Assignee liveness: the user must hold a membership row in the workspace. */
+  /** Cross-module lookups (service invariants) */
+
+  /** Actor display name frozen at emit time (activity D4/D5). */
+  findUserName(client: DbClient, userId: string) {
+    return client.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+  },
+
   findMemberByUser(client: DbClient, workspaceId: string, userId: string) {
     return client.workspaceMember.findFirst({
       where: { workspaceId, userId },

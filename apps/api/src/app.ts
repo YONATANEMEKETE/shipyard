@@ -38,6 +38,7 @@ import { notificationsRouter } from './features/notifications/routes.js';
 import { workspaceActivityRouter } from './features/activity/routes.js';
 import { workspaceSearchRouter } from './features/search/routes.js';
 import { workspaceDashboardRouter } from './features/dashboard/routes.js';
+import { settingsRouter } from './features/settings/routes.js';
 import {
   defaultAvatarStorage,
   setAvatarStorage,
@@ -148,6 +149,10 @@ export function createApp(options: CreateAppOptions = {}): express.Express {
 
   // Notifications module (F6) — global recipient scope (no :slug), no create route.
   app.use('/api/v1/notifications', notificationsRouter);
+
+  // Settings module (F11) — account paths, session-only guard chain (no :slug,
+  // no workspace context). Delegated sections are client links, never proxies.
+  app.use('/api/v1/settings', settingsRouter);
 
   // Activity module — workspace-scoped page walk, readable-when-archived,
   // no create route (emission is internal-only via record()).

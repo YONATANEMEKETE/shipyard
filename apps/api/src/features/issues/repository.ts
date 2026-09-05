@@ -90,6 +90,15 @@ export const issuesRepository = {
     });
   },
 
+  /** Batch refs for the F9 hub activity feed (no N+1). */
+  findIssuesByIdsScoped(client: DbClient, workspaceId: string, ids: string[]) {
+    if (ids.length === 0) return Promise.resolve([]);
+    return client.issue.findMany({
+      where: { workspaceId, id: { in: ids } },
+      select: { id: true, seqNumber: true, title: true },
+    });
+  },
+
   createIssue(
     client: DbClient,
     data: {

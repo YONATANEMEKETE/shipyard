@@ -141,6 +141,21 @@ export const projectsService = {
     return toDetail(await resolveProject(projectId, context));
   },
 
+  /**
+   * F9 dashboard contract (api-design §3.2): active non-archived projects,
+   * hard cap 20. The hub panel derives progress per project downstream —
+   * this module owns the filter, scope, and card mapping.
+   */
+  async listActive(workspaceId: string): Promise<ProjectCard[]> {
+    const rows = await projectsRepository.list(prisma, {
+      workspaceId,
+      where: { status: 'ACTIVE', archivedAt: null },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+    return rows.map(toCard);
+  },
+
   // ── Create (spec §3.1) ────────────────────────────────────────────────
 
   async create(

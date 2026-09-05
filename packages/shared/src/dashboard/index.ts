@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { issueAssigneeCardSchema, issueCardSchema } from '../issues/index.js';
-import { cycleCardSchema } from '../cycles/index.js';
+import { cycleCardSchema, cycleProgressSchema } from '../cycles/index.js';
 import { projectCardSchema } from '../projects/index.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -51,10 +51,14 @@ export type DashboardCycle = z.infer<typeof dashboardCycleSchema>;
 
 // ── Active Projects (spec §3.1) ──
 
-// Active non-archived projects with inline progress (projectCardSchema
-// verbatim, F4 list ordering). Empty array when none. Hard cap 20 is a
-// service-side safety bound, not a schema constraint.
-export const dashboardProjectsSchema = z.array(projectCardSchema);
+// Active non-archived projects, hard cap 20 (service-side safety bound).
+// The F4 card in this codebase ships without progress, so the hub panel
+// extends it additively with the shared progress shape (derived at read
+// time — never stored) so Active Projects renders its progress bars with
+// no second fetch. Empty array when none.
+export const dashboardProjectsSchema = z.array(
+  projectCardSchema.extend({ progress: cycleProgressSchema }),
+);
 
 export type DashboardProjects = z.infer<typeof dashboardProjectsSchema>;
 

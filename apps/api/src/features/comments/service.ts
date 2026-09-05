@@ -71,7 +71,9 @@ export function resolveMentionedUserIds(
   return resolved;
 }
 
-function toCard(row: CommentRow): CommentCard {
+// Exported for the search module (F10): grouped hits re-render owning card
+// shapes exactly — mapping stays single-sourced here, never duplicated.
+export function toCard(row: CommentRow): CommentCard {
   return {
     id: row.id,
     workspaceId: row.workspaceId,

@@ -36,6 +36,7 @@ import { workspaceCyclesRouter } from './features/cycles/routes.js';
 import { issueCommentsRouter } from './features/comments/routes.js';
 import { notificationsRouter } from './features/notifications/routes.js';
 import { workspaceActivityRouter } from './features/activity/routes.js';
+import { workspaceSearchRouter } from './features/search/routes.js';
 import { workspaceDashboardRouter } from './features/dashboard/routes.js';
 
 export interface CreateAppOptions {
@@ -140,6 +141,12 @@ export function createApp(options: CreateAppOptions = {}): express.Express {
   // Activity module — workspace-scoped page walk, readable-when-archived,
   // no create route (emission is internal-only via record()).
   app.use('/api/v1/workspaces/:slug/activity', workspaceActivityRouter);
+
+  // Search module (F10) — single grouped read over issues/projects/cycles/
+  // members/comments. Suggestions (limit=5) and "search within" (?type=)
+  // share this route. Mounted before the workspace sub-resource routers'
+  // sibling paths.
+  app.use('/api/v1/workspaces/:slug/search', workspaceSearchRouter);
 
   // Dashboard module (F9) — single composed GET under the workspace,
   // readable-when-archived, any member (no role check).

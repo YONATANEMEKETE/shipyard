@@ -74,6 +74,14 @@ export const projectsRepository = {
     });
   },
 
+  /** Actor display name frozen at emit time (activity D4/D5). */
+  findOwnerName(client: DbClient, userId: string) {
+    return client.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+  },
+
   create(
     client: DbClient,
     data: {

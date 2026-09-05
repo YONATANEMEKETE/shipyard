@@ -105,6 +105,7 @@ export function updateProjectController(
         context,
         String(request.params.projectId),
         body,
+        userIdOf(request),
       );
       sendSuccess(response, detail);
     } catch (error) {
@@ -126,6 +127,7 @@ export function transferProjectOwnerController(
         context,
         String(request.params.projectId),
         body.targetMemberId,
+        userIdOf(request),
       );
       sendSuccess(response, card);
     } catch (error) {
@@ -146,6 +148,7 @@ export function archiveProjectController(
         context,
         String(request.params.projectId),
         (request.body as { confirm?: unknown } | undefined)?.confirm,
+        userIdOf(request),
       );
       sendSuccess(response, detail);
     } catch (error) {
@@ -166,6 +169,7 @@ export function restoreProjectController(
         context,
         String(request.params.projectId),
         (request.body as { confirm?: unknown } | undefined)?.confirm,
+        userIdOf(request),
       );
       sendSuccess(response, detail);
     } catch (error) {

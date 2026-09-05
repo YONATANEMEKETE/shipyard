@@ -32,6 +32,7 @@ import {
   type ProjectRow,
 } from './repository.js';
 import { issuesService } from '../issues/service.js';
+import { activityService } from '../activity/service.js';
 import type { ListProjectsQuery } from './schemas.js';
 
 /**
@@ -158,15 +159,33 @@ export const projectsService = {
 
     try {
       const row = await prisma.$transaction((tx) =>
-        projectsRepository.create(tx, {
-          workspaceId: context.workspaceId,
-          name: input.name,
-          status: input.status ?? 'ACTIVE',
-          ownerId: userId,
-          description: input.description ?? null,
-          startDate: input.startDate ? new Date(input.startDate) : null,
-          targetDate: input.targetDate ? new Date(input.targetDate) : null,
-        }),
+        (async () => {
+          const created = await projectsRepository.create(tx, {
+            workspaceId: context.workspaceId,
+            name: input.name,
+            status: input.status ?? 'ACTIVE',
+            ownerId: userId,
+            description: input.description ?? null,
+            startDate: input.startDate ? new Date(input.startDate) : null,
+            targetDate: input.targetDate ? new Date(input.targetDate) : null,
+          });
+          // Creator == owner: the created row already carries the frozen
+          // actor name (no extra lookup).
+          await activityService.record(
+            {
+              workspaceId: context.workspaceId,
+              actorId: userId,
+              actorName: created.owner.name,
+              kind: 'PROJECT_CREATED',
+              entityType: 'PROJECT',
+              entityId: created.id,
+              entityTitle: created.name,
+              summary: `${created.owner.name} created project "${created.name}"`,
+            },
+            tx,
+          );
+          return created;
+        })(),
       );
       logger.info(
         {
@@ -193,6 +212,7 @@ export const projectsService = {
     context: WorkspaceRequestContext,
     projectId: string,
     input: UpdateProjectRequest,
+    actorUserId: string,
   ): Promise<ProjectDetail> {
     assertCanEdit(context);
     const project = await resolveProject(projectId, context);
@@ -217,12 +237,50 @@ export const projectsService = {
     if (input.targetDate !== undefined)
       data.targetDate = input.targetDate ? new Date(input.targetDate) : null;
 
-    const row = await projectsRepository.update(
-      prisma,
-      projectId,
-      context.workspaceId,
-      data,
-    );
+    const row = await prisma.$transaction(async (tx) => {
+      const updated = await projectsRepository.update(
+        tx,
+        projectId,
+        context.workspaceId,
+        data,
+      );
+      // Description/date-only edits are not narrative (spec §3.1 exclusion
+      // list) — only rename + status change emit.
+      const renamed = input.name !== undefined && input.name !== project.name;
+      const statusChanged =
+        input.status !== undefined && input.status !== project.status;
+      if (renamed || statusChanged) {
+        const actor = await projectsRepository.findOwnerName(tx, actorUserId);
+        const actorName = actor?.name ?? 'Someone';
+        const events: Parameters<typeof activityService.record>[0][] = [];
+        if (renamed) {
+          events.push({
+            workspaceId: context.workspaceId,
+            actorId: actorUserId,
+            actorName,
+            kind: 'PROJECT_RENAMED',
+            entityType: 'PROJECT',
+            entityId: projectId,
+            entityTitle: updated.name,
+            summary: `${actorName} renamed project "${project.name}" to "${updated.name}"`,
+          });
+        }
+        if (statusChanged) {
+          events.push({
+            workspaceId: context.workspaceId,
+            actorId: actorUserId,
+            actorName,
+            kind: 'PROJECT_STATUS_CHANGED',
+            entityType: 'PROJECT',
+            entityId: projectId,
+            entityTitle: updated.name,
+            summary: `${actorName} changed project "${updated.name}" status from ${project.status} to ${updated.status}`,
+          });
+        }
+        for (const event of events) await activityService.record(event, tx);
+      }
+      return updated;
+    });
     logger.info(
       {
         workspaceId: context.workspaceId,
@@ -241,6 +299,7 @@ export const projectsService = {
     context: WorkspaceRequestContext,
     projectId: string,
     targetMemberId: string,
+    actorUserId: string,
   ): Promise<ProjectCard> {
     assertCanEdit(context);
     const project = await resolveProject(projectId, context);
@@ -250,25 +309,46 @@ export const projectsService = {
       // Re-read inside the transaction (liveness, defense in depth).
       const fresh = await tx.project.findFirst({
         where: { id: projectId, workspaceId: context.workspaceId },
-        select: { id: true, ownerId: true, archivedAt: true },
+        select: { id: true, name: true, ownerId: true, archivedAt: true },
       });
       if (!fresh) throw new ProjectNotFoundError();
       if (fresh.archivedAt) throw new ProjectArchivedError();
 
       const target = await tx.workspaceMember.findUnique({
         where: { id: targetMemberId },
-        select: { id: true, workspaceId: true, userId: true },
+        select: {
+          id: true,
+          workspaceId: true,
+          userId: true,
+          user: { select: { name: true } },
+        },
       });
       if (!target || target.workspaceId !== context.workspaceId)
         throw new TransferTargetInvalidError();
       if (target.userId === fresh.ownerId)
         throw new TransferTargetInvalidError('Target is already the owner');
 
-      return tx.project.update({
+      const updated = await tx.project.update({
         where: { id: projectId },
         data: { ownerId: target.userId },
         include: projectInclude(context.workspaceId),
       });
+      const actor = await projectsRepository.findOwnerName(tx, actorUserId);
+      const actorName = actor?.name ?? 'Someone';
+      await activityService.record(
+        {
+          workspaceId: context.workspaceId,
+          actorId: actorUserId,
+          actorName,
+          kind: 'PROJECT_OWNER_TRANSFERRED',
+          entityType: 'PROJECT',
+          entityId: projectId,
+          entityTitle: fresh.name,
+          summary: `${actorName} transferred project "${fresh.name}" ownership to ${target.user.name}`,
+        },
+        tx,
+      );
+      return updated;
     });
 
     logger.info(
@@ -289,18 +369,37 @@ export const projectsService = {
     context: WorkspaceRequestContext,
     projectId: string,
     confirm: unknown,
+    actorUserId: string,
   ): Promise<ProjectDetail> {
     if (confirm !== true) throw new ConfirmationRequiredError();
     assertCanEdit(context);
     const project = await resolveProject(projectId, context);
     if (project.archivedAt) throw new AlreadyArchivedError();
 
-    const row = await projectsRepository.setArchivedAt(
-      prisma,
-      projectId,
-      context.workspaceId,
-      new Date(),
-    );
+    const row = await prisma.$transaction(async (tx) => {
+      const archived = await projectsRepository.setArchivedAt(
+        tx,
+        projectId,
+        context.workspaceId,
+        new Date(),
+      );
+      const actor = await projectsRepository.findOwnerName(tx, actorUserId);
+      const actorName = actor?.name ?? 'Someone';
+      await activityService.record(
+        {
+          workspaceId: context.workspaceId,
+          actorId: actorUserId,
+          actorName,
+          kind: 'PROJECT_ARCHIVED',
+          entityType: 'PROJECT',
+          entityId: projectId,
+          entityTitle: project.name,
+          summary: `${actorName} archived project "${project.name}"`,
+        },
+        tx,
+      );
+      return archived;
+    });
     logger.info(
       {
         workspaceId: context.workspaceId,
@@ -319,18 +418,37 @@ export const projectsService = {
     context: WorkspaceRequestContext,
     projectId: string,
     confirm: unknown,
+    actorUserId: string,
   ): Promise<ProjectDetail> {
     if (confirm !== true) throw new ConfirmationRequiredError();
     assertCanEdit(context);
     const project = await resolveProject(projectId, context);
     if (!project.archivedAt) throw new NotArchivedError();
 
-    const row = await projectsRepository.setArchivedAt(
-      prisma,
-      projectId,
-      context.workspaceId,
-      null,
-    );
+    const row = await prisma.$transaction(async (tx) => {
+      const restored = await projectsRepository.setArchivedAt(
+        tx,
+        projectId,
+        context.workspaceId,
+        null,
+      );
+      const actor = await projectsRepository.findOwnerName(tx, actorUserId);
+      const actorName = actor?.name ?? 'Someone';
+      await activityService.record(
+        {
+          workspaceId: context.workspaceId,
+          actorId: actorUserId,
+          actorName,
+          kind: 'PROJECT_RESTORED',
+          entityType: 'PROJECT',
+          entityId: projectId,
+          entityTitle: project.name,
+          summary: `${actorName} restored project "${project.name}"`,
+        },
+        tx,
+      );
+      return restored;
+    });
     logger.info(
       {
         workspaceId: context.workspaceId,
@@ -366,6 +484,24 @@ export const projectsService = {
         actorUserId,
       );
       await projectsRepository.remove(tx, projectId);
+      // D3 proof: the delete-event row survives the very deletion it
+      // describes (plain-string target, no FK) — frozen title renders
+      // without a link.
+      const actor = await projectsRepository.findOwnerName(tx, actorUserId);
+      const actorName = actor?.name ?? 'Someone';
+      await activityService.record(
+        {
+          workspaceId: context.workspaceId,
+          actorId: actorUserId,
+          actorName,
+          kind: 'PROJECT_DELETED',
+          entityType: 'PROJECT',
+          entityId: projectId,
+          entityTitle: project.name,
+          summary: `${actorName} deleted project "${project.name}"`,
+        },
+        tx,
+      );
       return unassigned;
     });
 

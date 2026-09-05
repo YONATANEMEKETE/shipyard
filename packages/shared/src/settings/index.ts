@@ -62,9 +62,11 @@ export const AVATAR_FILE_FIELD = 'avatar';
 // Profile rename. .strict() is the email firewall (D5): an `email` key (or
 // any other key) is a 400 VALIDATION_ERROR, never a silent strip — the
 // test-observable proof of rule 4.
-export const updateProfileSchema = z.object({
-  name: displayNameSchema,
-});
+export const updateProfileSchema = z
+  .object({
+    name: displayNameSchema,
+  })
+  .strict();
 
 export type UpdateProfileRequest = z.infer<typeof updateProfileSchema>;
 

@@ -13,28 +13,29 @@ generator client {
 }
 
 model User {
-  id               String            @id
-  name             String
-  email            String
-  emailVerified    Boolean           @default(false)
-  image            String?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  sessions         Session[]
-  accounts         Account[]
-  workspaceMembers WorkspaceMember[]
-  sentInvitations  Invitation[]      @relation("CreatedInvitations")
-  ownedProjects    Project[]
-  viewPreferences  ViewPreference[]
-  assignedIssues   Issue[]        @relation("AssignedIssues")
-  createdIssues    Issue[]        @relation("CreatedIssues")
-  issueHistoryActions IssueHistory[]
-  authoredComments Comment[]      @relation("AuthoredComments")
-  commentMentions  CommentMention[] @relation("CommentMentions")
-  receivedNotifications Notification[] @relation("ReceivedNotifications")
-  sentNotifications     Notification[] @relation("SentNotifications")
+  id                    String            @id
+  name                  String
+  email                 String
+  emailVerified         Boolean           @default(false)
+  image                 String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  sessions              Session[]
+  accounts              Account[]
+  workspaceMembers      WorkspaceMember[]
+  sentInvitations       Invitation[]      @relation("CreatedInvitations")
+  ownedProjects         Project[]
+  viewPreferences       ViewPreference[]
+  assignedIssues        Issue[]           @relation("AssignedIssues")
+  createdIssues         Issue[]           @relation("CreatedIssues")
+  issueHistoryActions   IssueHistory[]
+  authoredComments      Comment[]         @relation("AuthoredComments")
+  commentMentions       CommentMention[]  @relation("CommentMentions")
+  receivedNotifications Notification[]    @relation("ReceivedNotifications")
+  sentNotifications     Notification[]    @relation("SentNotifications")
   activityActions       ActivityEvent[]
   issueViews            IssueView[]
+  preference            UserPreference?
 
   @@unique([email])
   @@map("user")
@@ -133,9 +134,9 @@ model Workspace {
   issueSequence   WorkspaceIssueSequence?
   cycles          Cycle[]
   comments        Comment[]
-  notifications Notification[]
-  activityEvents ActivityEvent[]
-  issueViews IssueView[]
+  notifications   Notification[]
+  activityEvents  ActivityEvent[]
+  issueViews      IssueView[]
 
   @@map("workspace")
 }
@@ -303,11 +304,11 @@ model Issue {
   project   Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
   cycle     Cycle?    @relation(fields: [cycleId], references: [id], onDelete: SetNull)
 
-  labels  IssueLabel[]
-  history IssueHistory[]
-  comments Comment[]
+  labels        IssueLabel[]
+  history       IssueHistory[]
+  comments      Comment[]
   notifications Notification[]
-  views IssueView[]
+  views         IssueView[]
 
   // D2: display identifier SHIP-{seqNumber}, unique per workspace, never reused.
   @@unique([workspaceId, seqNumber])
@@ -630,8 +631,8 @@ model IssueView {
   // Explicit writes (not @updatedAt) so creation and bump share one code
   // path: the upsert sets viewedAt = now() on every view. Recency position —
   // the trail's primary order (data-model §2.1).
-  viewedAt  DateTime @default(now())
-  createdAt DateTime @default(now())
+  viewedAt    DateTime @default(now())
+  createdAt   DateTime @default(now())
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   issue     Issue     @relation(fields: [issueId], references: [id], onDelete: Cascade)
@@ -643,4 +644,37 @@ model IssueView {
   // prune past 50 oldest on one index.
   @@index([userId, workspaceId, viewedAt])
   @@map("issue_view")
+}
+
+// ── Settings (F11) ───────────────────────────────────────────────────────────
+// Prisma-owned (hand-modeled, like all prior features). See
+// shipyard-design/04-Engineering/features/settings/data-model.md §2. The only
+// new table in F11 — zero edits to Better Auth's generated tables (D1 keeps
+// F11's footprint isolated and gives future prefs like locale an obvious home).
+//
+// D1: a dedicated table, not a `user` column. One row per user, created
+// lazily on first preference write (upsert) — no backfill, no seed. Absent
+// row reads as SYSTEM at read time (D6), same absent-means-default discipline
+// as view_preference's LIST. Account-wide by construction: no workspaceId —
+// theme follows the human (spec rule 2); view prefs stay per (user,
+// workspace, kind) in F4's ViewPreference, untouched here.
+
+enum ThemePreference {
+  LIGHT
+  DARK
+  SYSTEM
+}
+
+model UserPreference {
+  // PK = userId — "one pref row per account" is structural, not conventional.
+  userId    String          @id
+  theme     ThemePreference @default(SYSTEM)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  // Prefs die with the account (private data, same reasoning as the
+  // notification inbox).
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preference")
 }

@@ -1,5 +1,9 @@
 import { prisma } from '../../common/db/client.js';
+import type { Prisma } from '../../generated/client.js';
 import type { WorkspaceRole } from '@shipyard/shared';
+
+/** Transaction client (same alias as sibling modules, e.g. activity). */
+export type DbClient = Prisma.TransactionClient | typeof prisma;
 
 /**
  * Workspace repository — Prisma access only. No business decisions, state
@@ -67,21 +71,9 @@ export const workspaceRepository = {
     input: { name: string; slug: string; icon: string | null },
     userId: string,
   ): Promise<WorkspaceRow> {
-    return prisma.$transaction(async (tx) => {
-      const workspace = await tx.workspace.create({
-        data: {
-          name: input.name,
-          slug: input.slug,
-          icon: input.icon,
-        },
-      });
-
-      await tx.workspaceMember.create({
-        data: { workspaceId: workspace.id, userId, role: 'OWNER' },
-      });
-
-      return workspace;
-    });
+    return prisma.$transaction(async (tx) =>
+      createWithOwnerTx(tx, input, userId),
+    );
   },
 
   async findById(workspaceId: string): Promise<WorkspaceRow | null> {
@@ -92,35 +84,17 @@ export const workspaceRepository = {
     workspaceId: string,
     data: { name?: string; icon?: string | null },
   ): Promise<WorkspaceWithMemberCount | null> {
-    // `icon` may be explicitly cleared (set to null) or undefined (leave as-is).
-    const patch: { name?: string; icon?: string | null } = {};
-    if (data.name !== undefined) patch.name = data.name;
-    if (data.icon !== undefined) patch.icon = data.icon;
-
-    return prisma.workspace.update({
-      where: { id: workspaceId },
-      data: patch,
-      include: { _count: { select: { members: true } } },
-    });
+    return updateTx(prisma, workspaceId, data);
   },
 
   async setArchived(
     workspaceId: string,
   ): Promise<WorkspaceWithMemberCount | null> {
-    return prisma.workspace.update({
-      where: { id: workspaceId },
-      data: { status: 'ARCHIVED', archivedAt: new Date() },
-      include: { _count: { select: { members: true } } },
-    });
+    return setArchivedTx(prisma, workspaceId);
   },
 
   async restore(workspaceId: string): Promise<WorkspaceWithMemberCount | null> {
-    // Restore keeps `archivedAt` to preserve the historical record (spec rule 9).
-    return prisma.workspace.update({
-      where: { id: workspaceId },
-      data: { status: 'ACTIVE' },
-      include: { _count: { select: { members: true } } },
-    });
+    return restoreTx(prisma, workspaceId);
   },
 
   /** Irreversible, all-or-nothing: memberships first, then the workspace row. */
@@ -130,4 +104,80 @@ export const workspaceRepository = {
       await tx.workspace.delete({ where: { id: workspaceId } });
     });
   },
+
+  /** Actor display name frozen at emit time (activity D4/D5). */
+  async findUserName(
+    client: DbClient,
+    userId: string,
+  ): Promise<{ name: string } | null> {
+    return client.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+  },
 };
+
+// ── Tx-aware variants (service-owned transactions, activity D2) ───────────
+// The public methods above delegate here with `prisma`; emitting service
+// methods pass their own `tx` so the state write + activity row commit
+// together or not at all.
+
+export async function createWithOwnerTx(
+  tx: DbClient,
+  input: { name: string; slug: string; icon: string | null },
+  userId: string,
+): Promise<WorkspaceRow> {
+  const workspace = await tx.workspace.create({
+    data: {
+      name: input.name,
+      slug: input.slug,
+      icon: input.icon,
+    },
+  });
+
+  await tx.workspaceMember.create({
+    data: { workspaceId: workspace.id, userId, role: 'OWNER' },
+  });
+
+  return workspace;
+}
+
+export async function updateTx(
+  tx: DbClient,
+  workspaceId: string,
+  data: { name?: string; icon?: string | null },
+): Promise<WorkspaceWithMemberCount | null> {
+  // `icon` may be explicitly cleared (set to null) or undefined (leave as-is).
+  const patch: { name?: string; icon?: string | null } = {};
+  if (data.name !== undefined) patch.name = data.name;
+  if (data.icon !== undefined) patch.icon = data.icon;
+
+  return tx.workspace.update({
+    where: { id: workspaceId },
+    data: patch,
+    include: { _count: { select: { members: true } } },
+  });
+}
+
+export async function setArchivedTx(
+  tx: DbClient,
+  workspaceId: string,
+): Promise<WorkspaceWithMemberCount | null> {
+  return tx.workspace.update({
+    where: { id: workspaceId },
+    data: { status: 'ARCHIVED', archivedAt: new Date() },
+    include: { _count: { select: { members: true } } },
+  });
+}
+
+export async function restoreTx(
+  tx: DbClient,
+  workspaceId: string,
+): Promise<WorkspaceWithMemberCount | null> {
+  // Restore keeps `archivedAt` to preserve the historical record (spec rule 9).
+  return tx.workspace.update({
+    where: { id: workspaceId },
+    data: { status: 'ACTIVE' },
+    include: { _count: { select: { members: true } } },
+  });
+}

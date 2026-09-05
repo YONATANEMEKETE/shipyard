@@ -8,7 +8,13 @@ import type {
 } from '@shipyard/shared';
 import { InternalServerError } from '../../common/errors/httpErrors.js';
 import { logger } from '../../common/logger/index.js';
+import { prisma } from '../../common/db/client.js';
+import { activityService } from '../activity/service.js';
 import {
+  createWithOwnerTx,
+  restoreTx,
+  setArchivedTx,
+  updateTx,
   workspaceRepository,
   type WorkspaceRow,
   type WorkspaceWithMemberCount,
@@ -90,10 +96,30 @@ export const workspaceService = {
     for (let attempt = 0; attempt < SLUG_MAX_TRIES; attempt += 1) {
       const slug = generateSlug();
       try {
-        created = await workspaceRepository.createWithOwner(
-          { name, slug, icon },
-          userId,
-        );
+        // Service-owned tx: workspace + membership + activity row commit
+        // together (strict, activity D2) — a failed log write fails create.
+        created = await prisma.$transaction(async (tx) => {
+          const workspace = await createWithOwnerTx(
+            tx,
+            { name, slug, icon },
+            userId,
+          );
+          const actor = await workspaceRepository.findUserName(tx, userId);
+          await activityService.record(
+            {
+              workspaceId: workspace.id,
+              actorId: userId,
+              actorName: actor?.name ?? 'Someone',
+              kind: 'WORKSPACE_CREATED',
+              entityType: 'WORKSPACE',
+              entityId: null,
+              entityTitle: workspace.name,
+              summary: `${actor?.name ?? 'Someone'} created the workspace "${workspace.name}"`,
+            },
+            tx,
+          );
+          return workspace;
+        });
         break;
       } catch (error) {
         // Unique violation on slug (a concurrent create raced us): retry with
@@ -142,13 +168,36 @@ export const workspaceService = {
     workspaceId: string,
     role: WorkspaceRole,
     input: UpdateWorkspaceRequest,
+    actorUserId: string,
   ): Promise<WorkspaceDetail> {
-    const row = requireDetail(
-      await workspaceRepository.update(workspaceId, {
-        ...(input.name !== undefined ? { name: input.name } : {}),
-        ...(input.icon !== undefined ? { icon: input.icon } : {}),
-      }),
-    );
+    const row = await prisma.$transaction(async (tx) => {
+      const updated = requireDetail(
+        await updateTx(tx, workspaceId, {
+          ...(input.name !== undefined ? { name: input.name } : {}),
+          ...(input.icon !== undefined ? { icon: input.icon } : {}),
+        }),
+      );
+      const actor = await workspaceRepository.findUserName(tx, actorUserId);
+      const actorName = actor?.name ?? 'Someone';
+      const summary =
+        input.name !== undefined
+          ? `${actorName} renamed the workspace to "${updated.name}"`
+          : `${actorName} updated the workspace icon`;
+      await activityService.record(
+        {
+          workspaceId,
+          actorId: actorUserId,
+          actorName,
+          kind: 'WORKSPACE_UPDATED',
+          entityType: 'WORKSPACE',
+          entityId: null,
+          entityTitle: updated.name,
+          summary,
+        },
+        tx,
+      );
+      return updated;
+    });
     logger.info(
       {
         workspaceId,
@@ -164,7 +213,8 @@ export const workspaceService = {
   async archive(
     workspaceId: string,
     role: WorkspaceRole,
-    confirm?: unknown,
+    confirm: unknown,
+    actorUserId: string,
   ): Promise<WorkspaceDetail> {
     if (confirm !== true) throw new ConfirmationRequiredError();
 
@@ -175,9 +225,25 @@ export const workspaceService = {
       throw new InvalidStatusTransitionError('Workspace is already archived');
     }
 
-    const row = requireDetail(
-      await workspaceRepository.setArchived(workspaceId),
-    );
+    const row = await prisma.$transaction(async (tx) => {
+      const archived = requireDetail(await setArchivedTx(tx, workspaceId));
+      const actor = await workspaceRepository.findUserName(tx, actorUserId);
+      const actorName = actor?.name ?? 'Someone';
+      await activityService.record(
+        {
+          workspaceId,
+          actorId: actorUserId,
+          actorName,
+          kind: 'WORKSPACE_ARCHIVED',
+          entityType: 'WORKSPACE',
+          entityId: null,
+          entityTitle: archived.name,
+          summary: `${actorName} archived the workspace`,
+        },
+        tx,
+      );
+      return archived;
+    });
     logger.info(
       { workspaceId, slug: row.slug, name: row.name, actorRole: role },
       'workspace.archived',
@@ -188,7 +254,8 @@ export const workspaceService = {
   async restore(
     workspaceId: string,
     role: WorkspaceRole,
-    confirm?: unknown,
+    confirm: unknown,
+    actorUserId: string,
   ): Promise<WorkspaceDetail> {
     if (confirm !== true) throw new ConfirmationRequiredError();
 
@@ -199,7 +266,25 @@ export const workspaceService = {
       throw new InvalidStatusTransitionError('Workspace is already active');
     }
 
-    const row = requireDetail(await workspaceRepository.restore(workspaceId));
+    const row = await prisma.$transaction(async (tx) => {
+      const restored = requireDetail(await restoreTx(tx, workspaceId));
+      const actor = await workspaceRepository.findUserName(tx, actorUserId);
+      const actorName = actor?.name ?? 'Someone';
+      await activityService.record(
+        {
+          workspaceId,
+          actorId: actorUserId,
+          actorName,
+          kind: 'WORKSPACE_RESTORED',
+          entityType: 'WORKSPACE',
+          entityId: null,
+          entityTitle: restored.name,
+          summary: `${actorName} restored the workspace`,
+        },
+        tx,
+      );
+      return restored;
+    });
     logger.info(
       { workspaceId, slug: row.slug, name: row.name, actorRole: role },
       'workspace.restored',

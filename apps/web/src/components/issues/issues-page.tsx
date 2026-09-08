@@ -16,7 +16,8 @@ import { useWorkspace } from '@/hooks/use-workspaces';
 import type { IssueStatus } from '@shipyard/shared';
 import { useViewPreference } from '@/hooks/use-projects';
 import { useSession } from '@/hooks/use-session';
-import { useIssues } from '@/hooks/use-issues';
+import { useIssues, useUpdateIssue } from '@/hooks/use-issues';
+import { useToast } from '@/components/providers/toast-provider';
 
 /**
  * Issues page — header + toolbar with live filters.
@@ -104,6 +105,22 @@ export function IssuesPage({ slug }: { slug: string }) {
 
   const issues = issuesQuery.data?.issues ?? [];
 
+  const { showToast } = useToast();
+  const updateIssueMutation = useUpdateIssue(slug);
+  const moveIssue = (issueId: string, status: IssueStatus) =>
+    updateIssueMutation
+      .mutateAsync({ issueId, body: { status } })
+      .catch((error: unknown) => {
+        const message =
+          error instanceof Error ? error.message : 'Please try again.';
+        showToast({
+          status: 'error',
+          title: "Couldn't move issue",
+          description: message,
+        });
+        throw error;
+      });
+
   return (
     <div className="flex h-full w-full flex-col gap-6">
       <span className="font-mono text-[10px] font-semibold uppercase tracking-[1.5px] text-ds-brand">
@@ -155,6 +172,11 @@ export function IssuesPage({ slug }: { slug: string }) {
           />
         ) : (
           <IssuesKanbanView
+            slug={slug}
+            issues={issues}
+            search={filters.search}
+            onAddIssue={openCreate}
+            onStatusChange={moveIssue}
             loading={issuesQuery.isPending}
             error={issuesQuery.isError}
             onRetry={() => issuesQuery.refetch()}

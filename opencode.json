@@ -9,9 +9,11 @@
     "pencil": {
       "type": "local",
       "command": [
-        "/tmp/.mount_pen.deYm3GrD/resources/app.asar.unpacked/out/mcp-server-linux-x64",
+        "/home/yonatane/.pencil/mcp/desktop/out/mcp-server-linux-x64",
         "--app",
-        "desktop"
+        "desktop",
+        "--agent",
+        "openCodeCLI"
       ],
       "enabled": true
     }

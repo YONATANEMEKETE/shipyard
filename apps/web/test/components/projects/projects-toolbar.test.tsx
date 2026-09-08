@@ -1,11 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type {
-  ProjectStatus,
-  ViewPreference,
-  WorkspaceMemberCard,
-} from '@shipyard/shared';
+import type { ViewPreference, WorkspaceMemberCard } from '@shipyard/shared';
 import type React from 'react';
 import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -29,6 +25,8 @@ vi.mock('@/hooks/use-projects', async () => {
     ...actual,
     useViewPreference: () => ({ data: viewPrefData }),
     useSetViewPreference: () => ({ mutate: mockSetView, isPending: false }),
+    // Scope-count query — empty workspace in tests (badge shows 0).
+    useProjects: () => ({ data: { projects: [] } }),
   };
 });
 
@@ -54,7 +52,7 @@ function member(
 
 /** The parent-owned filter state the toolbar patches via onChange. */
 function baseFilters(overrides: Partial<ProjectFilters> = {}): ProjectFilters {
-  return { search: '', sort: 'createdAt', order: 'desc', ...overrides };
+  return { search: '', order: 'desc', ...overrides };
 }
 
 function renderWithQC(ui: React.ReactNode) {
@@ -133,8 +131,8 @@ describe('ProjectsToolbar — filter controls', () => {
     // Search input (left)
     expect(screen.getByPlaceholderText('Find projects…')).toBeInTheDocument();
 
-    // Active / Archived scope tabs
-    expect(screen.getByRole('tab', { name: 'Active' })).toBeInTheDocument();
+    // All / Archived scope tabs (underline style, All carries the count)
+    expect(screen.getByRole('tab', { name: /All/ })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Archived' })).toBeInTheDocument();
 
     // View switch — List/Kanban icon tabs
@@ -143,24 +141,15 @@ describe('ProjectsToolbar — filter controls', () => {
       screen.getByRole('tab', { name: 'Kanban view' }),
     ).toBeInTheDocument();
 
-    // Filter pills
-    expect(
-      screen.getByRole('button', { name: 'All statuses' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'All owners' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Any start' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Any target' }),
-    ).toBeInTheDocument();
-    // Sort shows the current `sort` label; direction is desc → "Sort ascending"
-    expect(screen.getByRole('button', { name: 'Newest' })).toBeInTheDocument();
+    // Filter pills — no status filter (the list is grouped by status),
+    // no sort-field select (direction toggle only)
+    expect(screen.getByRole('button', { name: 'Owner' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Target' })).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Sort ascending' }),
     ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Clear' })).toBeNull();
   });
 
   it('defaults to List view when no preference exists yet', () => {
@@ -217,43 +206,15 @@ describe('ProjectsToolbar — filter controls', () => {
     });
   });
 
-  it('hides the status filter — but keeps owner/sort — in Kanban view', () => {
+  it('keeps owner/date filters in Kanban view (no status filter anywhere)', () => {
     viewPrefData = { view: 'KANBAN' };
     renderHarness();
 
-    // Status is a list-only concept
-    expect(screen.queryByRole('button', { name: 'All statuses' })).toBeNull();
+    // The list is grouped by status — no status pill in either view
+    expect(screen.queryByText('All statuses')).toBeNull();
     // The rest of the filter pills survive
-    expect(
-      screen.getByRole('button', { name: 'All owners' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Any start' }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Newest' })).toBeInTheDocument();
-  });
-
-  it('status select patches `status` and All resets it', async () => {
-    const user = userEvent.setup();
-    const { onFiltersChange } = renderHarness();
-
-    // Open the status select and pick Active
-    await user.click(screen.getByRole('button', { name: 'All statuses' }));
-    await user.click(screen.getByRole('option', { name: 'Active' }));
-    expect(onFiltersChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({ status: 'ACTIVE' as ProjectStatus }),
-    );
-
-    // Real state applied — the pill now shows "Active"
-    expect(screen.getByRole('button', { name: 'Active' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'All statuses' })).toBeNull();
-
-    // Switch back to All statuses → status cleared
-    await user.click(screen.getByRole('button', { name: 'Active' }));
-    await user.click(screen.getByRole('option', { name: 'All statuses' }));
-    expect(onFiltersChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({ status: undefined }),
-    );
+    expect(screen.getByRole('button', { name: 'Owner' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
   });
 
   it('owner select lists the roster and filters by user id', async () => {
@@ -271,7 +232,7 @@ describe('ProjectsToolbar — filter controls', () => {
     const user = userEvent.setup();
     const { onFiltersChange } = renderHarness();
 
-    await user.click(screen.getByRole('button', { name: 'All owners' }));
+    await user.click(screen.getByRole('button', { name: 'Owner' }));
 
     // Both roster names are present as options
     expect(
@@ -288,16 +249,9 @@ describe('ProjectsToolbar — filter controls', () => {
     );
   });
 
-  it('sort select swaps the sort key and the direction button toggles order', async () => {
+  it('direction toggle flips order', async () => {
     const user = userEvent.setup();
     const { onFiltersChange } = renderHarness();
-
-    // Change sort field
-    await user.click(screen.getByRole('button', { name: 'Newest' }));
-    await user.click(screen.getByRole('option', { name: 'Start date' }));
-    expect(onFiltersChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({ sort: 'startDate' }),
-    );
 
     // Direction toggle — desc → asc (aria-label flips)
     await user.click(screen.getByRole('button', { name: 'Sort ascending' }));
@@ -306,7 +260,25 @@ describe('ProjectsToolbar — filter controls', () => {
     );
   });
 
-  it('Active/Archived scope toggle notifies the parent', async () => {
+  it('Clear appears with active filters and resets them', async () => {
+    const user = userEvent.setup();
+    const { onFiltersChange } = renderHarness();
+
+    await user.type(screen.getByPlaceholderText('Find projects…'), 'pay');
+
+    const clear = await screen.findByRole('button', { name: 'Clear' });
+    await user.click(clear);
+    expect(onFiltersChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        search: '',
+        ownerId: undefined,
+        startDate: undefined,
+        targetDate: undefined,
+      }),
+    );
+  });
+
+  it('All/Archived scope toggle notifies the parent', async () => {
     const user = userEvent.setup();
     const { onArchivedChange } = renderHarness();
 
@@ -314,7 +286,7 @@ describe('ProjectsToolbar — filter controls', () => {
     expect(onArchivedChange).toHaveBeenCalledWith(true);
   });
 
-  it('archived prop drops view switch and all filter controls', () => {
+  it('archived prop drops view switch and filter pills, keeps search', () => {
     renderHarness({ archived: true });
 
     // Scope tabs still there, Archived selected
@@ -325,9 +297,8 @@ describe('ProjectsToolbar — filter controls', () => {
     // View switch + filter pills gone — the archived list is read-only
     expect(screen.queryByRole('tab', { name: 'List view' })).toBeNull();
     expect(screen.queryByRole('tab', { name: 'Kanban view' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'All owners' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Any start' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Newest' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Owner' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Start' })).toBeNull();
     // Search itself remains (it still filters the archived list)
     expect(screen.getByPlaceholderText('Find projects…')).toBeInTheDocument();
   });
@@ -336,7 +307,7 @@ describe('ProjectsToolbar — filter controls', () => {
     renderHarness({ onArchivedChange: undefined });
 
     expect(screen.queryByRole('tab', { name: 'Archived' })).toBeNull();
-    expect(screen.queryByRole('tab', { name: 'Active' })).toBeNull();
+    expect(screen.queryByText('All')).toBeNull();
     // View switch unaffected
     expect(
       screen.getByRole('tab', { name: 'Kanban view' }),

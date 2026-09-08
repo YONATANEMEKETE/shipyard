@@ -57,7 +57,13 @@ const tabsListVariants = tv({
         ],
         indicator: [
           'z-10',
-          'absolute bottom-0',
+          // Horizontal: `top-auto` drops the base `top-(--top)` — with
+          // top+height set, CSS ignores `bottom-0` and the line lands on
+          // top of the tab text instead of below it. Vertical keeps
+          // top+height (no bottom), so both are orientation-scoped.
+          'absolute',
+          'data-[orientation=horizontal]:bottom-0',
+          'data-[orientation=horizontal]:top-auto',
           'bg-primary',
           'data-[orientation=horizontal]:h-0.5',
           'data-[orientation=vertical]:w-0.5',

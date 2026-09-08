@@ -103,10 +103,20 @@ function statusIcon(status: IssueStatus) {
   }
 }
 
-function IssueRow({ issue }: { issue: IssueCard }) {
+function IssueRow({
+  issue,
+  onOpen,
+}: {
+  issue: IssueCard;
+  onOpen?: () => void;
+}) {
   const overdue = isOverdue(issue.dueDate);
   return (
-    <div className="flex h-12 w-full cursor-pointer items-center gap-3 border-b border-ds-border/70 px-4 last:border-b-0 transition-colors hover:bg-ds-bg">
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex h-12 w-full items-center gap-3 border-b border-ds-border/70 px-4 text-left last:border-b-0 transition-colors hover:bg-ds-bg"
+    >
       <IssuePriorityBadge priority={issue.priority} />
       <span className="shrink-0 font-mono text-[10px] font-semibold leading-none text-ds-text-muted">
         {issue.identifier}
@@ -157,7 +167,7 @@ function IssueRow({ issue }: { issue: IssueCard }) {
           Unassigned
         </span>
       )}
-    </div>
+    </button>
   );
 }
 
@@ -168,6 +178,7 @@ export function IssuesListView({
   onRetry,
   hasActiveFilters = false,
   onAddIssue,
+  onOpenIssue,
 }: {
   issues: IssueCard[];
   loading?: boolean;
@@ -175,6 +186,7 @@ export function IssuesListView({
   onRetry?: () => void;
   hasActiveFilters?: boolean;
   onAddIssue?: (status: IssueStatus) => void;
+  onOpenIssue?: (issue: IssueCard) => void;
 }) {
   const grouped = GROUP_ORDER.map((status) => ({
     status,
@@ -308,7 +320,11 @@ export function IssuesListView({
                 >
                   <div className="flex w-full flex-col">
                     {group.issues.map((issue) => (
-                      <IssueRow key={issue.id} issue={issue} />
+                      <IssueRow
+                        key={issue.id}
+                        issue={issue}
+                        onOpen={() => onOpenIssue?.(issue)}
+                      />
                     ))}
                   </div>
                 </motion.div>

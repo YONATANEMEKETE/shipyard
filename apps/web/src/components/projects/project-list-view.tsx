@@ -258,33 +258,34 @@ export function ProjectListView({
             const isCollapsed = collapsed.has(group.status);
             return (
               <section key={group.status} aria-label={meta.label}>
-                <button
-                  type="button"
-                  aria-expanded={!isCollapsed}
-                  aria-controls={`group-${group.status}`}
-                  onClick={() => toggle(group.status)}
-                  className="flex h-9 w-full items-center gap-2 border-b border-ds-border bg-ds-surface-subtle px-4 text-left transition-colors hover:bg-ds-bg"
-                >
-                  <span
-                    className={cn(
-                      'grid size-6 shrink-0 place-items-center rounded-md text-ds-text-muted transition-transform duration-200',
-                      isCollapsed ? '-rotate-90' : 'rotate-0',
-                    )}
-                    aria-hidden
+                <div className="flex h-9 w-full items-center gap-2 border-b border-ds-border bg-ds-surface-subtle px-4">
+                  <button
+                    type="button"
+                    aria-expanded={!isCollapsed}
+                    aria-controls={`group-${group.status}`}
+                    onClick={() => toggle(group.status)}
+                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
                   >
-                    <ChevronRight className="size-3.5" />
-                  </span>
-                  <span
-                    aria-hidden
-                    className={cn('size-2 shrink-0 rounded-full', meta.dot)}
-                  />
-                  <span className="text-[12.5px] font-semibold leading-none text-foreground">
-                    {meta.label}
-                  </span>
-                  <span className="text-[10px] font-semibold leading-none text-muted-foreground">
-                    {group.projects.length}
-                  </span>
-                  <span className="min-w-0 flex-1" aria-hidden />
+                    <span
+                      className={cn(
+                        'grid size-6 shrink-0 place-items-center rounded-md text-ds-text-muted transition-transform duration-200',
+                        isCollapsed ? '-rotate-90' : 'rotate-0',
+                      )}
+                      aria-hidden
+                    >
+                      <ChevronRight className="size-3.5" />
+                    </span>
+                    <span
+                      aria-hidden
+                      className={cn('size-2 shrink-0 rounded-full', meta.dot)}
+                    />
+                    <span className="text-[12.5px] font-semibold leading-none text-foreground">
+                      {meta.label}
+                    </span>
+                    <span className="text-[10px] font-semibold leading-none text-muted-foreground">
+                      {group.projects.length}
+                    </span>
+                  </button>
                   {group.status !== 'COMPLETED' ? (
                     <TooltipProvider delayDuration={100}>
                       <Tooltip>
@@ -292,10 +293,7 @@ export function ProjectListView({
                           <button
                             type="button"
                             aria-label={`New ${meta.label} project`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onAddProject?.(group.status);
-                            }}
+                            onClick={() => onAddProject?.(group.status)}
                             className="grid size-6 shrink-0 place-items-center rounded-md text-ds-text-muted transition-colors hover:bg-ds-bg hover:text-foreground"
                           >
                             <Plus className="size-3.5" />
@@ -306,8 +304,10 @@ export function ProjectListView({
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                  ) : null}
-                </button>
+                  ) : (
+                    <span className="size-6 shrink-0" aria-hidden />
+                  )}
+                </div>
                 <AnimatePresence initial={false}>
                   {!isCollapsed ? (
                     <motion.div

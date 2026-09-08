@@ -1,6 +1,7 @@
 'use client';
 
 import { Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -46,6 +47,9 @@ export function IssuesPage({ slug }: { slug: string }) {
     setCreateStatus(status);
     setCreateOpen(true);
   };
+  const router = useRouter();
+  const openIssue = (issue: { id: string }) =>
+    router.push(`/w/${slug}/issues/${issue.id}`);
 
   const q = filters.search.trim();
   const queryQ = q.length >= 2 ? q : q.length === 0 ? undefined : undefined;
@@ -107,9 +111,19 @@ export function IssuesPage({ slug }: { slug: string }) {
 
   const { showToast } = useToast();
   const updateIssueMutation = useUpdateIssue(slug);
-  const moveIssue = (issueId: string, status: IssueStatus) =>
-    updateIssueMutation
+  const moveIssue = (issueId: string, status: IssueStatus) => {
+    const label =
+      {
+        BACKLOG: 'Backlog',
+        TODO: 'Todo',
+        IN_PROGRESS: 'In Progress',
+        DONE: 'Done',
+      }[status] ?? status;
+    return updateIssueMutation
       .mutateAsync({ issueId, body: { status } })
+      .then(() => {
+        showToast({ status: 'success', title: `Moved to ${label}` });
+      })
       .catch((error: unknown) => {
         const message =
           error instanceof Error ? error.message : 'Please try again.';
@@ -120,6 +134,7 @@ export function IssuesPage({ slug }: { slug: string }) {
         });
         throw error;
       });
+  };
 
   return (
     <div className="flex h-full w-full flex-col gap-6">
@@ -169,6 +184,7 @@ export function IssuesPage({ slug }: { slug: string }) {
             onRetry={() => issuesQuery.refetch()}
             hasActiveFilters={hasActiveFilters}
             onAddIssue={openCreate}
+            onOpenIssue={openIssue}
           />
         ) : (
           <IssuesKanbanView
@@ -176,6 +192,7 @@ export function IssuesPage({ slug }: { slug: string }) {
             issues={issues}
             search={filters.search}
             onAddIssue={openCreate}
+            onOpenIssue={(id) => router.push(`/w/${slug}/issues/${id}`)}
             onStatusChange={moveIssue}
             loading={issuesQuery.isPending}
             error={issuesQuery.isError}

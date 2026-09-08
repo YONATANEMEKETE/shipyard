@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { cycleProgressSchema } from '../cycles/index.js';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Projects contracts
 //
@@ -133,6 +135,8 @@ export type ProjectOwnerCard = z.infer<typeof projectOwnerCardSchema>;
 // Card shape — what list/board/detail all render from. Dates are strings.
 // Description ships on the list payload too (board cards render it), so
 // card ≈ detail today; detail stays a named schema for future growth.
+// Progress is derived at read time from non-archived issue counts
+// ({total, completed, percent}; percent null when no issues) — never stored.
 export const projectCardSchema = z.object({
   id: z.string(),
   workspaceId: z.string(),
@@ -142,6 +146,7 @@ export const projectCardSchema = z.object({
   description: z.string().nullable(),
   startDate: projectDateSchema.nullable(),
   targetDate: projectDateSchema.nullable(),
+  progress: cycleProgressSchema,
   archivedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),

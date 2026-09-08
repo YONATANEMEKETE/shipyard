@@ -2,7 +2,10 @@ import type { SearchResults, WorkspaceMemberCard } from '@shipyard/shared';
 import { prisma } from '../../common/db/client.js';
 import type { WorkspaceRequestContext } from '../../common/guards/workspace-context.js';
 import { toCard as toIssueCard } from '../issues/service.js';
-import { toCard as toProjectCard } from '../projects/service.js';
+import {
+  progressFor as progressForProjects,
+  toCard as toProjectCard,
+} from '../projects/service.js';
 import { toCard as toCommentCard } from '../comments/service.js';
 import { progressFor, toCard as toCycleCard } from '../cycles/service.js';
 import {
@@ -178,7 +181,20 @@ export const searchService = {
     const hits = await rankedProjectIds(workspaceId, q, bound);
     const ids = hits.map((hit) => hit.id);
     const rows = orderRows(await hydrateProjects(workspaceId, ids), ids);
-    return rows.map(toProjectCard);
+    if (rows.length === 0) return [];
+    // Progress ships inline on the card (same derivation as the projects
+    // module — batched once for all hits, no N+1).
+    const progress = await progressForProjects(
+      prisma,
+      workspaceId,
+      rows.map((row) => row.id),
+    );
+    return rows.map((row) =>
+      toProjectCard(
+        row,
+        progress.get(row.id) ?? { total: 0, completed: 0, percent: null },
+      ),
+    );
   },
 
   async cyclesLeg(workspaceId: string, q: string, bound: number) {

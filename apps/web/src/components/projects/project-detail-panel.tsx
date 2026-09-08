@@ -16,6 +16,7 @@ import { Loader } from '@/components/motion/loader';
 import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/ui/error-state';
 import { EditProjectDialog } from '@/components/projects/edit-project-dialog';
+import { displayProgress } from '@/components/projects/project-progress';
 import { TransferProjectDialog } from '@/components/projects/transfer-project-dialog';
 import { ArchiveProjectDialog } from '@/components/projects/archive-project-dialog';
 import { DeleteProjectDialog } from '@/components/projects/delete-project-dialog';
@@ -36,8 +37,8 @@ import { cn } from '@/lib/utils';
  *  - No selection → empty prompt ("Select a project to see its details").
  *  - Selected + loading → a centered loader.
  *  - Selected + loaded → the full detail: owner (avatar image, falling back to
- *    initials), status, name, description, start/target dates, and a demo
- *    progress bar (45% until the issues feature drives real progress).
+ *    initials), status, name, description, start/target dates, and the
+ *    issue-derived progress bar.
  * The parent splits the content area 70/30 (list ↔ panel).
  */
 
@@ -178,6 +179,8 @@ export function ProjectDetailPanel({
     PLANNED: 'bg-ds-surface-subtle text-muted-foreground',
   };
 
+  const progress = displayProgress(project);
+
   return (
     <aside className="relative flex h-full w-full flex-col gap-4 overflow-hidden rounded-xl border border-ds-border bg-ds-surface p-5">
       {/* Header — title */}
@@ -256,7 +259,7 @@ export function ProjectDetailPanel({
 
       <div className="h-px w-full bg-ds-border" />
 
-      {/* Progress — demo 45% until the issues feature drives real progress */}
+      {/* Progress — issue-derived via displayProgress */}
       <span className="font-mono text-[9px] font-semibold uppercase tracking-[1px] text-muted-foreground">
         Progress
       </span>
@@ -264,11 +267,11 @@ export function ProjectDetailPanel({
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-ds-border">
           <div
             className="h-full rounded-full bg-ds-brand"
-            style={{ width: '45%' }}
+            style={{ width: `${progress}%` }}
           />
         </div>
         <span className="shrink-0 font-mono text-[11px] font-semibold text-foreground">
-          45%
+          {progress}%
         </span>
       </div>
 

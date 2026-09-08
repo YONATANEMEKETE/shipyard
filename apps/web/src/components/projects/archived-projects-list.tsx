@@ -1,9 +1,9 @@
 'use client';
 
-import { Archive, ArchiveRestore, RotateCw } from 'lucide-react';
+import { Archive, CornerDownRight, RotateCw } from 'lucide-react';
 import { useState } from 'react';
 
-import type { ProjectCard } from '@shipyard/shared';
+import type { ProjectCard, ProjectStatus } from '@shipyard/shared';
 import { Loader } from '@/components/motion/loader';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -12,13 +12,20 @@ import { useRestoreProject } from '@/hooks/use-projects';
 import { useToast } from '@/components/providers/toast-provider';
 import { cn } from '@/lib/utils';
 
+const STORED_STATUS_LABEL: Record<ProjectStatus, string> = {
+  PLANNED: 'was Planned',
+  ACTIVE: 'was Active',
+  COMPLETED: 'was Completed',
+};
+
 /**
- * Archived Projects — mirrors "Archived List Group" (owZDi) in shipyard.pen:
- * a read-only list of archived projects, each row showing an archive icon
- * tile, muted name + meta, and a Restore (Ghost) action. Restore needs no
- * confirmation — clicking it swaps the icon for an inline loader while the
- * row leaves the list (comes back with its status preserved into the active
- * views).
+ * Archived Projects — mirrors "Projects Grouped List" on
+ * Screen / Projects - Archived in shipyard.pen: a bare single-group list
+ * (no card container) with an Archived header (count), and 48px rows of
+ * go-arrow + muted name + ARCHIVED badge + stored status + brand Restore
+ * action. Restore needs no confirmation — clicking it swaps the label for
+ * an inline loader while the row leaves the list (comes back with its
+ * status preserved into the active views).
  */
 export function ArchivedProjectsList({
   slug,
@@ -67,54 +74,48 @@ export function ArchivedProjectsList({
     );
   };
 
-  // Loading — centered spinner in place of the list.
-  if (loading) {
-    return (
-      <div className="flex h-full w-full items-center justify-center rounded-xl border border-ds-border bg-ds-surface">
-        <Loader size={28} variant="spinner" label="Loading archived projects" />
-      </div>
-    );
-  }
-
-  // Error — retryable error state (matches the other project surfaces).
-  if (error) {
-    return (
-      <div className="flex h-full w-full items-center justify-center rounded-xl border border-ds-border bg-ds-surface">
-        <ErrorState
-          title="Couldn't load archived projects"
-          description="We ran into a problem fetching the archive. Try again in a moment."
-          action={
-            onRetry ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onRetry}
-                className="h-8 gap-2 rounded-md border-ds-border bg-ds-surface px-3 text-xs font-semibold text-foreground"
-              >
-                <RotateCw className="size-3.5" />
-                Try again
-              </Button>
-            ) : undefined
-          }
-        />
-      </div>
-    );
-  }
-
   const query = search.trim().toLowerCase();
   const visible =
     query === ''
       ? projects
       : projects.filter((p) => p.name.toLowerCase().includes(query));
 
-  return (
-    <div className="flex h-full w-full flex-col gap-3 overflow-hidden rounded-xl border border-ds-border bg-ds-surface p-4">
-      <span className="font-mono text-[10px] font-semibold uppercase tracking-[1.2px] text-muted-foreground">
-        Archived projects · read only
-      </span>
+  const showEmpty = !loading && !error && visible.length === 0;
+  const centered = showEmpty || error || loading;
 
-      <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {visible.length === 0 ? (
+  return (
+    <div className="flex h-full w-full flex-col overflow-x-auto">
+      <div
+        className={cn(
+          'relative min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+          centered && 'flex flex-col items-center justify-center',
+        )}
+      >
+        {loading ? (
+          <Loader
+            size={28}
+            variant="spinner"
+            label="Loading archived projects"
+          />
+        ) : error ? (
+          <ErrorState
+            title="Couldn't load archived projects"
+            description="We ran into a problem fetching the archive. Try again in a moment."
+            action={
+              onRetry ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onRetry}
+                  className="h-8 gap-2 rounded-md border-ds-border bg-ds-surface px-3 text-xs font-semibold text-foreground"
+                >
+                  <RotateCw className="size-3.5" />
+                  Try again
+                </Button>
+              ) : undefined
+            }
+          />
+        ) : showEmpty ? (
           <EmptyState
             icon={Archive}
             title={
@@ -125,58 +126,61 @@ export function ArchivedProjectsList({
                 ? 'Try a different name — or clear the search.'
                 : 'Archive a project and it lands here, ready to restore.'
             }
-            className="py-10"
           />
         ) : (
-          <div className="flex w-full flex-col gap-2">
+          <section aria-label="Archived">
+            <div className="flex h-9 items-center gap-2 border-b border-ds-border bg-ds-surface-subtle px-4">
+              <Archive
+                aria-hidden
+                className="size-[15px] shrink-0 text-muted-foreground"
+              />
+              <span className="text-[12.5px] font-semibold leading-none text-foreground">
+                Archived
+              </span>
+              <span className="text-[10px] font-semibold leading-none text-muted-foreground">
+                {visible.length}
+              </span>
+            </div>
             {visible.map((project) => {
               const restoring = restoringId === project.id;
               return (
                 <div
                   key={project.id}
-                  className="flex h-[60px] w-full items-center gap-3.5 rounded-xl border border-ds-border bg-ds-surface-subtle px-4"
+                  className="flex h-12 min-w-[560px] items-center gap-3 border-b border-ds-border/70 px-4 transition-colors last:border-b-0 hover:bg-ds-bg md:min-w-0"
                 >
-                  {/* Archive icon tile */}
-                  <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-ds-border bg-ds-sidebar">
-                    <Archive className="size-[18px] text-muted-foreground" />
+                  <CornerDownRight
+                    aria-hidden
+                    className="size-[15px] shrink-0 text-muted-foreground"
+                  />
+                  <span className="min-w-0 flex-1 truncate text-[12.5px] leading-none text-muted-foreground">
+                    {project.name}
                   </span>
-
-                  {/* Name + meta */}
-                  <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
-                    <span className="truncate text-[14px] font-semibold leading-none text-muted-foreground">
-                      {project.name}
-                    </span>
-                    <span className="truncate text-[11px] leading-[1.3] text-muted-foreground">
-                      Archived · {project.owner.name} · restore to reopen
-                    </span>
-                  </div>
-
-                  {/* Restore — no confirmation; inline loader while in flight */}
-                  <Button
+                  <span className="inline-flex h-5 shrink-0 items-center rounded-full bg-[#F0EFEB] px-2 font-mono text-[9px] font-semibold leading-none text-muted-foreground">
+                    ARCHIVED
+                  </span>
+                  <span className="w-24 shrink-0 text-[11.5px] leading-none text-muted-foreground">
+                    {STORED_STATUS_LABEL[project.status]}
+                  </span>
+                  <button
                     type="button"
-                    variant="ghost"
                     disabled={restoring || restoreMutation.isPending}
                     onClick={() => handleRestore(project)}
-                    className={cn(
-                      'h-8 shrink-0 gap-1.5 rounded-lg px-2.5 text-[11px] font-semibold text-foreground',
-                    )}
+                    className="shrink-0 text-xs font-semibold text-ds-brand transition-colors hover:text-ds-brand/80 disabled:pointer-events-none disabled:opacity-60"
                   >
                     {restoring ? (
                       <Loader
                         size={13}
                         variant="spinner"
                         label="Restoring project"
-                        className="text-muted-foreground"
                       />
                     ) : (
-                      <ArchiveRestore className="size-3.5" />
+                      'Restore'
                     )}
-                    Restore
-                  </Button>
+                  </button>
                 </div>
               );
             })}
-          </div>
+          </section>
         )}
       </div>
     </div>

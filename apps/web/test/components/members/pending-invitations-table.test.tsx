@@ -161,7 +161,7 @@ describe('PendingInvitationsTable — pending tab states', () => {
     expect(screen.getByText('Expires')).toBeInTheDocument();
 
     // Footer derives from the real list
-    expect(screen.getByText(/showing 2 of 2 pending/i)).toBeInTheDocument();
+    expect(screen.getByText(/showing 1–2 of 2 pending/i)).toBeInTheDocument();
   });
 
   it('renders a distinct status pill for every resolved status', () => {
@@ -245,8 +245,109 @@ describe('PendingInvitationsTable — pending tab states', () => {
     );
 
     expect(
-      screen.getByText(/showing 1 of 1 pending invitation/i),
+      screen.getByText(/showing 1–1 of 1 pending invitation/i),
     ).toBeInTheDocument();
+  });
+});
+
+describe('PendingInvitationsTable — client-side pagination', () => {
+  beforeEach(() => {
+    mockShowToast.mockClear();
+    mockResendMutate = vi.fn();
+    mockRevokeMutate = vi.fn();
+    mockResendPending = false;
+    mockRevokePending = false;
+    mockResendVariables = undefined;
+    mockRevokeVariables = undefined;
+    mockResendOpts = undefined;
+    mockRevokeOpts = undefined;
+  });
+
+  function roster(count: number): InvitationCard[] {
+    return Array.from({ length: count }, (_, index) =>
+      invitation({
+        id: `cm0inv${String(index + 1).padStart(4, '0')}`,
+        email: `invite${index + 1}@harbor.test`,
+      }),
+    );
+  }
+
+  it('renders only the first page and derives the footer range from it', () => {
+    renderWithProviders(
+      <PendingInvitationsTable invitations={roster(12)} pageSize={5} />,
+    );
+
+    expect(screen.getByText('invite1@harbor.test')).toBeInTheDocument();
+    expect(screen.getByText('invite5@harbor.test')).toBeInTheDocument();
+    expect(screen.queryByText('invite6@harbor.test')).not.toBeInTheDocument();
+    expect(screen.getByText(/showing 1–5 of 12 pending/i)).toBeInTheDocument();
+  });
+
+  it('navigates with previous/next and disables the bounds', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PendingInvitationsTable invitations={roster(12)} pageSize={5} />,
+    );
+
+    const prev = screen.getByRole('button', { name: /previous page/i });
+    const next = screen.getByRole('button', { name: /next page/i });
+    expect(prev).toBeDisabled();
+    expect(next).toBeEnabled();
+
+    await user.click(next);
+    expect(screen.queryByText('invite1@harbor.test')).not.toBeInTheDocument();
+    expect(screen.getByText('invite6@harbor.test')).toBeInTheDocument();
+    expect(screen.getByText(/showing 6–10 of 12 pending/i)).toBeInTheDocument();
+
+    await user.click(next);
+    expect(screen.getByText('invite12@harbor.test')).toBeInTheDocument();
+    expect(
+      screen.getByText(/showing 11–12 of 12 pending/i),
+    ).toBeInTheDocument();
+    expect(next).toBeDisabled();
+
+    await user.click(prev);
+    expect(screen.getByText(/showing 6–10 of 12 pending/i)).toBeInTheDocument();
+  });
+
+  it('jumps straight to a numbered page', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PendingInvitationsTable invitations={roster(12)} pageSize={5} />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /go to page 3/i }));
+    expect(screen.getByText('invite11@harbor.test')).toBeInTheDocument();
+    expect(
+      screen.getByText(/showing 11–12 of 12 pending/i),
+    ).toBeInTheDocument();
+  });
+
+  it('clamps back to the last page when the list shrinks', async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderWithProviders(
+      <PendingInvitationsTable invitations={roster(12)} pageSize={5} />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /go to page 3/i }));
+    expect(
+      screen.getByText(/showing 11–12 of 12 pending/i),
+    ).toBeInTheDocument();
+
+    const qc = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    rerender(
+      <QueryClientProvider client={qc}>
+        <PendingInvitationsTable invitations={roster(2)} pageSize={5} />
+      </QueryClientProvider>,
+    );
+    expect(screen.getByText('invite1@harbor.test')).toBeInTheDocument();
+    expect(screen.getByText('invite2@harbor.test')).toBeInTheDocument();
+    expect(screen.getByText(/showing 1–2 of 2 pending/i)).toBeInTheDocument();
   });
 });
 

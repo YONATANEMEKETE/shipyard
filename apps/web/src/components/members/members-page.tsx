@@ -186,7 +186,11 @@ export function MembersPage({ slug }: { slug: string }) {
   );
 
   const directory = (
+    // Key remounts the table (resetting it to page 1) whenever the filters
+    // change — the table otherwise keeps its page and only clamps when the
+    // list shrinks, so background refetches never yank the user to page 1.
     <MemberDirectory
+      key={`directory-${search}-${roleFilter ?? 'ALL'}`}
       members={visibleMembers}
       loading={membersQuery.isPending}
       error={membersQuery.isError}
@@ -270,7 +274,10 @@ export function MembersPage({ slug }: { slug: string }) {
             {directory}
           </TabsContent>
           <TabsContent value="pending" className="min-h-0">
+            {/* Key remounts the table (resetting it to page 1) whenever the
+                filters change — same pattern as the directory tab above. */}
             <PendingInvitations
+              key={`pending-${inviteSearch}-${inviteStatus ?? 'ALL'}`}
               slug={slug}
               invitations={visibleInvitations}
               loading={invitationsQuery.isPending}

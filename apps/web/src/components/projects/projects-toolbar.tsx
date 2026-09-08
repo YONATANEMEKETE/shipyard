@@ -87,12 +87,6 @@ export function ProjectsToolbar({
     setViewPref.mutate({ scope: 'PROJECT', view });
   };
 
-  const hasActiveFilters =
-    filters.search.trim() !== '' ||
-    filters.ownerId !== undefined ||
-    filters.startDate !== undefined ||
-    filters.targetDate !== undefined;
-
   const clearFilters = () =>
     onChange({
       ...filters,
@@ -100,6 +94,7 @@ export function ProjectsToolbar({
       ownerId: undefined,
       startDate: undefined,
       targetDate: undefined,
+      order: 'desc',
     });
 
   return (
@@ -240,11 +235,11 @@ export function ProjectsToolbar({
           ) : null}
         </div>
 
-        {!archived && hasActiveFilters ? (
+        {!archived ? (
           <button
             type="button"
             onClick={clearFilters}
-            className="shrink-0 text-xs font-medium text-ds-brand transition-colors hover:text-ds-brand/80"
+            className="shrink-0 px-1 text-xs font-medium text-ds-brand transition-colors hover:text-ds-brand/80"
           >
             Clear
           </button>

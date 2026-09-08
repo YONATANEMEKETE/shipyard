@@ -173,6 +173,7 @@ export function ProjectsPage({ slug }: { slug: string }) {
                 error={projectsQuery.isError}
                 onRetry={projectsQuery.refetch}
                 onOpenProject={(project) => setSelectedProjectId(project.id)}
+                onAddProject={(status) => openCreate(status)}
               />
             ) : (
               <ProjectKanbanView

@@ -1,5 +1,6 @@
 import type {
   CreateProjectRequest,
+  CycleProgress,
   ProjectCard,
   ProjectDetail,
   UpdateProjectRequest,
@@ -53,7 +54,7 @@ function toDateString(date: Date | null | undefined): string | null {
 
 // Exported for the search module (F10): grouped hits re-render owning card
 // shapes exactly — mapping stays single-sourced here, never duplicated.
-export function toCard(row: ProjectRow): ProjectCard {
+export function toCard(row: ProjectRow, progress: CycleProgress): ProjectCard {
   const ownerMembership = row.owner.workspaceMembers[0];
   return {
     id: row.id,
@@ -70,14 +71,72 @@ export function toCard(row: ProjectRow): ProjectCard {
     description: row.description ?? null,
     startDate: toDateString(row.startDate),
     targetDate: toDateString(row.targetDate),
+    progress,
     archivedAt: row.archivedAt ? row.archivedAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
 }
 
-function toDetail(row: ProjectRow): ProjectDetail {
-  return toCard(row);
+function toDetail(row: ProjectRow, progress: CycleProgress): ProjectDetail {
+  return toCard(row, progress);
+}
+
+function emptyProgress(): CycleProgress {
+  return { total: 0, completed: 0, percent: null };
+}
+
+// Progress derivation (mirrors cycles progressFor): batched totals + dones
+// over non-archived issues, read-time only — never stored. Exported for the
+// search module (F10).
+export async function progressFor(
+  client: DbClient,
+  workspaceId: string,
+  projectIds: string[],
+): Promise<Map<string, CycleProgress>> {
+  const result = new Map<string, CycleProgress>();
+  for (const id of projectIds) result.set(id, emptyProgress());
+  if (projectIds.length === 0) return result;
+
+  const [totals, dones] = await Promise.all([
+    projectsRepository.countIssuesByProject(client, workspaceId, projectIds),
+    projectsRepository.countDoneByProject(client, workspaceId, projectIds),
+  ]);
+  for (const row of totals) {
+    if (row.projectId)
+      result.set(row.projectId, {
+        total: row._count._all,
+        completed: 0,
+        percent: null,
+      });
+  }
+  for (const row of dones) {
+    if (!row.projectId) continue;
+    const entry = result.get(row.projectId) ?? emptyProgress();
+    const completed = row._count._all;
+    result.set(row.projectId, {
+      total: entry.total,
+      completed,
+      percent:
+        entry.total === 0 ? null : Math.round((completed / entry.total) * 100),
+    });
+  }
+  return result;
+}
+
+async function cardFor(
+  client: DbClient,
+  row: ProjectRow,
+): Promise<ProjectCard> {
+  const progress = await progressFor(client, row.workspaceId, [row.id]);
+  return toCard(row, progress.get(row.id) ?? emptyProgress());
+}
+
+async function detailFor(
+  client: DbClient,
+  row: ProjectRow,
+): Promise<ProjectDetail> {
+  return cardFor(client, row);
 }
 
 function requireProject(row: ProjectRow | null): ProjectRow {
@@ -134,14 +193,23 @@ export const projectsService = {
       orderBy,
       take: LIST_LIMIT,
     });
-    return rows.map(toCard);
+    if (rows.length === 0) return [];
+    // Progress ships inline on the card — batched once for all rows, no N+1.
+    const progress = await progressFor(
+      prisma,
+      context.workspaceId,
+      rows.map((row) => row.id),
+    );
+    return rows.map((row) =>
+      toCard(row, progress.get(row.id) ?? emptyProgress()),
+    );
   },
 
   async getDetail(
     context: WorkspaceRequestContext,
     projectId: string,
   ): Promise<ProjectDetail> {
-    return toDetail(await resolveProject(projectId, context));
+    return detailFor(prisma, await resolveProject(projectId, context));
   },
 
   /**
@@ -156,7 +224,15 @@ export const projectsService = {
       orderBy: { createdAt: 'desc' },
       take: 20,
     });
-    return rows.map(toCard);
+    if (rows.length === 0) return [];
+    const progress = await progressFor(
+      prisma,
+      workspaceId,
+      rows.map((row) => row.id),
+    );
+    return rows.map((row) =>
+      toCard(row, progress.get(row.id) ?? emptyProgress()),
+    );
   },
 
   // ── Create (spec §3.1) ────────────────────────────────────────────────
@@ -215,7 +291,7 @@ export const projectsService = {
         },
         'project.created',
       );
-      return toDetail(row);
+      return toDetail(row, emptyProgress());
     } catch (error) {
       // Race: the D3 functional index is the source of truth for uniqueness.
       if ((error as { code?: string }).code === 'P2002')
@@ -308,7 +384,7 @@ export const projectsService = {
       },
       'project.updated',
     );
-    return toDetail(row);
+    return detailFor(prisma, row);
   },
 
   // ── Ownership transfer (spec §3.3) ────────────────────────────────────
@@ -378,7 +454,7 @@ export const projectsService = {
       },
       'project.owner_transferred',
     );
-    return toCard(row);
+    return cardFor(prisma, row);
   },
 
   // ── Archive / restore (spec §3.2) ─────────────────────────────────────
@@ -429,7 +505,7 @@ export const projectsService = {
     );
     // Restore returns to the stored operational status for free: `status` is
     // untouched by archive/restore (data-model D1).
-    return toDetail(row);
+    return detailFor(prisma, row);
   },
 
   async restore(
@@ -476,7 +552,7 @@ export const projectsService = {
       },
       'project.restored',
     );
-    return toDetail(row);
+    return detailFor(prisma, row);
   },
 
   // ── Permanent delete (spec rule 9) ────────────────────────────────────

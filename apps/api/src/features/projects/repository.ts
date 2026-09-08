@@ -137,6 +137,45 @@ export const projectsRepository = {
     return client.project.delete({ where: { id } });
   },
 
+  /** Total non-archived issues per project, one groupBy (mirrors F7 D8). */
+  countIssuesByProject(
+    client: DbClient,
+    workspaceId: string,
+    projectIds: string[],
+  ) {
+    if (projectIds.length === 0)
+      return Promise.resolve(
+        [] as { projectId: string | null; _count: { _all: number } }[],
+      );
+    return client.issue.groupBy({
+      by: ['projectId'],
+      where: { workspaceId, projectId: { in: projectIds }, archivedAt: null },
+      _count: { _all: true },
+    });
+  },
+
+  /** Done non-archived issues per project, one groupBy. */
+  countDoneByProject(
+    client: DbClient,
+    workspaceId: string,
+    projectIds: string[],
+  ) {
+    if (projectIds.length === 0)
+      return Promise.resolve(
+        [] as { projectId: string | null; _count: { _all: number } }[],
+      );
+    return client.issue.groupBy({
+      by: ['projectId'],
+      where: {
+        workspaceId,
+        projectId: { in: projectIds },
+        archivedAt: null,
+        status: 'DONE',
+      },
+      _count: { _all: true },
+    });
+  },
+
   /** F3 Checkpoint B contract: move owned projects to the new owner. No
    *  archivedAt filter — archived projects transfer too (spec rule 6). */
   transferOwned(

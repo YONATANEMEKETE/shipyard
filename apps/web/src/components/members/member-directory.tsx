@@ -17,6 +17,7 @@ export function MemberDirectory({
   onOpenMember,
   emptyTitle,
   emptyDescription,
+  pageSize,
 }: {
   members: WorkspaceMemberCard[];
   loading?: boolean;
@@ -26,6 +27,8 @@ export function MemberDirectory({
   onOpenMember?: (member: WorkspaceMemberCard) => void;
   emptyTitle?: string;
   emptyDescription?: string;
+  /** Rows per client-side page — forwarded to MembersTable. */
+  pageSize?: number;
 }) {
   return (
     <MembersTable
@@ -37,6 +40,7 @@ export function MemberDirectory({
       onOpenMember={onOpenMember}
       emptyTitle={emptyTitle}
       emptyDescription={emptyDescription}
+      pageSize={pageSize}
     />
   );
 }

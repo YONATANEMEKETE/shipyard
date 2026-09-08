@@ -19,6 +19,7 @@ export function PendingInvitations({
   onRetry,
   emptyTitle,
   emptyDescription,
+  pageSize,
 }: {
   slug?: string;
   invitations: InvitationCard[];
@@ -28,6 +29,8 @@ export function PendingInvitations({
   /** Customize the empty state copy — e.g. "no matches" when filters are active. */
   emptyTitle?: string;
   emptyDescription?: string;
+  /** Rows per client-side page — forwarded to PendingInvitationsTable. */
+  pageSize?: number;
 }) {
   return (
     <PendingInvitationsTable
@@ -38,6 +41,7 @@ export function PendingInvitations({
       onRetry={onRetry}
       emptyTitle={emptyTitle}
       emptyDescription={emptyDescription}
+      pageSize={pageSize}
     />
   );
 }

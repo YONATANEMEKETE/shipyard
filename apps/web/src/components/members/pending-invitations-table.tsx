@@ -1,11 +1,11 @@
 'use client';
 
-import { Send, X } from 'lucide-react';
-import { ChevronLeft, ChevronRight, MailPlus, RotateCw } from 'lucide-react';
+import { MailPlus, RotateCw, Send, X } from 'lucide-react';
 import type { InvitationCard } from '@shipyard/shared';
 
 import { InvitationStatusBadge } from '@/components/members/invitation-status-badge';
 import { MemberBadge } from '@/components/members/member-badge';
+import { TablePaginationFooter } from '@/components/members/table-pagination-footer';
 import { Loader } from '@/components/motion/loader';
 import { StatefulButton } from '@/components/motion/button/stateful';
 import { useToast } from '@/components/providers/toast-provider';
@@ -13,6 +13,7 @@ import {
   useResendInvitation,
   useRevokeInvitation,
 } from '@/hooks/use-invitations';
+import { useClientPagination } from '@/hooks/use-pagination';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,13 @@ import { cn } from '@/lib/utils';
  * Column set from "Screen / Members — Pending Invitations" in shipyard.pen:
  * Invitee (email + invited-note) · Role · Status · Expires · Actions
  * (Resend / Revoke). Consumes InvitationCard exactly as the API returns it.
+ *
+ * Pagination is client-side: the API returns the full list (already filtered
+ * by the parent), and this table slices it into pages of `pageSize`.
  */
+
+/** Default rows per page — mirrors MEMBERS_PAGE_SIZE so both tabs paginate identically. */
+export const INVITATIONS_PAGE_SIZE = 15;
 
 function formatInvited(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', {
@@ -162,6 +169,7 @@ export function PendingInvitationsTable({
   onRetry,
   emptyTitle,
   emptyDescription,
+  pageSize = INVITATIONS_PAGE_SIZE,
 }: {
   slug?: string;
   invitations: InvitationCard[];
@@ -171,6 +179,8 @@ export function PendingInvitationsTable({
   /** Customize the empty state copy — e.g. "no matches" when filters are active. */
   emptyTitle?: string;
   emptyDescription?: string;
+  /** Rows per client-side page — defaults to INVITATIONS_PAGE_SIZE. */
+  pageSize?: number;
 }) {
   const { showToast } = useToast();
 
@@ -210,6 +220,17 @@ export function PendingInvitationsTable({
 
   const showEmpty = !loading && !error && invitations.length === 0;
   const centered = (showEmpty || error) && !loading;
+
+  // Client-side pagination over the (already filtered) list.
+  const {
+    pagedItems: pagedInvitations,
+    currentPage,
+    totalPages,
+    totalCount,
+    startIndex,
+    endIndex,
+    setPage,
+  } = useClientPagination(invitations, pageSize);
 
   return (
     <div className="flex h-full w-full flex-col overflow-x-auto rounded-xl border border-ds-border bg-ds-surface">
@@ -271,7 +292,7 @@ export function PendingInvitationsTable({
             }
           />
         ) : (
-          invitations.map((invitation) => {
+          pagedInvitations.map((invitation) => {
             const isResending =
               resendMutation.isPending &&
               (resendMutation.variables as { invitationId: string } | undefined)
@@ -303,35 +324,23 @@ export function PendingInvitationsTable({
         />
       </div>
 
-      {/* Pagination footer — UI only for now */}
-      <div className="flex h-[52px] min-w-[720px] shrink-0 items-center justify-between gap-4 px-4 md:min-w-0">
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            aria-label="Previous page"
-            className="grid size-7 place-items-center rounded-md border border-ds-border bg-ds-bg text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ChevronLeft className="size-[14px]" />
-          </button>
-          <button
-            type="button"
-            className="grid size-7 place-items-center rounded-md bg-ds-brand text-xs font-semibold text-white"
-          >
-            1
-          </button>
-          <button
-            type="button"
-            aria-label="Next page"
-            className="grid size-7 place-items-center rounded-md border border-ds-border bg-ds-bg text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ChevronRight className="size-[14px]" />
-          </button>
-        </div>
-        <span className="text-[11px] text-muted-foreground">
-          Showing {invitations.length} of {invitations.length}{' '}
-          {invitations.length === 1 ? 'pending invitation' : 'pending'}
-        </span>
-      </div>
+      {/* Pagination footer — client-side over the filtered list */}
+      <TablePaginationFooter
+        page={currentPage}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        className="min-w-[720px]"
+        label={
+          totalCount === 0 ? (
+            <>Showing 0 of 0 pending</>
+          ) : (
+            <>
+              Showing {startIndex + 1}–{endIndex} of {totalCount}{' '}
+              {totalCount === 1 ? 'pending invitation' : 'pending'}
+            </>
+          )
+        }
+      />
     </div>
   );
 }

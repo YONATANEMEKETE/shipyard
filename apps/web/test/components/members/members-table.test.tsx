@@ -137,3 +137,84 @@ describe('MembersTable — directory states', () => {
     expect(screen.queryByRole('button', { name: /try again/i })).toBeNull();
   });
 });
+
+describe('MembersTable — client-side pagination', () => {
+  function roster(count: number): WorkspaceMemberCard[] {
+    return Array.from({ length: count }, (_, index) =>
+      member({
+        id: `cm0mem${String(index + 1).padStart(4, '0')}`,
+        userId: `usr_${index + 1}`,
+        name: `Member ${String(index + 1).padStart(2, '0')}`,
+        email: `member${index + 1}@harbor.test`,
+      }),
+    );
+  }
+
+  it('renders only the first page and derives the footer range from it', () => {
+    const first = render(<MembersTable members={roster(12)} pageSize={5} />);
+
+    expect(screen.getByText('Member 01')).toBeInTheDocument();
+    expect(screen.getByText('Member 05')).toBeInTheDocument();
+    expect(screen.queryByText('Member 06')).not.toBeInTheDocument();
+    expect(screen.getByText(/showing 1–5 of 12 members/i)).toBeInTheDocument();
+    first.unmount();
+
+    // Single page within the default page size keeps the old label shape
+    render(<MembersTable members={roster(3)} />);
+    expect(screen.getByText(/showing 1–3 of 3 members/i)).toBeInTheDocument();
+  });
+
+  it('navigates with previous/next and disables the bounds', async () => {
+    const user = userEvent.setup();
+    render(<MembersTable members={roster(12)} pageSize={5} />);
+
+    const prev = screen.getByRole('button', { name: /previous page/i });
+    const next = screen.getByRole('button', { name: /next page/i });
+    expect(prev).toBeDisabled();
+    expect(next).toBeEnabled();
+
+    await user.click(next);
+    expect(screen.queryByText('Member 01')).not.toBeInTheDocument();
+    expect(screen.getByText('Member 06')).toBeInTheDocument();
+    expect(screen.getByText(/showing 6–10 of 12 members/i)).toBeInTheDocument();
+    expect(prev).toBeEnabled();
+
+    await user.click(next);
+    expect(screen.getByText('Member 12')).toBeInTheDocument();
+    expect(
+      screen.getByText(/showing 11–12 of 12 members/i),
+    ).toBeInTheDocument();
+    expect(next).toBeDisabled();
+
+    await user.click(prev);
+    expect(screen.getByText(/showing 6–10 of 12 members/i)).toBeInTheDocument();
+  });
+
+  it('jumps straight to a numbered page', async () => {
+    const user = userEvent.setup();
+    render(<MembersTable members={roster(12)} pageSize={5} />);
+
+    await user.click(screen.getByRole('button', { name: /go to page 3/i }));
+    expect(screen.getByText('Member 11')).toBeInTheDocument();
+    expect(
+      screen.getByText(/showing 11–12 of 12 members/i),
+    ).toBeInTheDocument();
+  });
+
+  it('clamps back to the last page when the list shrinks', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <MembersTable members={roster(12)} pageSize={5} />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /go to page 3/i }));
+    expect(
+      screen.getByText(/showing 11–12 of 12 members/i),
+    ).toBeInTheDocument();
+
+    rerender(<MembersTable members={roster(2)} pageSize={5} />);
+    expect(screen.getByText('Member 01')).toBeInTheDocument();
+    expect(screen.getByText('Member 02')).toBeInTheDocument();
+    expect(screen.getByText(/showing 1–2 of 2 members/i)).toBeInTheDocument();
+  });
+});

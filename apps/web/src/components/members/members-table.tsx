@@ -1,13 +1,15 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { RotateCw, Users } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState } from 'react';
 import type { WorkspaceMemberCard, WorkspaceRole } from '@shipyard/shared';
 
 import { MemberBadge } from '@/components/members/member-badge';
+import { TablePaginationFooter } from '@/components/members/table-pagination-footer';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { Button } from '@/components/ui/button';
+import { useClientPagination } from '@/hooks/use-pagination';
 import { SPRING_LAYOUT } from '@/lib/ease';
 import { cn } from '@/lib/utils';
 
@@ -15,7 +17,14 @@ import { cn } from '@/lib/utils';
  * Members directory table — matches "Directory Card" in shipyard.pen
  * (576px white surface, mono column header, 48px rows, pagination footer).
  * Consumes WorkspaceMemberCard exactly as the members API returns it.
+ *
+ * Pagination is client-side: the API returns the full roster (already
+ * filtered by the parent), and this table slices it into pages of
+ * `pageSize`. The footer controls are fully functional.
  */
+
+/** Default rows per page — tweak here if the directory card geometry changes. */
+export const MEMBERS_PAGE_SIZE = 15;
 
 function initialsOf(name: string): string {
   return name
@@ -166,6 +175,7 @@ export function MembersTable({
   onOpenMember,
   emptyTitle,
   emptyDescription,
+  pageSize = MEMBERS_PAGE_SIZE,
 }: {
   members: WorkspaceMemberCard[];
   loading?: boolean;
@@ -177,9 +187,22 @@ export function MembersTable({
   /** Customize the empty state copy — e.g. "no matches" when filters are active. */
   emptyTitle?: string;
   emptyDescription?: string;
+  /** Rows per client-side page — defaults to MEMBERS_PAGE_SIZE. */
+  pageSize?: number;
 }) {
   const showEmpty = !loading && !error && members.length === 0;
   const centered = (showEmpty || error) && !loading;
+
+  // Client-side pagination over the (already filtered) roster.
+  const {
+    pagedItems: pagedMembers,
+    currentPage,
+    totalPages,
+    totalCount,
+    startIndex,
+    endIndex,
+    setPage,
+  } = useClientPagination(members, pageSize);
 
   return (
     <div className="flex h-full w-full flex-col overflow-x-auto rounded-xl border border-ds-border bg-ds-surface">
@@ -236,7 +259,7 @@ export function MembersTable({
             }
           />
         ) : (
-          members.map((member) => (
+          pagedMembers.map((member) => (
             <MemberRow
               key={member.id}
               member={member}
@@ -254,35 +277,23 @@ export function MembersTable({
         />
       </div>
 
-      {/* Pagination footer — UI only for now */}
-      <div className="flex h-[52px] min-w-[640px] shrink-0 items-center justify-between gap-4 px-4 md:min-w-0">
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            aria-label="Previous page"
-            className="grid size-7 place-items-center rounded-md border border-ds-border bg-ds-bg text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ChevronLeft className="size-[14px]" />
-          </button>
-          <button
-            type="button"
-            className="grid size-7 place-items-center rounded-md bg-ds-brand text-xs font-semibold text-white"
-          >
-            1
-          </button>
-          <button
-            type="button"
-            aria-label="Next page"
-            className="grid size-7 place-items-center rounded-md border border-ds-border bg-ds-bg text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ChevronRight className="size-[14px]" />
-          </button>
-        </div>
-        <span className="text-[11px] text-muted-foreground">
-          Showing 1–{members.length} of {members.length}{' '}
-          {members.length === 1 ? 'member' : 'members'}
-        </span>
-      </div>
+      {/* Pagination footer — client-side over the filtered roster */}
+      <TablePaginationFooter
+        page={currentPage}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        className="min-w-[640px]"
+        label={
+          totalCount === 0 ? (
+            <>Showing 0 of 0 members</>
+          ) : (
+            <>
+              Showing {startIndex + 1}–{endIndex} of {totalCount}{' '}
+              {totalCount === 1 ? 'member' : 'members'}
+            </>
+          )
+        }
+      />
     </div>
   );
 }

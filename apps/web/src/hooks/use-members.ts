@@ -10,6 +10,7 @@ import type {
   RemoveMemberRequest,
   TransferOwnershipRequest,
   WorkspaceMemberCard,
+  WorkspaceMemberDetail,
 } from '@shipyard/shared';
 
 import {
@@ -63,7 +64,7 @@ export function useMember(
   slug: string | null | undefined,
   memberId: string | null | undefined,
   options?: Omit<
-    UseQueryOptions<WorkspaceMemberCard, MembersApiError>,
+    UseQueryOptions<WorkspaceMemberDetail, MembersApiError>,
     'queryKey' | 'queryFn' | 'enabled'
   > & { enabled?: boolean },
 ) {
@@ -99,7 +100,12 @@ export function useChangeMemberRole(
     mutationFn: ({ memberId, body }) => changeMemberRole(slug, memberId, body),
     ...rest,
     onSuccess: (data, variables, context, mutation) => {
-      queryClient.setQueryData(memberKeys.detail(slug, data.id), data);
+      // Detail cache holds card + stats; role change keeps stats — merge so
+      // the dialog never loses its counts on a role update.
+      queryClient.setQueryData<WorkspaceMemberDetail>(
+        memberKeys.detail(slug, data.id),
+        (old) => (old ? { ...data, stats: old.stats } : undefined),
+      );
       void queryClient.invalidateQueries({ queryKey: memberKeys.list(slug) });
       onSuccess?.(data, variables, context, mutation);
     },
@@ -170,7 +176,10 @@ export function useTransferOwnership(
     ...rest,
     onSuccess: (data, variables, context, mutation) => {
       for (const member of data.members) {
-        queryClient.setQueryData(memberKeys.detail(slug, member.id), member);
+        queryClient.setQueryData<WorkspaceMemberDetail>(
+          memberKeys.detail(slug, member.id),
+          (old) => (old ? { ...member, stats: old.stats } : undefined),
+        );
       }
       void queryClient.invalidateQueries({ queryKey: memberKeys.list(slug) });
       onSuccess?.(data, variables, context, mutation);

@@ -82,6 +82,22 @@ export const workspaceMemberCardSchema = z.object({
 
 export type WorkspaceMemberCard = z.infer<typeof workspaceMemberCardSchema>;
 
+// Member detail stats — bundled into GET /members/:memberId so the web
+// dialog renders Projects/Issues with a single fetch (no cycles: cycles
+// are team-level, no owner/assignee).
+export const workspaceMemberStatsSchema = z.object({
+  projectsOwned: z.number().int().nonnegative(),
+  issuesAssigned: z.number().int().nonnegative(),
+});
+
+export type WorkspaceMemberStats = z.infer<typeof workspaceMemberStatsSchema>;
+
+export const workspaceMemberDetailSchema = workspaceMemberCardSchema.extend({
+  stats: workspaceMemberStatsSchema,
+});
+
+export type WorkspaceMemberDetail = z.infer<typeof workspaceMemberDetailSchema>;
+
 export const invitationCardSchema = z.object({
   id: z.string(),
   workspaceId: z.string(),

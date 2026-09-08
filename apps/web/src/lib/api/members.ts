@@ -3,6 +3,7 @@ import type {
   RemoveMemberRequest,
   TransferOwnershipRequest,
   WorkspaceMemberCard,
+  WorkspaceMemberDetail,
 } from '@shipyard/shared';
 
 import { confirmRequest, requestJson } from '@/lib/api/request';
@@ -57,8 +58,8 @@ export function listMembers(slug: string): Promise<ListMembersResponse> {
 export function getMember(
   slug: string,
   memberId: string,
-): Promise<WorkspaceMemberCard> {
-  return requestJson<WorkspaceMemberCard>(
+): Promise<WorkspaceMemberDetail> {
+  return requestJson<WorkspaceMemberDetail>(
     `${membersBase(slug)}/${encodeURIComponent(memberId)}`,
     { method: 'GET' },
     'Failed to load member',

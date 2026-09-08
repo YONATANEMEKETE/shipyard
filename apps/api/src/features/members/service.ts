@@ -6,6 +6,7 @@ import type {
   InviteMembersRequest,
   RecordActivityEvent,
   WorkspaceMemberCard,
+  WorkspaceMemberDetail,
 } from '@shipyard/shared';
 import { INVITATION_TTL_DAYS } from '@shipyard/shared';
 import { env } from '../../common/config/env.js';
@@ -130,11 +131,24 @@ export const membersService = {
   async getMember(
     workspaceId: string,
     memberId: string,
-  ): Promise<WorkspaceMemberCard> {
+  ): Promise<WorkspaceMemberDetail> {
     const row = await membersRepository.findMemberById(prisma, memberId);
     if (!row || row.workspaceId !== workspaceId)
       throw new MemberNotFoundError();
-    return toMemberCard(row);
+    const card = toMemberCard(row);
+    // Bundled stats — single fetch for the member details dialog. Counts
+    // include archived rows (no archivedAt filter), matching the previous
+    // web total of active + archived project lists and the atomic
+    // remove/leave transfer+unassign semantics (archived included).
+    const [projectsOwned, issuesAssigned] = await Promise.all([
+      prisma.project.count({
+        where: { workspaceId, ownerId: row.userId },
+      }),
+      prisma.issue.count({
+        where: { workspaceId, assigneeId: row.userId },
+      }),
+    ]);
+    return { ...card, stats: { projectsOwned, issuesAssigned } };
   },
 
   // ── Change role ────────────────────────────────────────────────────────

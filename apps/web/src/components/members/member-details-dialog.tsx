@@ -1,12 +1,13 @@
 'use client';
 
-import { ChevronRight, Shield, UserCog, UserX, X } from 'lucide-react';
+import { ChevronRight, Loader2, Shield, UserCog, UserX, X } from 'lucide-react';
 import { Dialog as DialogPrimitive } from 'radix-ui';
+import type { ReactNode } from 'react';
 
 import type { WorkspaceMemberCard, WorkspaceRole } from '@shipyard/shared';
 
 import { MemberBadge } from '@/components/members/member-badge';
-import { useOwnedProjectCount } from '@/hooks/use-projects';
+import { useMember } from '@/hooks/use-members';
 import { cn } from '@/lib/utils';
 
 /**
@@ -19,10 +20,9 @@ import { cn } from '@/lib/utils';
  *    remove Members — hidden for ADMIN/OWNER targets, mirroring "Member
  *    Details Modal — Admin").
  *  - MEMBER viewer sees identity + definition list only (read-only).
- * Action rows are UI-only for now — the Change Role / Transfer Ownership /
- * Remove confirmations land next. Data beyond the member card (project/cycle/
- * issue counts) defaults to 0 via `stats` until the details endpoint supplies
- * them.
+ * Stats (projects owned / issues assigned) come bundled from
+ * GET /members/:memberId in a single fetch — no separate project/issue
+ * queries. Cycles are intentionally absent (team-level, no assignee).
  */
 
 function initialsOf(name: string): string {
@@ -50,7 +50,6 @@ const AVATAR_TONE: Record<WorkspaceRole, string> = {
 
 export interface MemberStats {
   projectsOwned: number;
-  cyclesAssigned: number;
   issuesAssigned: number;
 }
 
@@ -66,8 +65,8 @@ interface MemberDetailsDialogProps {
   /** Viewer's role on this workspace — drives which action sections render. */
   viewerRole?: WorkspaceRole;
   currentUserId?: string;
-  /** Display counts — when omitted the dialog fetches real owned-project
-   *  counts (including archived) from the projects API. Kept for tests. */
+  /** Display-count override — skips the detail fetch when both counts are
+   *  provided. Kept for tests / optimistic callers. */
   stats?: Partial<MemberStats>;
 }
 
@@ -88,39 +87,61 @@ export function MemberDetailsDialog({
   const isOwner = member.role === 'OWNER';
   const viewerCanManage = viewerRole === 'OWNER' && !isOwner && !isSelf;
 
-  // Real owned-project count including archived (Checkpoint B). Fetched only
-  // when the dialog is open and no explicit stats override was provided.
-  const shouldFetchCount = open && stats?.projectsOwned === undefined;
-  const { data: fetchedProjectsOwned } = useOwnedProjectCount(
-    slug,
-    member.userId,
-    { enabled: shouldFetchCount },
-  );
-  const projectsOwned = fetchedProjectsOwned ?? stats?.projectsOwned ?? 0;
+  // Single-fetch stats bundled in GET /members/:memberId. The list row
+  // (`member` prop) renders identity instantly; counts resolve from the
+  // detail query. Skipped when both overrides are provided (tests).
+  const shouldFetchDetail =
+    open &&
+    Boolean(slug) &&
+    (stats?.projectsOwned === undefined || stats?.issuesAssigned === undefined);
+  const detailQuery = useMember(slug, member.id, {
+    enabled: shouldFetchDetail,
+  });
+  // While pending with no override → spinner. On error/success-empty →
+  // fall back to 0 so identity + actions still render (previous behaviour).
+  const projectsOwned =
+    stats?.projectsOwned ??
+    detailQuery.data?.stats.projectsOwned ??
+    (detailQuery.isPending ? undefined : 0);
+  const issuesAssigned =
+    stats?.issuesAssigned ??
+    detailQuery.data?.stats.issuesAssigned ??
+    (detailQuery.isPending ? undefined : 0);
 
   // Remove is the only action Admins get, and only against Members.
   const viewerCanRemove =
     (viewerRole === 'OWNER' && !isOwner && !isSelf) ||
     (viewerRole === 'ADMIN' && member.role === 'MEMBER');
 
-  const rows: { label: string; value: string; divider?: boolean }[] = [
+  const rows: { label: string; value: ReactNode; divider?: boolean }[] = [
     {
       label: 'Status',
       value: `Active · Member since ${formatJoined(member.createdAt)}`,
     },
     {
       label: 'Projects',
-      value: `${projectsOwned} owned`,
-      divider: true,
-    },
-    {
-      label: 'Cycles',
-      value: `${stats?.cyclesAssigned ?? 0} assigned`,
+      value:
+        projectsOwned === undefined ? (
+          <Loader2
+            aria-label="Loading projects count"
+            className="size-3.5 animate-spin text-muted-foreground"
+          />
+        ) : (
+          `${projectsOwned} owned`
+        ),
       divider: true,
     },
     {
       label: 'Issues',
-      value: `${stats?.issuesAssigned ?? 0} assigned`,
+      value:
+        issuesAssigned === undefined ? (
+          <Loader2
+            aria-label="Loading issues count"
+            className="size-3.5 animate-spin text-muted-foreground"
+          />
+        ) : (
+          `${issuesAssigned} assigned`
+        ),
       divider: true,
     },
   ];
@@ -189,7 +210,7 @@ export function MemberDetailsDialog({
             </div>
           </div>
 
-          {/* Definition list — Status / Projects / Cycles / Issues */}
+          {/* Definition list — Status / Projects / Issues */}
           <div className="w-full px-6">
             {rows.map((row) => (
               <div

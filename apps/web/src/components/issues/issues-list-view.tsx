@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  ChevronRight,
   Circle,
   CircleDashed,
   CircleCheck,
@@ -11,6 +12,8 @@ import {
   Plus,
   RotateCw,
 } from 'lucide-react';
+import { useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import type { IssueCard, IssueStatus } from '@shipyard/shared';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -98,7 +101,7 @@ function IssueRow({ issue }: { issue: IssueCard }) {
   const overdue = isOverdue(issue.dueDate);
 
   return (
-    <div className="flex h-11 w-full items-center gap-2.5 border-b border-ds-border px-4 last:border-b-0 transition-colors hover:bg-ds-bg">
+    <div className="flex h-12 w-full cursor-pointer items-center gap-3 border-b border-ds-border/70 px-4 last:border-b-0 transition-colors hover:bg-ds-bg">
       <IssuePriorityBadge priority={issue.priority} />
 
       <span className="shrink-0 font-mono text-[10px] font-semibold leading-none text-ds-text-muted">
@@ -185,6 +188,15 @@ export function IssuesListView({
     issues: issues.filter((i) => i.status === status),
   })).filter((g) => g.issues.length > 0);
 
+  const [collapsed, setCollapsed] = useState<Set<IssueStatus>>(new Set());
+  const toggle = (status: IssueStatus) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(status)) next.delete(status);
+      else next.add(status);
+      return next;
+    });
+
   const showEmpty = !loading && !error && grouped.length === 0;
   const centered = loading || error || showEmpty;
 
@@ -231,41 +243,76 @@ export function IssuesListView({
 
   return (
     <div className="flex w-full flex-col">
-      {grouped.map((group) => (
-        <section
-          key={group.status}
-          aria-label={group.meta.label}
-          className="flex w-full flex-col"
-        >
-          <div className="flex h-9 w-full items-center gap-2 border-b border-ds-border bg-ds-surface-subtle px-4">
-            <span
-              aria-hidden
-              className={cn('size-2 shrink-0 rounded-full', group.meta.dot)}
-            />
-            <span className="text-[12.5px] font-semibold leading-none text-foreground">
-              {group.meta.label}
-            </span>
-            <span className="font-mono text-[10px] font-semibold leading-none text-ds-text-muted">
-              {group.issues.length}
-            </span>
-            <span className="min-w-0 flex-1" aria-hidden />
+      {grouped.map((group) => {
+        const isCollapsed = collapsed.has(group.status);
+        return (
+          <section
+            key={group.status}
+            aria-label={group.meta.label}
+            className="flex w-full flex-col"
+          >
             <button
               type="button"
-              aria-label={`Add ${group.meta.label} issue`}
-              title={`Add ${group.meta.label} issue`}
-              className="grid size-6 shrink-0 place-items-center rounded-md text-ds-text-muted transition-colors hover:bg-ds-bg hover:text-foreground"
-              onClick={() => undefined}
+              aria-expanded={!isCollapsed}
+              aria-controls={`group-${group.status}`}
+              onClick={() => toggle(group.status)}
+              className="flex h-9 w-full items-center gap-2 border-b border-ds-border bg-ds-surface-subtle px-4 text-left transition-colors hover:bg-ds-bg"
             >
-              <Plus className="size-3.5" />
+              <span
+                className={cn(
+                  'grid size-6 shrink-0 place-items-center rounded-md text-ds-text-muted transition-transform duration-200',
+                  isCollapsed ? '-rotate-90' : 'rotate-0',
+                )}
+                aria-hidden
+              >
+                <ChevronRight className="size-3.5" />
+              </span>
+              <span
+                aria-hidden
+                className={cn('size-2 shrink-0 rounded-full', group.meta.dot)}
+              />
+              <span className="text-[12.5px] font-semibold leading-none text-foreground">
+                {group.meta.label}
+              </span>
+              <span className="font-mono text-[10px] font-semibold leading-none text-ds-text-muted">
+                {group.issues.length}
+              </span>
+              <span className="min-w-0 flex-1" aria-hidden />
+              <span
+                role="button"
+                tabIndex={-1}
+                aria-label={`Add ${group.meta.label} issue`}
+                title={`Add ${group.meta.label} issue`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+                className="grid size-6 shrink-0 place-items-center rounded-md text-ds-text-muted transition-colors hover:bg-ds-surface hover:text-foreground"
+              >
+                <Plus className="size-3.5" />
+              </span>
             </button>
-          </div>
-          <div className="flex w-full flex-col">
-            {group.issues.map((issue) => (
-              <IssueRow key={issue.id} issue={issue} />
-            ))}
-          </div>
-        </section>
-      ))}
+            <AnimatePresence initial={false}>
+              {!isCollapsed ? (
+                <motion.div
+                  id={`group-${group.status}`}
+                  key="content"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                  className="overflow-hidden"
+                >
+                  <div className="flex w-full flex-col">
+                    {group.issues.map((issue) => (
+                      <IssueRow key={issue.id} issue={issue} />
+                    ))}
+                  </div>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+          </section>
+        );
+      })}
     </div>
   );
 }

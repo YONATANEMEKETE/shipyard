@@ -1,5 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
+  ChevronRight,
   CornerDownRight,
   FolderKanban,
   Loader2,
@@ -190,6 +192,15 @@ export function ProjectListView({
     })).filter((group) => group.projects.length > 0);
   }, [visibleProjects]);
 
+  const [collapsed, setCollapsed] = useState<Set<ProjectStatus>>(new Set());
+  const toggle = (status: ProjectStatus) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(status)) next.delete(status);
+      else next.add(status);
+      return next;
+    });
+
   const hasActiveFilters = filters.search.trim() !== '';
   const showEmpty = !loading && !error && visibleProjects.length === 0;
   const centered = showEmpty || error || loading;
@@ -238,12 +249,28 @@ export function ProjectListView({
         ) : (
           grouped.map((group) => {
             const meta = GROUP_META[group.status];
+            const isCollapsed = collapsed.has(group.status);
             return (
               <section key={group.status} aria-label={meta.label}>
-                <div className="flex h-9 items-center gap-2 border-b border-ds-border bg-ds-surface-subtle px-4">
+                <button
+                  type="button"
+                  aria-expanded={!isCollapsed}
+                  aria-controls={`group-${group.status}`}
+                  onClick={() => toggle(group.status)}
+                  className="flex h-9 w-full items-center gap-2 border-b border-ds-border bg-ds-surface-subtle px-4 text-left transition-colors hover:bg-ds-bg"
+                >
+                  <span
+                    className={cn(
+                      'grid size-6 shrink-0 place-items-center rounded-md text-ds-text-muted transition-transform duration-200',
+                      isCollapsed ? '-rotate-90' : 'rotate-0',
+                    )}
+                    aria-hidden
+                  >
+                    <ChevronRight className="size-3.5" />
+                  </span>
                   <span
                     aria-hidden
-                    className={cn('size-2 rounded-full', meta.dot)}
+                    className={cn('size-2 shrink-0 rounded-full', meta.dot)}
                   />
                   <span className="text-[12.5px] font-semibold leading-none text-foreground">
                     {meta.label}
@@ -252,29 +279,49 @@ export function ProjectListView({
                     {group.projects.length}
                   </span>
                   <span className="min-w-0 flex-1" aria-hidden />
-                  <button
-                    type="button"
+                  <span
+                    role="button"
+                    tabIndex={-1}
                     aria-label={`New ${meta.label} project`}
                     title={`New ${meta.label} project`}
-                    onClick={() => onAddProject?.(group.status)}
-                    className="grid size-6 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-ds-bg hover:text-foreground"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAddProject?.(group.status);
+                    }}
+                    className="grid size-6 shrink-0 place-items-center rounded-md text-ds-text-muted transition-colors hover:bg-ds-surface hover:text-foreground"
                   >
                     <Plus className="size-3.5" />
-                  </button>
-                </div>
-                {group.projects.map((project) => (
-                  <ProjectRow
-                    key={project.id}
-                    project={project}
-                    bar={meta.bar}
-                    muted={group.status === 'COMPLETED'}
-                    onOpen={
-                      onOpenProject
-                        ? () => onOpenProject(project)
-                        : () => undefined
-                    }
-                  />
-                ))}
+                  </span>
+                </button>
+                <AnimatePresence initial={false}>
+                  {!isCollapsed ? (
+                    <motion.div
+                      id={`group-${group.status}`}
+                      key="content"
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                      className="overflow-hidden"
+                    >
+                      <div className="flex w-full flex-col">
+                        {group.projects.map((project) => (
+                          <ProjectRow
+                            key={project.id}
+                            project={project}
+                            bar={meta.bar}
+                            muted={group.status === 'COMPLETED'}
+                            onOpen={
+                              onOpenProject
+                                ? () => onOpenProject(project)
+                                : () => undefined
+                            }
+                          />
+                        ))}
+                      </div>
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
               </section>
             );
           })

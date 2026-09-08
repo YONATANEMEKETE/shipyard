@@ -176,6 +176,40 @@ export const projectsRepository = {
     });
   },
 
+  /**
+   * Distinct (project, assignee) pairs over non-archived issues — the raw
+   * material for worker stacks. Unassigned issues contribute no rows.
+   */
+  findWorkerAssignees(
+    client: DbClient,
+    workspaceId: string,
+    projectIds: string[],
+  ) {
+    if (projectIds.length === 0)
+      return Promise.resolve(
+        [] as { projectId: string | null; assigneeId: string | null }[],
+      );
+    return client.issue.findMany({
+      where: {
+        workspaceId,
+        projectId: { in: projectIds },
+        archivedAt: null,
+        assigneeId: { not: null },
+      },
+      distinct: ['projectId', 'assigneeId'],
+      select: { projectId: true, assigneeId: true },
+    });
+  },
+
+  /** Display cards for a batch of users — never per item. */
+  findUsersByIds(client: DbClient, userIds: string[]) {
+    if (userIds.length === 0) return Promise.resolve([]);
+    return client.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, name: true, image: true },
+    });
+  },
+
   /** F3 Checkpoint B contract: move owned projects to the new owner. No
    *  archivedAt filter — archived projects transfer too (spec rule 6). */
   transferOwned(

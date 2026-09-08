@@ -1,9 +1,10 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Check, Folder, X } from 'lucide-react';
+import { format } from 'date-fns';
+import { Calendar as CalendarIcon, Check, ChevronRight, X } from 'lucide-react';
 import { Dialog as DialogPrimitive } from 'radix-ui';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -14,27 +15,22 @@ import {
   type ProjectDetail,
   type ProjectStatus,
 } from '@shipyard/shared';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from '@/components/motion/select';
-
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-} from '@/components/ui/form';
 import { StatefulButton } from '@/components/motion/button/stateful';
+import { toYmd } from '@/components/projects/date-picker-field';
 import { useUpdateProject } from '@/hooks/use-projects';
 import { useToast } from '@/components/providers/toast-provider';
-import { DatePickerField } from '@/components/projects/date-picker-field';
 import { cn } from '@/lib/utils';
 
 export interface EditProjectDialogProps {
@@ -45,9 +41,9 @@ export interface EditProjectDialogProps {
   project: ProjectDetail | null;
 }
 
-// Form contract — name + status are required in the dialog; dates and
-// description are optional and clearable (explicit null on update). Mirrors
-// Element / Edit Project Modal in shipyard.pen.
+// Form contract — name + status are required; dates and description are
+// optional and clearable (explicit null on update). Same shape as the update
+// contract so partial edits stay partial.
 const editProjectFormSchema = z.object({
   name: projectNameSchema,
   description: z
@@ -61,25 +57,106 @@ const editProjectFormSchema = z.object({
 
 type EditProjectFormValues = z.infer<typeof editProjectFormSchema>;
 
-const STATUS_OPTIONS: { value: ProjectStatus; label: string }[] = [
-  { value: 'PLANNED', label: 'Planned' },
-  { value: 'ACTIVE', label: 'Active' },
-  { value: 'COMPLETED', label: 'Completed' },
+const STATUS_OPTIONS: { value: ProjectStatus; label: string; dot: string }[] = [
+  { value: 'PLANNED', label: 'Planned', dot: 'bg-ds-info' },
+  { value: 'ACTIVE', label: 'Active', dot: 'bg-ds-brand' },
+  { value: 'COMPLETED', label: 'Completed', dot: 'bg-ds-success' },
 ];
 
-const STATUS_DOT: Record<ProjectStatus, string> = {
-  ACTIVE: 'bg-ds-brand',
-  COMPLETED: 'bg-ds-success',
-  PLANNED: 'bg-ds-text-muted',
-};
+function initialsOf(name: string): string {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]!.toUpperCase())
+    .join('');
+}
+
+/** Pill shell shared by the status/date/owner controls in the pill bar. */
+function Pill({
+  children,
+  className,
+  invalid,
+}: {
+  children: ReactNode;
+  className?: string;
+  invalid?: boolean;
+}) {
+  return (
+    <span
+      className={cn(
+        'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border bg-ds-surface-subtle px-3 text-xs font-medium text-foreground',
+        invalid ? 'border-destructive' : 'border-ds-border',
+        className,
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+function DatePill({
+  value,
+  onChange,
+  placeholder,
+  invalid,
+  disabled,
+}: {
+  value?: string;
+  onChange: (value: string | undefined) => void;
+  placeholder: string;
+  invalid?: boolean;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected: Date | undefined = value
+    ? new Date(`${value}T12:00:00`)
+    : undefined;
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          disabled={disabled}
+          aria-label={placeholder}
+          className={cn(
+            'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border bg-ds-surface-subtle px-3 text-xs font-medium transition-colors hover:border-ds-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
+            invalid ? 'border-destructive' : 'border-ds-border',
+            value ? 'text-foreground' : 'text-muted-foreground',
+          )}
+        >
+          <CalendarIcon className="size-3.5 shrink-0 text-muted-foreground" />
+          {value ? format(new Date(`${value}T12:00:00`), 'MMM d') : placeholder}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        sideOffset={8}
+        className="w-auto border-ds-border bg-ds-surface p-0 shadow-xl"
+      >
+        <Calendar
+          mode="single"
+          selected={selected}
+          onSelect={(date) => {
+            onChange(date ? toYmd(date) : undefined);
+            setOpen(false);
+          }}
+          fixedWeeks
+          initialFocus
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 /**
- * Edit Project Dialog — mirrors Element / Edit Project Modal (Sgz99) in
- * shipyard.pen: 500w modal, header (17/700 title + 12 muted subcopy + X),
- * Project name input, Description textarea, Status select (dot + label +
- * chevron), Start/Target date row, footer Cancel (Ghost/X) + Save changes
- * (Primary/Check). Saves via useUpdateProject; success/error toasts (same
- * pattern as create-project-dialog).
+ * Edit Project Dialog — same composer as the create dialog
+ * ("Create Project Dialog" in shipyard.pen): breadcrumb top bar, borderless
+ * name + description inputs, pill bar (status select · start/target date
+ * calendars · disabled owner pill), footer hint + Save action. Values are
+ * prefilled from `project`; owner is the project's current owner (ownership
+ * itself moves via the transfer dialog, never here). Saves via
+ * useUpdateProject with success/error toasts.
  */
 export function EditProjectDialog({
   open,
@@ -87,22 +164,58 @@ export function EditProjectDialog({
   slug,
   project,
 }: EditProjectDialogProps) {
+  if (!project) return null;
+  return (
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+      <DialogPrimitive.Portal>
+        <EditProjectDialogContent
+          key={open ? `open-${project.id}` : 'closed'}
+          slug={slug}
+          project={project}
+          onOpenChange={onOpenChange}
+        />
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
+  );
+}
+
+function EditProjectDialogContent({
+  slug,
+  project,
+  onOpenChange,
+}: {
+  slug: string;
+  project: ProjectDetail;
+  onOpenChange: (open: boolean) => void;
+}) {
   const { showToast } = useToast();
 
   const form = useForm<EditProjectFormValues>({
     resolver: zodResolver(editProjectFormSchema),
     mode: 'all',
     defaultValues: {
-      name: project?.name ?? '',
-      description: project?.description ?? '',
-      status: project?.status ?? 'ACTIVE',
-      startDate: project?.startDate ?? undefined,
-      targetDate: project?.targetDate ?? undefined,
+      name: project.name,
+      description: project.description ?? '',
+      status: project.status,
+      startDate: project.startDate ?? undefined,
+      targetDate: project.targetDate ?? undefined,
     },
   });
 
   const values = useWatch({ control: form.control });
+  const nameValue = useWatch({ control: form.control, name: 'name' });
+  const descriptionValue = useWatch({
+    control: form.control,
+    name: 'description',
+  });
   const canSubmit = editProjectFormSchema.safeParse(values).success;
+  const showErrors = form.formState.isSubmitted;
+  const firstError = showErrors
+    ? (form.formState.errors.name?.message ??
+      form.formState.errors.startDate?.message ??
+      form.formState.errors.targetDate?.message ??
+      form.formState.errors.description?.message)
+    : undefined;
 
   const updateMutation = useUpdateProject(slug, {
     onSuccess: (updated) => {
@@ -122,26 +235,38 @@ export function EditProjectDialog({
     },
   });
 
-  // Hydrate the form from the selected project every time the dialog opens
-  // (and whenever the project object changes while open).
-  useEffect(() => {
-    if (!open) return;
-    form.reset({
-      name: project?.name ?? '',
-      description: project?.description ?? '',
-      status: project?.status ?? 'ACTIVE',
-      startDate: project?.startDate ?? undefined,
-      targetDate: project?.targetDate ?? undefined,
-    });
-  }, [open, project, form]);
+  const busy = updateMutation.isPending;
+  const ownerName = project.owner.name?.trim() || 'You';
 
-  useEffect(() => {
-    if (!open) return;
-    const t = setTimeout(() => form.setFocus('name'), 50);
-    return () => clearTimeout(t);
-  }, [open, form]);
-
-  if (!project) return null;
+  // While the status panel is open (or still playing its ~0.4s close
+  // animation) the dialog content switches to overflow-visible so the
+  // absolutely-positioned panel floats above the dialog edge (like the
+  // portaled calendar popovers) instead of getting clipped and forcing a
+  // scrollbar. The Select itself stays uncontrolled so the panel opens and
+  // closes instantly; only the overflow flag is delayed.
+  const [statusPanelVisible, setStatusPanelVisible] = useState(false);
+  const statusCloseTimer = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (statusCloseTimer.current !== null)
+        window.clearTimeout(statusCloseTimer.current);
+    },
+    [],
+  );
+  const handleStatusOpenChange = (next: boolean) => {
+    if (statusCloseTimer.current !== null) {
+      window.clearTimeout(statusCloseTimer.current);
+      statusCloseTimer.current = null;
+    }
+    if (next) {
+      setStatusPanelVisible(true);
+    } else {
+      statusCloseTimer.current = window.setTimeout(() => {
+        statusCloseTimer.current = null;
+        setStatusPanelVisible(false);
+      }, 450);
+    }
+  };
 
   const onSubmit = form.handleSubmit((vals) => {
     updateMutation.mutate({
@@ -157,216 +282,222 @@ export function EditProjectDialog({
   });
 
   return (
-    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
-      <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[#17171714] backdrop-blur-[1px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <DialogPrimitive.Content
-          aria-describedby={undefined}
-          className={cn(
-            'fixed left-1/2 top-1/2 z-50 flex max-h-[90vh] w-[500px] max-w-[calc(100vw-32px)] -translate-x-1/2 -translate-y-1/2 flex-col gap-5 rounded-2xl border border-ds-border bg-ds-surface p-6 shadow-[0_12px_28px_#17171718]',
-            'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
-          )}
-        >
-          {/* Header */}
-          <div className="flex w-full items-center gap-3">
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <DialogPrimitive.Title className="text-[17px] font-bold leading-none tracking-[-0.4px] text-foreground">
-                Edit project
-              </DialogPrimitive.Title>
-              <p className="text-[12px] leading-[1.55] text-muted-foreground">
-                Update the project&apos;s details or change its operational
-                status.
-              </p>
-            </div>
-            <DialogPrimitive.Close asChild>
-              <button
-                type="button"
-                aria-label="Close"
-                className="grid size-8 shrink-0 place-items-center rounded-lg border border-ds-border bg-ds-bg text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <X className="size-3.5" />
-              </button>
-            </DialogPrimitive.Close>
+    <>
+      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[#17171714] backdrop-blur-[1px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+      <DialogPrimitive.Content
+        aria-describedby={undefined}
+        className={cn(
+          'fixed left-1/2 top-1/2 z-50 flex max-h-[90vh] w-[720px] max-w-[calc(100vw-32px)] -translate-x-1/2 -translate-y-1/2 flex-col rounded-2xl border border-ds-border bg-ds-surface shadow-[0_12px_28px_#17171718]',
+          statusPanelVisible ? 'overflow-visible' : 'overflow-y-auto',
+          'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+        )}
+      >
+        {/* Top bar — breadcrumb + close */}
+        <div className="flex w-full items-center gap-3 px-8 pt-6">
+          <nav
+            aria-label="Breadcrumb"
+            className="flex min-w-0 flex-1 items-center gap-1.5 text-xs"
+          >
+            <span className="font-medium text-muted-foreground">Projects</span>
+            <ChevronRight
+              aria-hidden
+              className="size-3.5 shrink-0 text-muted-foreground"
+            />
+            <span className="truncate font-semibold text-foreground">
+              {project.name}
+            </span>
+          </nav>
+          <DialogPrimitive.Close asChild>
+            <button
+              type="button"
+              aria-label="Close"
+              className="grid size-8 shrink-0 place-items-center rounded-lg border border-ds-border bg-ds-bg text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <X className="size-3.5" />
+            </button>
+          </DialogPrimitive.Close>
+        </div>
+
+        <form noValidate onSubmit={onSubmit} className="flex flex-col">
+          {/* Borderless name input */}
+          <div className="w-full px-8 pt-5">
+            <label htmlFor="edit-project-name" className="sr-only">
+              Project name
+            </label>
+            <input
+              id="edit-project-name"
+              autoFocus
+              value={nameValue ?? ''}
+              onChange={(e) =>
+                form.setValue('name', e.target.value, {
+                  shouldValidate: form.formState.isSubmitted,
+                })
+              }
+              onBlur={() => form.trigger('name')}
+              placeholder="Project name"
+              disabled={busy}
+              className="w-full bg-transparent text-xl font-bold tracking-[-0.4px] text-foreground placeholder:text-muted-foreground focus:outline-none"
+            />
           </div>
 
-          <Form {...form}>
-            <form
-              noValidate
-              onSubmit={onSubmit}
-              className="flex flex-col gap-5"
+          {/* Borderless description */}
+          <div className="w-full px-8 pt-2">
+            <label htmlFor="edit-project-description" className="sr-only">
+              Description
+            </label>
+            <textarea
+              id="edit-project-description"
+              value={descriptionValue ?? ''}
+              onChange={(e) => form.setValue('description', e.target.value)}
+              onBlur={() => form.trigger('description')}
+              placeholder="Add description…"
+              rows={3}
+              disabled={busy}
+              className="w-full resize-none bg-transparent text-[13px] leading-relaxed text-foreground placeholder:text-muted-foreground focus:outline-none"
+            />
+          </div>
+
+          {/* Pill bar — status select · dates · owner */}
+          <div className="flex w-full flex-wrap items-center gap-2 px-8 pb-6 pt-4">
+            <StatusPill
+              value={values.status ?? project.status}
+              onChange={(next) =>
+                form.setValue('status', next, {
+                  shouldValidate: form.formState.isSubmitted,
+                })
+              }
+              onOpenChange={handleStatusOpenChange}
+              invalid={showErrors && !!form.formState.errors.status}
+              disabled={busy}
+            />
+            <DatePill
+              value={values.startDate}
+              onChange={(v) =>
+                form.setValue('startDate', v, {
+                  shouldValidate: form.formState.isSubmitted,
+                })
+              }
+              placeholder="Start date"
+              invalid={showErrors && !!form.formState.errors.startDate}
+              disabled={busy}
+            />
+            <DatePill
+              value={values.targetDate}
+              onChange={(v) =>
+                form.setValue('targetDate', v, {
+                  shouldValidate: form.formState.isSubmitted,
+                })
+              }
+              placeholder="Target date"
+              invalid={showErrors && !!form.formState.errors.targetDate}
+              disabled={busy}
+            />
+            <Pill
+              className="cursor-default aria-disabled:opacity-100"
+              invalid={false}
             >
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field, fieldState }) => (
-                  <FormItem className="gap-1.5">
-                    <FormLabel className="text-[11px] font-semibold text-foreground">
-                      Project name
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        value={field.value ?? ''}
-                        onChange={(value) =>
-                          field.onChange(value, {
-                            shouldValidate: form.formState.isSubmitted,
-                          })
-                        }
-                        onBlur={() => {
-                          field.onBlur();
-                          form.trigger('name');
-                        }}
-                        placeholder="Ship Payroll"
-                        leftIcon={<Folder className="size-4" />}
-                        disabled={updateMutation.isPending}
-                        error={fieldState.error?.message}
-                        classNames={{
-                          field:
-                            'h-9 rounded-md border-ds-border bg-ds-surface',
-                          input: 'text-sm',
-                        }}
-                      />
-                    </FormControl>
-                  </FormItem>
+              <span aria-disabled className="flex items-center gap-1.5">
+                {project.owner.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={project.owner.image}
+                    alt=""
+                    className="size-4 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="grid size-4 place-items-center rounded-full bg-ds-brand font-mono text-[7px] font-bold text-white">
+                    {initialsOf(ownerName)}
+                  </span>
                 )}
+                <span className="max-w-28 truncate">{ownerName}</span>
+              </span>
+            </Pill>
+          </div>
+
+          {firstError ? (
+            <p role="alert" className="px-8 pb-3 text-xs text-destructive">
+              {firstError}
+            </p>
+          ) : null}
+
+          <div className="border-t border-ds-border" aria-hidden />
+
+          {/* Footer — hint + save */}
+          <div className="flex w-full flex-wrap items-center justify-between gap-3 px-8 py-5">
+            <p className="text-[11px] text-muted-foreground">
+              Name required unique
+            </p>
+            <StatefulButton
+              type="submit"
+              className="h-9 gap-2 rounded-md bg-ds-brand px-4 text-sm font-semibold text-white hover:bg-ds-brand/90 disabled:opacity-50"
+              state={busy ? 'loading' : 'idle'}
+              loadingText="Saving…"
+              successText="Saved"
+              icon={<Check className="size-4" />}
+              disabled={!canSubmit || busy}
+            >
+              Save changes
+            </StatefulButton>
+          </div>
+        </form>
+      </DialogPrimitive.Content>
+    </>
+  );
+}
+
+function StatusPill({
+  value,
+  onChange,
+  onOpenChange,
+  invalid,
+  disabled,
+}: {
+  value: ProjectStatus;
+  onChange: (next: ProjectStatus) => void;
+  onOpenChange: (open: boolean) => void;
+  invalid?: boolean;
+  disabled?: boolean;
+}) {
+  const option =
+    STATUS_OPTIONS.find((o) => o.value === value) ?? STATUS_OPTIONS[0]!;
+  return (
+    <Select
+      value={value}
+      onValueChange={(next) => onChange(next as ProjectStatus)}
+      onOpenChange={onOpenChange}
+      disabled={disabled}
+    >
+      <SelectTrigger
+        className={cn(
+          // `rounded-full!` (important) pins the pill shape: the trigger
+          // animates border-radius inline (gooey open/close), which would
+          // otherwise override the class and leave the pill squarer than
+          // the date/owner pills. inline-flex + shrink-0 mirror the date
+          // pills exactly so all pills share the same box.
+          'inline-flex rounded-full! h-8 w-auto shrink-0 gap-1.5 border bg-ds-surface-subtle px-3 py-0 text-xs font-medium text-foreground [&>span:last-child]:hidden',
+          invalid ? 'border-destructive' : 'border-ds-border',
+        )}
+      >
+        <span className="flex items-center gap-1.5">
+          <span aria-hidden className={cn('size-2 rounded-full', option.dot)} />
+          {option.label}
+        </span>
+      </SelectTrigger>
+      {/* Panel sizes to its content (w-max, at least trigger width) so
+          option labels like Completed are never cut by the narrow pill. */}
+      <SelectContent className="w-max min-w-full">
+        {STATUS_OPTIONS.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            <span className="flex items-center gap-2 whitespace-nowrap">
+              <span
+                aria-hidden
+                className={cn('size-2 rounded-full', option.dot)}
               />
-
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field, fieldState }) => (
-                  <FormItem className="gap-1.5">
-                    <FormLabel className="text-[11px] font-semibold text-foreground">
-                      Description
-                    </FormLabel>
-                    <FormControl>
-                      <textarea
-                        value={field.value ?? ''}
-                        onChange={(e) => field.onChange(e.target.value)}
-                        onBlur={field.onBlur}
-                        placeholder="A short summary of what this project is working toward…"
-                        rows={2}
-                        disabled={updateMutation.isPending}
-                        className={cn(
-                          'min-h-[64px] w-full resize-none rounded-md border bg-ds-surface px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                          fieldState.error
-                            ? 'border-destructive'
-                            : 'border-ds-border',
-                        )}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem className="gap-1.5">
-                    <FormLabel className="text-[11px] font-semibold text-foreground">
-                      Status
-                    </FormLabel>
-                    <FormControl>
-                      <Select
-                        value={field.value}
-                        onValueChange={(value) =>
-                          field.onChange(value as ProjectStatus)
-                        }
-                      >
-                        <SelectTrigger className="h-9 rounded-md border-ds-border bg-ds-surface text-sm">
-                          <span className="flex items-center gap-2">
-                            <span
-                              aria-hidden
-                              className={cn(
-                                'size-[7px] shrink-0 rounded-full',
-                                STATUS_DOT[field.value],
-                              )}
-                            />
-                            <SelectValue placeholder="Select status" />
-                          </span>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {STATUS_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <div className="flex w-full gap-3">
-                <FormField
-                  control={form.control}
-                  name="startDate"
-                  render={({ field, fieldState }) => (
-                    <FormItem className="flex-1 gap-1.5">
-                      <FormLabel className="text-[11px] font-semibold text-foreground">
-                        Start date
-                      </FormLabel>
-                      <FormControl>
-                        <DatePickerField
-                          value={field.value}
-                          onChange={field.onChange}
-                          placeholder="Pick a date"
-                          error={fieldState.error?.message}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="targetDate"
-                  render={({ field, fieldState }) => (
-                    <FormItem className="flex-1 gap-1.5">
-                      <FormLabel className="text-[11px] font-semibold text-foreground">
-                        Target date
-                      </FormLabel>
-                      <FormControl>
-                        <DatePickerField
-                          value={field.value}
-                          onChange={field.onChange}
-                          placeholder="Pick a date"
-                          error={fieldState.error?.message}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="flex w-full items-center justify-end gap-2.5 pt-1">
-                <DialogPrimitive.Close asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    disabled={updateMutation.isPending}
-                    className="h-9 gap-1.5"
-                  >
-                    <X className="size-3.5" />
-                    Cancel
-                  </Button>
-                </DialogPrimitive.Close>
-                <StatefulButton
-                  type="submit"
-                  className="h-9 gap-2 rounded-md bg-ds-brand px-4 text-sm font-semibold text-white hover:bg-ds-brand/90 disabled:opacity-50"
-                  state={updateMutation.isPending ? 'loading' : 'idle'}
-                  loadingText="Saving…"
-                  successText="Saved"
-                  icon={<Check className="size-4" />}
-                  disabled={!canSubmit || updateMutation.isPending}
-                >
-                  Save changes
-                </StatefulButton>
-              </div>
-            </form>
-          </Form>
-        </DialogPrimitive.Content>
-      </DialogPrimitive.Portal>
-    </DialogPrimitive.Root>
+              {option.label}
+            </span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

@@ -105,30 +105,23 @@ function statusIcon(status: IssueStatus) {
 
 function IssueRow({ issue }: { issue: IssueCard }) {
   const overdue = isOverdue(issue.dueDate);
-
   return (
     <div className="flex h-12 w-full cursor-pointer items-center gap-3 border-b border-ds-border/70 px-4 last:border-b-0 transition-colors hover:bg-ds-bg">
       <IssuePriorityBadge priority={issue.priority} />
-
       <span className="shrink-0 font-mono text-[10px] font-semibold leading-none text-ds-text-muted">
         {issue.identifier}
       </span>
-
       {statusIcon(issue.status)}
-
       <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium leading-none text-foreground">
         {issue.title}
       </span>
-
       {issue.blocked ? (
         <span className="inline-flex h-[18px] shrink-0 items-center gap-1 rounded-full bg-ds-danger-soft px-[7px] text-[10px] font-semibold text-ds-danger">
           <OctagonAlert className="size-2.5" aria-hidden />
           Blocked
         </span>
       ) : null}
-
       <IssueLabelPills labels={issue.labels} />
-
       <span
         className={cn(
           'hidden w-[52px] shrink-0 text-right text-[11.5px] leading-none sm:block',
@@ -139,7 +132,6 @@ function IssueRow({ issue }: { issue: IssueCard }) {
       >
         {formatDue(issue.dueDate)}
       </span>
-
       {issue.assignee ? (
         issue.assignee.image ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -169,12 +161,6 @@ function IssueRow({ issue }: { issue: IssueCard }) {
   );
 }
 
-/**
- * Issues Grouped List — mirrors "Issues Grouped List" (WDauM) in shipyard.pen.
- * Grouped by status BACKLOG / TODO / IN_PROGRESS / DONE, ordered.
- * Handles centered loading (Loader2), error (ErrorState) and empty (EmptyState)
- * like ProjectListView — parent drives the query and passes the flags.
- */
 export function IssuesListView({
   issues,
   loading = false,
@@ -259,33 +245,34 @@ export function IssuesListView({
             aria-label={group.meta.label}
             className="flex w-full flex-col"
           >
-            <button
-              type="button"
-              aria-expanded={!isCollapsed}
-              aria-controls={`group-${group.status}`}
-              onClick={() => toggle(group.status)}
-              className="flex h-9 w-full items-center gap-2 border-b border-ds-border bg-ds-surface-subtle px-4 text-left transition-colors hover:bg-ds-bg"
-            >
-              <span
-                className={cn(
-                  'grid size-6 shrink-0 place-items-center rounded-md text-ds-text-muted transition-transform duration-200',
-                  isCollapsed ? '-rotate-90' : 'rotate-0',
-                )}
-                aria-hidden
+            <div className="flex h-9 w-full items-center gap-2 border-b border-ds-border bg-ds-surface-subtle px-4">
+              <button
+                type="button"
+                aria-expanded={!isCollapsed}
+                aria-controls={`group-${group.status}`}
+                onClick={() => toggle(group.status)}
+                className="flex min-w-0 flex-1 items-center gap-2 text-left"
               >
-                <ChevronRight className="size-3.5" />
-              </span>
-              <span
-                aria-hidden
-                className={cn('size-2 shrink-0 rounded-full', group.meta.dot)}
-              />
-              <span className="text-[12.5px] font-semibold leading-none text-foreground">
-                {group.meta.label}
-              </span>
-              <span className="font-mono text-[10px] font-semibold leading-none text-ds-text-muted">
-                {group.issues.length}
-              </span>
-              <span className="min-w-0 flex-1" aria-hidden />
+                <span
+                  className={cn(
+                    'grid size-6 shrink-0 place-items-center rounded-md text-ds-text-muted transition-transform duration-200',
+                    isCollapsed ? '-rotate-90' : 'rotate-0',
+                  )}
+                  aria-hidden
+                >
+                  <ChevronRight className="size-3.5" />
+                </span>
+                <span
+                  aria-hidden
+                  className={cn('size-2 shrink-0 rounded-full', group.meta.dot)}
+                />
+                <span className="text-[12.5px] font-semibold leading-none text-foreground">
+                  {group.meta.label}
+                </span>
+                <span className="font-mono text-[10px] font-semibold leading-none text-ds-text-muted">
+                  {group.issues.length}
+                </span>
+              </button>
               {group.status !== 'DONE' ? (
                 <TooltipProvider delayDuration={100}>
                   <Tooltip>
@@ -293,10 +280,7 @@ export function IssuesListView({
                       <button
                         type="button"
                         aria-label={`New ${group.meta.label} issue`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onAddIssue?.(group.status);
-                        }}
+                        onClick={() => onAddIssue?.(group.status)}
                         className="grid size-6 shrink-0 place-items-center rounded-md text-ds-text-muted transition-colors hover:bg-ds-bg hover:text-foreground"
                       >
                         <Plus className="size-3.5" />
@@ -307,8 +291,10 @@ export function IssuesListView({
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-              ) : null}
-            </button>
+              ) : (
+                <span className="size-6 shrink-0" aria-hidden />
+              )}
+            </div>
             <AnimatePresence initial={false}>
               {!isCollapsed ? (
                 <motion.div

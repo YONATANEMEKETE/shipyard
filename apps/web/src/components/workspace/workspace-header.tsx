@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/tooltip';
 import { CreateWorkspaceDialog } from '@/components/workspace/create-workspace-dialog';
 import { CreateProjectDialog } from '@/components/projects/create-project-dialog';
+import { CreateIssueDialog } from '@/components/issues/create-issue-dialog';
 import { LeaveWorkspaceDialog } from '@/components/members/leave-workspace-dialog';
 import { useWorkspace } from '@/hooks/use-workspaces';
 import { isArchived } from '@/lib/workspace/is-archived';
@@ -71,6 +72,7 @@ export function WorkspaceHeader({
 }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [projectCreateOpen, setProjectCreateOpen] = useState(false);
+  const [issueCreateOpen, setIssueCreateOpen] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
   const label = usePageContext(slug);
   const { data: workspace } = useWorkspace(slug);
@@ -204,6 +206,7 @@ export function WorkspaceHeader({
           onSelect={(label) => {
             if (label === 'Workspace') setCreateOpen(true);
             if (label === 'Project') setProjectCreateOpen(true);
+            if (label === 'Issue') setIssueCreateOpen(true);
           }}
         />
       </div>
@@ -211,6 +214,11 @@ export function WorkspaceHeader({
       <CreateProjectDialog
         open={projectCreateOpen}
         onOpenChange={setProjectCreateOpen}
+        slug={slug}
+      />
+      <CreateIssueDialog
+        open={issueCreateOpen}
+        onOpenChange={setIssueCreateOpen}
         slug={slug}
       />
       <LeaveWorkspaceDialog

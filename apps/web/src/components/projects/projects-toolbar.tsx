@@ -5,17 +5,15 @@ import {
   ArrowDownAZ,
   ArrowUpAZ,
   CalendarDays,
-  CalendarRange,
-  Filter,
+  Flag,
   Kanban,
   LayoutList,
   Search,
   User,
-  X,
 } from 'lucide-react';
 import { useState } from 'react';
 import type React from 'react';
-import type { ProjectStatus, ViewType } from '@shipyard/shared';
+import type { ViewType } from '@shipyard/shared';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
@@ -29,42 +27,35 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from '@/components/motion/select';
 import { useMembers } from '@/hooks/use-members';
-import { useViewPreference, useSetViewPreference } from '@/hooks/use-projects';
+import {
+  useProjects,
+  useViewPreference,
+  useSetViewPreference,
+} from '@/hooks/use-projects';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export interface ProjectFilters {
   search: string;
-  status?: ProjectStatus;
   ownerId?: string;
   startDate?: string;
   targetDate?: string;
-  sort: 'createdAt' | 'name' | 'targetDate' | 'startDate' | 'status';
   order: 'asc' | 'desc';
 }
 
-const SORT_OPTIONS: { value: ProjectFilters['sort']; label: string }[] = [
-  { value: 'createdAt', label: 'Newest' },
-  { value: 'name', label: 'Name' },
-  { value: 'status', label: 'Status' },
-  { value: 'startDate', label: 'Start date' },
-  { value: 'targetDate', label: 'Target date' },
-];
-
 /**
- * Projects toolbar — mirrors "Projects Toolbar Row" in shipyard.pen (List and
- * Kanban screens): search left, then the List/Kanban view switch and the
- * filter/sort controls right.
- *  - Search: h-9 rounded-md surface input, muted "Find projects…" placeholder.
- *  - View switch: Tabs (TabsList/TabsTrigger) with List/Kanban icon triggers,
- *    matching the Members page tab pattern. The choice persists per-workspace
- *    through the view-preference API (rule 12: LIST is the default).
- *  - Filters: Status / Owner / Start date / Target date pills (motion Select)
- *    and a Sort dropdown. Owner options come from the workspace roster.
- * Filter state is lifted to the parent via `onFiltersChange` so the list/board
- * view can consume it; the view is persisted server-side.
+ * Projects toolbar — mirrors "Projects Toolbar Row" in shipyard.pen
+ * (Screen / Projects - List):
+ *  - Top row: underline scope tabs (All + total count | Archived) left,
+ *    List/Kanban view switch right (hidden in archived mode).
+ *  - Bottom row: search + Owner / Start / Target pills + sort-direction
+ *    toggle left, Clear (resets the visible filters) right. In archived
+ *    mode only the search stays — the archived list is read-only.
+ * The list is grouped by status, so there is no status filter; sort field
+ * is fixed to newest-first server-side, the toggle flips direction only.
+ * Filter state is lifted to the parent via `onChange`; the view persists
+ * server-side through the view-preference API.
  */
 export function ProjectsToolbar({
   slug,
@@ -84,6 +75,8 @@ export function ProjectsToolbar({
   const setViewPref = useSetViewPreference(slug);
 
   const { data: roster } = useMembers(slug);
+  // Unfiltered active total for the All tab count badge.
+  const { data: scopeCounts } = useProjects(slug);
 
   const set = (patch: Partial<ProjectFilters>) =>
     onChange({ ...filters, ...patch });
@@ -94,26 +87,25 @@ export function ProjectsToolbar({
     setViewPref.mutate({ scope: 'PROJECT', view });
   };
 
-  return (
-    <div className="flex w-full flex-wrap items-center justify-between gap-3">
-      {/* Left group — search + Active/Archived scope (reads left-to-right).
-          Wraps on narrow screens. */}
-      <div className="flex flex-wrap items-center gap-3">
-        <Input
-          value={filters.search}
-          onChange={(value) => set({ search: value })}
-          placeholder="Find projects…"
-          leftIcon={<Search className="size-[14px] text-muted-foreground" />}
-          classNames={{
-            field:
-              'h-[34px] w-full rounded-lg border-ds-border bg-ds-surface sm:w-[240px]',
-            input: 'text-xs',
-          }}
-        />
+  const hasActiveFilters =
+    filters.search.trim() !== '' ||
+    filters.ownerId !== undefined ||
+    filters.startDate !== undefined ||
+    filters.targetDate !== undefined;
 
-        {/* Active / Archived scope — same Tabs component as the view switch.
-            Archived is a read-only list (no board, no filters), so the rest of
-            the controls hide while it's on. */}
+  const clearFilters = () =>
+    onChange({
+      ...filters,
+      search: '',
+      ownerId: undefined,
+      startDate: undefined,
+      targetDate: undefined,
+    });
+
+  return (
+    <div className="flex w-full flex-col gap-3">
+      {/* Top row — scope tabs + view switch. */}
+      <div className="flex w-full flex-wrap items-center justify-between gap-3">
         {onArchivedChange ? (
           <Tabs
             value={archived ? 'ARCHIVED' : 'ACTIVE'}
@@ -121,19 +113,23 @@ export function ProjectsToolbar({
               onArchivedChange(details.value === 'ARCHIVED')
             }
           >
-            <TabsList className="gap-0.5 border border-ds-border bg-ds-surface p-0.5">
-              <TabsTrigger value="ACTIVE">Active</TabsTrigger>
+            <TabsList variant="underline">
+              <TabsTrigger
+                value="ACTIVE"
+                className="gap-1.5 aria-selected:text-ds-brand"
+              >
+                All
+                <span className="text-[10px] font-semibold text-muted-foreground">
+                  {scopeCounts ? scopeCounts.projects.length : 0}
+                </span>
+              </TabsTrigger>
               <TabsTrigger value="ARCHIVED">Archived</TabsTrigger>
             </TabsList>
           </Tabs>
         ) : null}
-      </div>
 
-      {/* Right group — view switch + filter controls. Wraps below the left
-          group and internally when narrow. */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* View switch — Tabs (mirrors Members page tab pattern). The board
-            is meaningless for archived projects, so it hides in that mode. */}
+        {/* View switch — the board is meaningless for archived projects,
+            so it hides in that mode. */}
         {!archived ? (
           <Tabs
             value={activeView}
@@ -159,119 +155,124 @@ export function ProjectsToolbar({
             </TabsList>
           </Tabs>
         ) : null}
+      </div>
 
-        {/* Filter + sort controls — hidden in archived mode (read-only). */}
-        {!archived ? (
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Status is a list-only concept — the board always shows every
-                status, so the pill is hidden (not just ignored) in Kanban. */}
-            {activeView === 'LIST' ? (
+      {/* Bottom row — search + filter pills + sort toggle, Clear at right.
+          Archived mode keeps the search only (read-only list). */}
+      <div className="flex w-full flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            value={filters.search}
+            onChange={(value) => set({ search: value })}
+            placeholder="Find projects…"
+            leftIcon={<Search className="size-[14px] text-muted-foreground" />}
+            classNames={{
+              field:
+                'h-[34px] w-full rounded-md border-ds-border bg-ds-surface sm:w-[160px]',
+              input: 'text-xs',
+            }}
+          />
+
+          {!archived ? (
+            <>
               <Select
-                value={filters.status ?? 'ALL'}
+                value={filters.ownerId ?? 'ALL'}
                 onValueChange={(value) =>
-                  set({
-                    status:
-                      value === 'ALL' ? undefined : (value as ProjectStatus),
-                  })
+                  set({ ownerId: value === 'ALL' ? undefined : value })
                 }
               >
-                <SelectTrigger className="h-[34px] gap-1.5 border-ds-border bg-ds-surface px-3 text-xs text-muted-foreground hover:border-ds-border">
-                  <Filter className="size-[14px]" />
-                  <SelectValue placeholder="All statuses" />
+                <SelectTrigger className="h-[34px] gap-1.5 rounded-md! border-ds-border bg-ds-surface px-3 text-xs text-foreground hover:border-ds-border">
+                  <User className="size-[14px] text-muted-foreground" />
+                  <OwnerPillValue
+                    ownerId={filters.ownerId}
+                    members={roster?.members ?? []}
+                  />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All statuses</SelectItem>
-                  <SelectItem value="PLANNED">Planned</SelectItem>
-                  <SelectItem value="ACTIVE">Active</SelectItem>
-                  <SelectItem value="COMPLETED">Completed</SelectItem>
+                <SelectContent className="w-max min-w-full">
+                  <SelectItem value="ALL">All owners</SelectItem>
+                  {(roster?.members ?? []).map((member) => (
+                    // Use the user id (not the membership id) — the list endpoint
+                    // filters Project.ownerId, which references User.id.
+                    <SelectItem
+                      key={member.userId}
+                      value={member.userId}
+                      className="whitespace-nowrap"
+                    >
+                      {member.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-            ) : null}
 
-            <Select
-              value={filters.ownerId ?? 'ALL'}
-              onValueChange={(value) =>
-                set({ ownerId: value === 'ALL' ? undefined : value })
-              }
-            >
-              <SelectTrigger className="h-[34px] gap-1.5 border-ds-border bg-ds-surface px-3 text-xs text-muted-foreground hover:border-ds-border">
-                <User className="size-[14px]" />
-                <SelectValue placeholder="All owners" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All owners</SelectItem>
-                {(roster?.members ?? []).map((member) => (
-                  // Use the user id (not the membership id) — the list endpoint
-                  // filters Project.ownerId, which references User.id.
-                  <SelectItem key={member.userId} value={member.userId}>
-                    {member.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <DateFilter
+                value={filters.startDate}
+                onChange={(value) => set({ startDate: value })}
+                icon={<CalendarDays className="size-[14px]" />}
+                placeholder="Start"
+              />
 
-            <DateFilter
-              value={filters.startDate}
-              onChange={(value) => set({ startDate: value })}
-              icon={<CalendarDays className="size-[14px]" />}
-              placeholder="Any start"
-            />
+              <DateFilter
+                value={filters.targetDate}
+                onChange={(value) => set({ targetDate: value })}
+                icon={<Flag className="size-[14px]" />}
+                placeholder="Target"
+              />
 
-            <DateFilter
-              value={filters.targetDate}
-              onChange={(value) => set({ targetDate: value })}
-              icon={<CalendarRange className="size-[14px]" />}
-              placeholder="Any target"
-            />
+              {/* Sort direction toggle — flips asc/desc. */}
+              <button
+                type="button"
+                aria-label={`Sort ${
+                  filters.order === 'asc' ? 'descending' : 'ascending'
+                }`}
+                title={`Sort ${filters.order === 'asc' ? 'descending' : 'ascending'}`}
+                onClick={() =>
+                  set({ order: filters.order === 'asc' ? 'desc' : 'asc' })
+                }
+                className="grid size-[34px] shrink-0 place-items-center rounded-md border border-ds-border bg-ds-surface text-muted-foreground transition-colors hover:border-ds-border hover:text-foreground"
+              >
+                {filters.order === 'asc' ? (
+                  <ArrowUpAZ className="size-[14px]" />
+                ) : (
+                  <ArrowDownAZ className="size-[14px]" />
+                )}
+              </button>
+            </>
+          ) : null}
+        </div>
 
-            <Select
-              value={filters.sort}
-              onValueChange={(value) =>
-                set({ sort: value as ProjectFilters['sort'] })
-              }
-            >
-              <SelectTrigger className="h-[34px] gap-1.5 border-ds-border bg-ds-surface px-3 text-xs text-muted-foreground hover:border-ds-border">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SORT_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Sort direction toggle — flips asc/desc (previously decorative). */}
-            <button
-              type="button"
-              aria-label={`Sort ${
-                filters.order === 'asc' ? 'descending' : 'ascending'
-              }`}
-              title={`Sort ${filters.order === 'asc' ? 'descending' : 'ascending'}`}
-              onClick={() =>
-                set({ order: filters.order === 'asc' ? 'desc' : 'asc' })
-              }
-              className="grid size-[34px] shrink-0 place-items-center rounded-md border border-ds-border bg-ds-surface text-muted-foreground transition-colors hover:border-ds-border hover:text-foreground"
-            >
-              {filters.order === 'asc' ? (
-                <ArrowUpAZ className="size-[14px]" />
-              ) : (
-                <ArrowDownAZ className="size-[14px]" />
-              )}
-            </button>
-          </div>
+        {!archived && hasActiveFilters ? (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="shrink-0 text-xs font-medium text-ds-brand transition-colors hover:text-ds-brand/80"
+          >
+            Clear
+          </button>
         ) : null}
       </div>
     </div>
   );
 }
 
+/** Owner pill label — the filter name at rest, the member name when set. */
+function OwnerPillValue({
+  ownerId,
+  members,
+}: {
+  ownerId?: string;
+  members: { userId: string; name: string }[];
+}) {
+  const selected = ownerId
+    ? members.find((m) => m.userId === ownerId)
+    : undefined;
+  return <span className="truncate">{selected?.name ?? 'Owner'}</span>;
+}
+
 /**
- * Date filter — a compact 34px pill (calendar icon + label) that opens the
- * shared `Calendar` in a `Popover`, matching the Start/Target date filters in
- * shipyard.pen and the date picker used in the Create Project dialog. Values
- * are serialized to the shared `YYYY-MM-DD` format (`ProjectFilters`).
+ * Date filter — a 34px pill (leading icon + label + trailing calendar icon)
+ * that opens the shared `Calendar` in a `Popover`, matching the Start/Target
+ * date filters in shipyard.pen. Values are serialized to the shared
+ * `YYYY-MM-DD` format (`ProjectFilters`).
  */
 function DateFilter({
   value,
@@ -297,30 +298,15 @@ function DateFilter({
           aria-label={placeholder}
           title={value ? format(selected!, 'MMM d, yyyy') : placeholder}
           className={cn(
-            'flex h-[34px] items-center gap-1.5 rounded-md border px-3 text-xs transition-colors',
+            'flex h-[34px] items-center gap-1.5 rounded-md border border-ds-border bg-ds-surface px-3 text-xs font-medium text-foreground transition-colors hover:border-ds-border-strong',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            value
-              ? 'border-ds-brand/40 bg-ds-brand-soft text-ds-brand'
-              : 'border-ds-border bg-ds-surface text-muted-foreground hover:border-ds-border',
           )}
         >
-          <span className={cn(value && 'text-ds-brand')}>{icon}</span>
+          <span className="text-muted-foreground">{icon}</span>
           <span className="whitespace-nowrap">
             {value ? format(selected!, 'MMM d, yyyy') : placeholder}
           </span>
-          {value ? (
-            <span
-              role="button"
-              aria-label={`Clear ${placeholder}`}
-              className="ml-0.5 grid size-4 shrink-0 place-items-center rounded-sm text-current/70 hover:bg-ds-brand/10"
-              onClick={(e) => {
-                e.stopPropagation();
-                onChange(undefined);
-              }}
-            >
-              <X className="size-3" />
-            </span>
-          ) : null}
+          <CalendarDays className="size-[14px] shrink-0 text-muted-foreground" />
         </button>
       </PopoverTrigger>
       <PopoverContent

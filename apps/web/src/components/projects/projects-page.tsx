@@ -51,7 +51,6 @@ export function ProjectsPage({ slug }: { slug: string }) {
   );
   const [filters, setFilters] = useState<ProjectFilters>({
     search: '',
-    sort: 'createdAt',
     order: 'desc',
   });
   // Archived scope — read-only list of archived projects with Restore.
@@ -61,9 +60,9 @@ export function ProjectsPage({ slug }: { slug: string }) {
   // share one query. Filter params are passed server-side where the endpoint
   // supports them; search stays client-side in the list and board views.
   //
-  // Status is a list-only filter — the board always shows every status, so
-  // it's dropped from the query in Kanban; owner/date/sort still apply (server
-  // sorted, grouped per column). Archived is a separate read-only scope.
+  // The list is grouped by status, so there is no status filter; sort field
+  // is fixed to newest-first, the toolbar toggle flips direction only.
+  // Archived is a separate read-only scope.
   const projectsQuery = useProjects(
     slug,
     archived
@@ -73,15 +72,14 @@ export function ProjectsPage({ slug }: { slug: string }) {
             ownerId: filters.ownerId,
             startDate: filters.startDate,
             targetDate: filters.targetDate,
-            sort: filters.sort,
+            sort: 'createdAt',
             order: filters.order,
           }
         : {
-            status: filters.status,
             ownerId: filters.ownerId,
             startDate: filters.startDate,
             targetDate: filters.targetDate,
-            sort: filters.sort,
+            sort: 'createdAt',
             order: filters.order,
           },
   );

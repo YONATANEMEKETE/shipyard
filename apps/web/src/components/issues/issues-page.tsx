@@ -9,7 +9,10 @@ import {
   type IssueFilters,
   type IssueScope,
 } from '@/components/issues/issues-toolbar';
+import { IssuesListView } from '@/components/issues/issues-list-view';
+import { IssuesKanbanView } from '@/components/issues/issues-kanban-view';
 import { useWorkspace } from '@/hooks/use-workspaces';
+import { useViewPreference } from '@/hooks/use-projects';
 import { useSession } from '@/hooks/use-session';
 import { useIssues } from '@/hooks/use-issues';
 
@@ -24,6 +27,8 @@ export function IssuesPage({ slug }: { slug: string }) {
   const canCreate = workspace?.role !== 'MEMBER';
 
   const { data: session } = useSession();
+  const { data: viewPref } = useViewPreference(slug, 'ISSUE');
+  const view = viewPref?.view ?? 'LIST';
 
   const [scope, setScope] = useState<IssueScope>('ALL');
   const [filters, setFilters] = useState<IssueFilters>({
@@ -79,11 +84,15 @@ export function IssuesPage({ slug }: { slug: string }) {
     ...(myCountQuery.data ? { MY: myCountQuery.data.issues.length } : {}),
   };
 
-  // Expose query status for dev verification; not rendered in toolbar-only pass.
-  // Keeping the hook live proves the filter system is end-to-end (Select/Calendar -> params -> fetch).
-  void issuesQuery.data;
-  void issuesQuery.isPending;
-  void issuesQuery.isError;
+  const hasActiveFilters =
+    filters.search.trim() !== '' ||
+    filters.priority !== undefined ||
+    filters.assigneeId !== undefined ||
+    filters.projectId !== undefined ||
+    filters.labelId !== undefined ||
+    filters.dueDate !== undefined;
+
+  const issues = issuesQuery.data?.issues ?? [];
 
   return (
     <div className="flex h-full w-full flex-col gap-6">
@@ -122,7 +131,24 @@ export function IssuesPage({ slug }: { slug: string }) {
         counts={counts}
       />
 
-      {/* Content area — list/kanban views and the create dialog land next. */}
+      {/* Content area — list / kanban (archived is list-only). */}
+      <div className="flex min-h-0 flex-1 flex-col">
+        {scope === 'ARCHIVED' || view === 'LIST' ? (
+          <IssuesListView
+            issues={issues}
+            loading={issuesQuery.isPending}
+            error={issuesQuery.isError}
+            onRetry={() => issuesQuery.refetch()}
+            hasActiveFilters={hasActiveFilters}
+          />
+        ) : (
+          <IssuesKanbanView
+            loading={issuesQuery.isPending}
+            error={issuesQuery.isError}
+            onRetry={() => issuesQuery.refetch()}
+          />
+        )}
+      </div>
     </div>
   );
 }

@@ -80,7 +80,7 @@ function ProjectRow({
   return (
     <div
       onClick={onOpen}
-      className="flex h-12 min-w-[560px] cursor-pointer items-center gap-3 border-b border-ds-border/70 px-4 transition-colors last:border-b-0 hover:bg-ds-bg md:min-w-0"
+      className="flex h-12 cursor-pointer items-center gap-3 border-b border-ds-border/70 px-4 transition-colors last:border-b-0 hover:bg-ds-bg"
     >
       <CornerDownRight
         aria-hidden
@@ -115,24 +115,28 @@ function ProjectRow({
         </span>
       )}
 
-      <span
-        role="progressbar"
-        aria-valuenow={pct}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-label={`${project.name} progress`}
-        className="h-1.5 w-20 shrink-0 rounded-full bg-[#E8E5DE]"
-      >
+      {/* Progress + target date collapse on small screens (sm/md+) so the
+          row never scrolls horizontally — name + owner stay visible. */}
+      <span className="hidden shrink-0 items-center gap-3 sm:flex">
         <span
-          aria-hidden
-          className={cn('block h-full rounded-full', bar)}
-          style={{ width: `${pct}%` }}
-        />
+          role="progressbar"
+          aria-valuenow={pct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`${project.name} progress`}
+          className="h-1.5 w-20 shrink-0 rounded-full bg-[#E8E5DE]"
+        >
+          <span
+            aria-hidden
+            className={cn('block h-full rounded-full', bar)}
+            style={{ width: `${pct}%` }}
+          />
+        </span>
+        <span className="w-8 shrink-0 text-[10px] leading-none text-muted-foreground">
+          {pct}%
+        </span>
       </span>
-      <span className="w-8 shrink-0 text-[10px] leading-none text-muted-foreground">
-        {pct}%
-      </span>
-      <span className="w-14 shrink-0 text-[11.5px] leading-none text-muted-foreground">
+      <span className="hidden w-14 shrink-0 text-[11.5px] leading-none text-muted-foreground md:block">
         {formatTargetDate(project.targetDate)}
       </span>
     </div>
@@ -191,7 +195,7 @@ export function ProjectListView({
   const centered = showEmpty || error || loading;
 
   return (
-    <div className="flex h-full w-full flex-col overflow-x-auto">
+    <div className="flex h-full w-full flex-col">
       <div
         className={cn(
           'relative min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',

@@ -84,7 +84,7 @@ export function ArchivedProjectsList({
   const centered = showEmpty || error || loading;
 
   return (
-    <div className="flex h-full w-full flex-col overflow-x-auto">
+    <div className="flex h-full w-full flex-col">
       <div
         className={cn(
           'relative min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
@@ -146,7 +146,7 @@ export function ArchivedProjectsList({
               return (
                 <div
                   key={project.id}
-                  className="flex h-12 min-w-[560px] items-center gap-3 border-b border-ds-border/70 px-4 transition-colors last:border-b-0 hover:bg-ds-bg md:min-w-0"
+                  className="flex h-12 items-center gap-3 border-b border-ds-border/70 px-4 transition-colors last:border-b-0 hover:bg-ds-bg"
                 >
                   <CornerDownRight
                     aria-hidden
@@ -158,7 +158,9 @@ export function ArchivedProjectsList({
                   <span className="inline-flex h-5 shrink-0 items-center rounded-full bg-[#F0EFEB] px-2 font-mono text-[9px] font-semibold leading-none text-muted-foreground">
                     ARCHIVED
                   </span>
-                  <span className="w-24 shrink-0 text-[11.5px] leading-none text-muted-foreground">
+                  {/* Stored status hides on small screens — badge + restore
+                      stay reachable without horizontal scrolling. */}
+                  <span className="hidden w-24 shrink-0 text-[11.5px] leading-none text-muted-foreground sm:block">
                     {STORED_STATUS_LABEL[project.status]}
                   </span>
                   <button

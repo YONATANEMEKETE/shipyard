@@ -11,6 +11,7 @@ import {
 } from '@/components/issues/issues-toolbar';
 import { IssuesListView } from '@/components/issues/issues-list-view';
 import { IssuesKanbanView } from '@/components/issues/issues-kanban-view';
+import { CreateIssueDialog } from '@/components/issues/create-issue-dialog';
 import { useWorkspace } from '@/hooks/use-workspaces';
 import { useViewPreference } from '@/hooks/use-projects';
 import { useSession } from '@/hooks/use-session';
@@ -35,6 +36,7 @@ export function IssuesPage({ slug }: { slug: string }) {
     search: '',
     order: 'desc',
   });
+  const [createOpen, setCreateOpen] = useState(false);
 
   const q = filters.search.trim();
   const queryQ = q.length >= 2 ? q : q.length === 0 ? undefined : undefined;
@@ -114,6 +116,7 @@ export function IssuesPage({ slug }: { slug: string }) {
         {canCreate ? (
           <Button
             type="button"
+            onClick={() => setCreateOpen(true)}
             className="h-9 gap-2 rounded-md bg-ds-brand px-4 text-sm font-semibold text-white hover:bg-ds-brand/90"
           >
             <Plus className="size-4" />
@@ -149,6 +152,12 @@ export function IssuesPage({ slug }: { slug: string }) {
           />
         )}
       </div>
+
+      <CreateIssueDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        slug={slug}
+      />
     </div>
   );
 }

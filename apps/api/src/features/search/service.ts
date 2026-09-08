@@ -5,6 +5,7 @@ import { toCard as toIssueCard } from '../issues/service.js';
 import {
   progressFor as progressForProjects,
   toCard as toProjectCard,
+  workersFor as workersForProjects,
 } from '../projects/service.js';
 import { toCard as toCommentCard } from '../comments/service.js';
 import { progressFor, toCard as toCycleCard } from '../cycles/service.js';
@@ -182,17 +183,25 @@ export const searchService = {
     const ids = hits.map((hit) => hit.id);
     const rows = orderRows(await hydrateProjects(workspaceId, ids), ids);
     if (rows.length === 0) return [];
-    // Progress ships inline on the card (same derivation as the projects
-    // module — batched once for all hits, no N+1).
-    const progress = await progressForProjects(
-      prisma,
-      workspaceId,
-      rows.map((row) => row.id),
-    );
+    // Progress + workers ship inline on the card (same derivation as the
+    // projects module — batched once for all hits, no N+1).
+    const [progress, workers] = await Promise.all([
+      progressForProjects(
+        prisma,
+        workspaceId,
+        rows.map((row) => row.id),
+      ),
+      workersForProjects(
+        prisma,
+        workspaceId,
+        rows.map((row) => row.id),
+      ),
+    ]);
     return rows.map((row) =>
       toProjectCard(
         row,
         progress.get(row.id) ?? { total: 0, completed: 0, percent: null },
+        workers.get(row.id) ?? [],
       ),
     );
   },

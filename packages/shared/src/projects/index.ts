@@ -132,6 +132,17 @@ export const projectOwnerCardSchema = z.object({
 
 export type ProjectOwnerCard = z.infer<typeof projectOwnerCardSchema>;
 
+// A project worker — someone doing the work: the distinct assignees of the
+// project's non-archived issues. Derived at read time, never stored. The
+// owner is shown separately (owner row), so workers can be empty.
+export const projectWorkerCardSchema = z.object({
+  userId: z.string(),
+  name: z.string(),
+  image: z.string().nullable(),
+});
+
+export type ProjectWorkerCard = z.infer<typeof projectWorkerCardSchema>;
+
 // Card shape — what list/board/detail all render from. Dates are strings.
 // Description ships on the list payload too (board cards render it), so
 // card ≈ detail today; detail stays a named schema for future growth.
@@ -147,6 +158,7 @@ export const projectCardSchema = z.object({
   startDate: projectDateSchema.nullable(),
   targetDate: projectDateSchema.nullable(),
   progress: cycleProgressSchema,
+  workers: z.array(projectWorkerCardSchema),
   archivedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),

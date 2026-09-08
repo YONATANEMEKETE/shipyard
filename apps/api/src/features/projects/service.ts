@@ -3,6 +3,7 @@ import type {
   CycleProgress,
   ProjectCard,
   ProjectDetail,
+  ProjectWorkerCard,
   UpdateProjectRequest,
   ViewPreference,
   ViewScope,
@@ -54,7 +55,11 @@ function toDateString(date: Date | null | undefined): string | null {
 
 // Exported for the search module (F10): grouped hits re-render owning card
 // shapes exactly — mapping stays single-sourced here, never duplicated.
-export function toCard(row: ProjectRow, progress: CycleProgress): ProjectCard {
+export function toCard(
+  row: ProjectRow,
+  progress: CycleProgress,
+  workers: ProjectWorkerCard[],
+): ProjectCard {
   const ownerMembership = row.owner.workspaceMembers[0];
   return {
     id: row.id,
@@ -72,14 +77,19 @@ export function toCard(row: ProjectRow, progress: CycleProgress): ProjectCard {
     startDate: toDateString(row.startDate),
     targetDate: toDateString(row.targetDate),
     progress,
+    workers,
     archivedAt: row.archivedAt ? row.archivedAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
 }
 
-function toDetail(row: ProjectRow, progress: CycleProgress): ProjectDetail {
-  return toCard(row, progress);
+function toDetail(
+  row: ProjectRow,
+  progress: CycleProgress,
+  workers: ProjectWorkerCard[],
+): ProjectDetail {
+  return toCard(row, progress, workers);
 }
 
 function emptyProgress(): CycleProgress {
@@ -128,8 +138,15 @@ async function cardFor(
   client: DbClient,
   row: ProjectRow,
 ): Promise<ProjectCard> {
-  const progress = await progressFor(client, row.workspaceId, [row.id]);
-  return toCard(row, progress.get(row.id) ?? emptyProgress());
+  const [progress, workers] = await Promise.all([
+    progressFor(client, row.workspaceId, [row.id]),
+    workersFor(client, row.workspaceId, [row.id]),
+  ]);
+  return toCard(
+    row,
+    progress.get(row.id) ?? emptyProgress(),
+    workers.get(row.id) ?? [],
+  );
 }
 
 async function detailFor(
@@ -137,6 +154,49 @@ async function detailFor(
   row: ProjectRow,
 ): Promise<ProjectDetail> {
   return cardFor(client, row);
+}
+
+// Worker stacks (mirrors progressFor): distinct assignees of non-archived
+// issues per project, display cards resolved in one user lookup — no N+1.
+// Exported for the search module (F10).
+export async function workersFor(
+  client: DbClient,
+  workspaceId: string,
+  projectIds: string[],
+): Promise<Map<string, ProjectWorkerCard[]>> {
+  const result = new Map<string, ProjectWorkerCard[]>();
+  for (const id of projectIds) result.set(id, []);
+  if (projectIds.length === 0) return result;
+
+  const pairs = await projectsRepository.findWorkerAssignees(
+    client,
+    workspaceId,
+    projectIds,
+  );
+  const assigneeIds = [
+    ...new Set(
+      pairs
+        .map((pair) => pair.assigneeId)
+        .filter((id): id is string => id !== null),
+    ),
+  ];
+  if (assigneeIds.length === 0) return result;
+  const users = await projectsRepository.findUsersByIds(client, assigneeIds);
+  const byId = new Map(users.map((user) => [user.id, user]));
+  for (const pair of pairs) {
+    if (!pair.projectId || !pair.assigneeId) continue;
+    const user = byId.get(pair.assigneeId);
+    if (!user) continue;
+    result.get(pair.projectId)?.push({
+      userId: user.id,
+      name: user.name,
+      image: resolveImageUrl(user.image),
+    });
+  }
+  // Deterministic order so stacks render stably.
+  for (const list of result.values())
+    list.sort((a, b) => a.name.localeCompare(b.name));
+  return result;
 }
 
 function requireProject(row: ProjectRow | null): ProjectRow {
@@ -194,14 +254,26 @@ export const projectsService = {
       take: LIST_LIMIT,
     });
     if (rows.length === 0) return [];
-    // Progress ships inline on the card — batched once for all rows, no N+1.
-    const progress = await progressFor(
-      prisma,
-      context.workspaceId,
-      rows.map((row) => row.id),
-    );
+    // Progress + workers ship inline on the card — batched once for all
+    // rows, no N+1.
+    const [progress, workers] = await Promise.all([
+      progressFor(
+        prisma,
+        context.workspaceId,
+        rows.map((row) => row.id),
+      ),
+      workersFor(
+        prisma,
+        context.workspaceId,
+        rows.map((row) => row.id),
+      ),
+    ]);
     return rows.map((row) =>
-      toCard(row, progress.get(row.id) ?? emptyProgress()),
+      toCard(
+        row,
+        progress.get(row.id) ?? emptyProgress(),
+        workers.get(row.id) ?? [],
+      ),
     );
   },
 
@@ -225,13 +297,24 @@ export const projectsService = {
       take: 20,
     });
     if (rows.length === 0) return [];
-    const progress = await progressFor(
-      prisma,
-      workspaceId,
-      rows.map((row) => row.id),
-    );
+    const [progress, workers] = await Promise.all([
+      progressFor(
+        prisma,
+        workspaceId,
+        rows.map((row) => row.id),
+      ),
+      workersFor(
+        prisma,
+        workspaceId,
+        rows.map((row) => row.id),
+      ),
+    ]);
     return rows.map((row) =>
-      toCard(row, progress.get(row.id) ?? emptyProgress()),
+      toCard(
+        row,
+        progress.get(row.id) ?? emptyProgress(),
+        workers.get(row.id) ?? [],
+      ),
     );
   },
 
@@ -291,7 +374,8 @@ export const projectsService = {
         },
         'project.created',
       );
-      return toDetail(row, emptyProgress());
+      // A fresh project tracks no issues and has no workers yet.
+      return toDetail(row, emptyProgress(), []);
     } catch (error) {
       // Race: the D3 functional index is the source of truth for uniqueness.
       if ((error as { code?: string }).code === 'P2002')

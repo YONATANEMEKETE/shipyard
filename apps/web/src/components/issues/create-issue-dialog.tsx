@@ -331,8 +331,8 @@ function CreateIssueDialogContent({
           // creation succeeded, cycle attach failed — still show success but flag
           showToast({
             status: 'success',
-            title: 'Issue created',
-            description: `${issue.identifier} is ready (cycle not attached).`,
+            title: `Created ${issue.identifier}`,
+            description: `"${issue.title}" — cycle not attached`,
           });
           form.reset();
           setCycleId(null);
@@ -342,8 +342,8 @@ function CreateIssueDialogContent({
       }
       showToast({
         status: 'success',
-        title: 'Issue created',
-        description: `${issue.identifier} is ready.`,
+        title: `Created ${issue.identifier}`,
+        description: `"${issue.title}" is ready`,
       });
       form.reset();
       setCycleId(null);

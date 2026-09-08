@@ -21,6 +21,12 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { IssuePriorityBadge } from '@/components/issues/issue-priority-badge';
 import { IssueLabelPills } from '@/components/issues/issue-label-pill';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const GROUP_ORDER: IssueStatus[] = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'DONE'];
 
@@ -175,12 +181,14 @@ export function IssuesListView({
   error = false,
   onRetry,
   hasActiveFilters = false,
+  onAddIssue,
 }: {
   issues: IssueCard[];
   loading?: boolean;
   error?: boolean;
   onRetry?: () => void;
   hasActiveFilters?: boolean;
+  onAddIssue?: (status: IssueStatus) => void;
 }) {
   const grouped = GROUP_ORDER.map((status) => ({
     status,
@@ -278,18 +286,28 @@ export function IssuesListView({
                 {group.issues.length}
               </span>
               <span className="min-w-0 flex-1" aria-hidden />
-              <span
-                role="button"
-                tabIndex={-1}
-                aria-label={`Add ${group.meta.label} issue`}
-                title={`Add ${group.meta.label} issue`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                }}
-                className="grid size-6 shrink-0 place-items-center rounded-md text-ds-text-muted transition-colors hover:bg-ds-surface hover:text-foreground"
-              >
-                <Plus className="size-3.5" />
-              </span>
+              {group.status !== 'DONE' ? (
+                <TooltipProvider delayDuration={100}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label={`New ${group.meta.label} issue`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAddIssue?.(group.status);
+                        }}
+                        className="grid size-6 shrink-0 place-items-center rounded-md text-ds-text-muted transition-colors hover:bg-ds-bg hover:text-foreground"
+                      >
+                        <Plus className="size-3.5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      New {group.meta.label} issue
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : null}
             </button>
             <AnimatePresence initial={false}>
               {!isCollapsed ? (

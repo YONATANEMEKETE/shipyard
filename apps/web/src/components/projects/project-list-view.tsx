@@ -15,6 +15,12 @@ import { ErrorState } from '@/components/ui/error-state';
 import { Button } from '@/components/ui/button';
 import type { ProjectFilters } from '@/components/projects/projects-toolbar';
 import { displayProgress } from '@/components/projects/project-progress';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 const GROUP_ORDER: ProjectStatus[] = ['PLANNED', 'ACTIVE', 'COMPLETED'];
@@ -279,19 +285,28 @@ export function ProjectListView({
                     {group.projects.length}
                   </span>
                   <span className="min-w-0 flex-1" aria-hidden />
-                  <span
-                    role="button"
-                    tabIndex={-1}
-                    aria-label={`New ${meta.label} project`}
-                    title={`New ${meta.label} project`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onAddProject?.(group.status);
-                    }}
-                    className="grid size-6 shrink-0 place-items-center rounded-md text-ds-text-muted transition-colors hover:bg-ds-surface hover:text-foreground"
-                  >
-                    <Plus className="size-3.5" />
-                  </span>
+                  {group.status !== 'COMPLETED' ? (
+                    <TooltipProvider delayDuration={100}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            aria-label={`New ${meta.label} project`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onAddProject?.(group.status);
+                            }}
+                            className="grid size-6 shrink-0 place-items-center rounded-md text-ds-text-muted transition-colors hover:bg-ds-bg hover:text-foreground"
+                          >
+                            <Plus className="size-3.5" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          New {meta.label} project
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : null}
                 </button>
                 <AnimatePresence initial={false}>
                   {!isCollapsed ? (

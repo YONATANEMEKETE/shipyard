@@ -9,6 +9,7 @@ import {
   Pencil,
   MessageSquare,
   History,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -21,13 +22,15 @@ import {
 } from '@/components/motion/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { Loader } from '@/components/motion/loader';
 import {
   useArchiveIssue,
+  useAttachLabel,
   useDeleteIssue,
+  useDetachLabel,
   useIssue,
+  useLabels,
   useUpdateIssue,
 } from '@/hooks/use-issues';
 import { useMembers } from '@/hooks/use-members';
@@ -38,6 +41,7 @@ import { cn } from '@/lib/utils';
 import type { IssueStatus } from '@shipyard/shared';
 import { useRouter } from 'next/navigation';
 import { Archive, Trash2 } from 'lucide-react';
+import { IssueLabelSelect } from '@/components/issues/issue-label-select';
 import { Calendar } from '@/components/ui/calendar';
 import {
   Popover,
@@ -107,11 +111,14 @@ export function IssueDetailPage({
   const { data: membersData } = useMembers(slug);
   const { data: projectsData } = useProjects(slug);
   const { data: cyclesData } = useCycles(slug);
+  const { data: labelsData, isPending: isLabelsLoading } = useLabels(slug);
   const hasMembers = membersData ? membersData.members.length > 0 : true;
   const hasProjects = projectsData ? projectsData.projects.length > 0 : true;
   const hasCycles = cyclesData ? cyclesData.cycles.length > 0 : true;
   const archiveIssue = useArchiveIssue(slug);
   const deleteIssue = useDeleteIssue(slug);
+  const attachLabel = useAttachLabel(slug);
+  const detachLabel = useDetachLabel(slug);
 
   if (isPending) {
     return (
@@ -664,26 +671,122 @@ export function IssueDetailPage({
 
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground">Labels</span>
-              <div className="flex max-w-[160px] flex-wrap justify-end gap-1.5">
-                {issue.labels.length === 0 ? (
-                  <span className="text-xs text-muted-foreground">
-                    No labels
-                  </span>
-                ) : (
-                  issue.labels.map((l) => (
-                    <span
-                      key={l.id}
-                      className="inline-flex h-5 items-center gap-1 rounded-full bg-ds-surface-subtle px-2 text-[10px] font-medium text-foreground"
-                    >
-                      <span
-                        className="size-2 rounded-full"
-                        style={{ backgroundColor: l.color }}
-                        aria-hidden
-                      />
-                      {l.name}
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
+                  {issue.labels.length === 0 ? (
+                    <span className="text-xs text-muted-foreground">
+                      No labels
                     </span>
-                  ))
-                )}
+                  ) : (
+                    <>
+                      {issue.labels.slice(0, 2).map((l) => (
+                        <span
+                          key={l.id}
+                          className="inline-flex h-[18px] items-center gap-1 rounded-full px-1.5 pl-2 text-[10px] font-medium"
+                          style={{
+                            backgroundColor: `${l.color}18`,
+                            color: l.color,
+                          }}
+                        >
+                          <span className="truncate">{l.name}</span>
+                          <button
+                            type="button"
+                            aria-label={`Remove ${l.name}`}
+                            disabled={
+                              detachLabel.isPending ||
+                              attachLabel.isPending ||
+                              updateIssue.isPending
+                            }
+                            onClick={() =>
+                              detachLabel.mutate(
+                                { issueId: issue.id, labelId: l.id },
+                                {
+                                  onSuccess: () =>
+                                    showToast({
+                                      status: 'success',
+                                      title: 'Label removed',
+                                      description: `${l.name} · ${issue.identifier}`,
+                                    }),
+                                  onError: (e) =>
+                                    showToast({
+                                      status: 'error',
+                                      title: 'Failed to remove label',
+                                      description: (e as Error).message,
+                                    }),
+                                },
+                              )
+                            }
+                            className="grid size-3.5 shrink-0 place-items-center rounded-full text-current opacity-70 transition-opacity hover:opacity-100 disabled:opacity-40"
+                          >
+                            <X className="size-2.5" />
+                          </button>
+                        </span>
+                      ))}
+                      {issue.labels.length > 2 ? (
+                        <span className="inline-flex h-[18px] items-center justify-center rounded-full bg-ds-surface-subtle px-2 text-[10px] font-medium text-muted-foreground">
+                          +{issue.labels.length - 2}
+                        </span>
+                      ) : null}
+                    </>
+                  )}
+                </div>
+                <IssueLabelSelect
+                  labels={labelsData?.labels ?? []}
+                  selectedIds={issue.labels.map((l) => l.id)}
+                  isLoading={isLabelsLoading}
+                  disabled={
+                    updateIssue.isPending ||
+                    attachLabel.isPending ||
+                    detachLabel.isPending
+                  }
+                  variant="plus"
+                  align="end"
+                  onToggle={(labelId) => {
+                    const isSelected = issue.labels.some(
+                      (l) => l.id === labelId,
+                    );
+                    const labelName =
+                      labelsData?.labels.find((x) => x.id === labelId)?.name ??
+                      labelId;
+                    if (isSelected) {
+                      detachLabel.mutate(
+                        { issueId: issue.id, labelId },
+                        {
+                          onSuccess: () =>
+                            showToast({
+                              status: 'success',
+                              title: 'Label removed',
+                              description: `${labelName} · ${issue.identifier}`,
+                            }),
+                          onError: (e) =>
+                            showToast({
+                              status: 'error',
+                              title: 'Failed to remove label',
+                              description: (e as Error).message,
+                            }),
+                        },
+                      );
+                    } else {
+                      attachLabel.mutate(
+                        { issueId: issue.id, body: { labelId } },
+                        {
+                          onSuccess: () =>
+                            showToast({
+                              status: 'success',
+                              title: 'Label added',
+                              description: `${labelName} · ${issue.identifier}`,
+                            }),
+                          onError: (e) =>
+                            showToast({
+                              status: 'error',
+                              title: 'Failed to add label',
+                              description: (e as Error).message,
+                            }),
+                        },
+                      );
+                    }
+                  }}
+                />
               </div>
             </div>
 

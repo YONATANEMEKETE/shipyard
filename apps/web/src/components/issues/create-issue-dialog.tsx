@@ -7,7 +7,6 @@ import {
   ChevronRight,
   Plus,
   X,
-  Tag,
   RefreshCcw,
   Folder,
   User,
@@ -15,8 +14,6 @@ import {
 import { Dialog as DialogPrimitive } from 'radix-ui';
 import { useEffect, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
-import type { ReactNode } from 'react';
-
 import {
   createIssueSchema,
   type CreateIssueRequest,
@@ -43,6 +40,7 @@ import { useProjects } from '@/hooks/use-projects';
 import { useCycles } from '@/hooks/use-cycles';
 import { useToast } from '@/components/providers/toast-provider';
 import { cn } from '@/lib/utils';
+import { IssueLabelSelect } from '@/components/issues/issue-label-select';
 
 export interface CreateIssueDialogProps {
   open: boolean;
@@ -78,28 +76,6 @@ function initialsOf(name: string): string {
     .slice(0, 2)
     .map((p) => p[0]!.toUpperCase())
     .join('');
-}
-
-function Pill({
-  children,
-  className,
-  invalid,
-}: {
-  children: ReactNode;
-  className?: string;
-  invalid?: boolean;
-}) {
-  return (
-    <span
-      className={cn(
-        'inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border bg-ds-surface-subtle px-3 text-xs font-medium text-foreground',
-        invalid ? 'border-destructive' : 'border-ds-border',
-        className,
-      )}
-    >
-      {children}
-    </span>
-  );
 }
 
 function DatePill({
@@ -153,103 +129,6 @@ function DatePill({
   );
 }
 
-function LabelsPill({
-  value,
-  onChange,
-  slug,
-  invalid,
-  disabled,
-  onExternalOpenChange,
-}: {
-  value: string[];
-  onChange: (next: string[]) => void;
-  slug: string;
-  invalid?: boolean;
-  disabled?: boolean;
-  onExternalOpenChange?: (open: boolean) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const handleOpenChange = (next: boolean) => {
-    setOpen(next);
-    onExternalOpenChange?.(next);
-  };
-  const { data } = useLabels(slug);
-  const labels = data?.labels ?? [];
-  const hasLabels = data ? labels.length > 0 : true;
-  const selected = labels.filter((l) => value.includes(l.id));
-  const labelText =
-    selected.length === 0 ? 'Labels' : selected.map((l) => l.name).join(', ');
-  const isDisabled = disabled || !hasLabels;
-
-  return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          disabled={isDisabled}
-          aria-label="Labels"
-          className={cn(
-            'inline-flex h-7 max-w-[180px] shrink-0 items-center gap-1.5 rounded-full border bg-ds-surface-subtle px-3 text-xs font-medium transition-colors hover:border-ds-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
-            invalid ? 'border-destructive' : 'border-ds-border',
-            selected.length === 0 ? 'text-muted-foreground' : 'text-foreground',
-          )}
-        >
-          <Tag className="size-3.5 shrink-0 text-muted-foreground" />
-          <span className="truncate">{labelText}</span>
-        </button>
-      </PopoverTrigger>
-      <PopoverContent
-        align="start"
-        sideOffset={8}
-        className="w-64 border-ds-border bg-ds-surface p-2 shadow-xl"
-      >
-        <div className="flex max-h-64 flex-col gap-1 overflow-y-auto">
-          {labels.length === 0 ? (
-            <p className="px-2 py-3 text-center text-xs text-muted-foreground">
-              No labels yet
-            </p>
-          ) : (
-            labels.map((label) => {
-              const checked = value.includes(label.id);
-              return (
-                <label
-                  key={label.id}
-                  className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-muted"
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={(e) => {
-                      if (e.target.checked) onChange([...value, label.id]);
-                      else onChange(value.filter((id) => id !== label.id));
-                    }}
-                    className="size-3.5 rounded border-ds-border"
-                  />
-                  <span
-                    className="size-2.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: label.color }}
-                    aria-hidden
-                  />
-                  <span className="flex-1 truncate">{label.name}</span>
-                </label>
-              );
-            })
-          )}
-        </div>
-        {value.length > 0 ? (
-          <button
-            type="button"
-            onClick={() => onChange([])}
-            className="mt-2 w-full rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted"
-          >
-            Clear
-          </button>
-        ) : null}
-      </PopoverContent>
-    </Popover>
-  );
-}
-
 export function CreateIssueDialog({
   open,
   onOpenChange,
@@ -283,6 +162,7 @@ function CreateIssueDialogContent({
   const { data: membersData } = useMembers(slug);
   const { data: projectsData } = useProjects(slug);
   const { data: cyclesData } = useCycles(slug);
+  const { data: labelsData, isPending: isLabelsLoading } = useLabels(slug);
   const [cycleId, setCycleId] = useState<string | null>(null);
 
   const hasMembers = membersData ? membersData.members.length > 0 : true;
@@ -676,15 +556,24 @@ function CreateIssueDialogContent({
           </div>
 
           <div className="flex w-full flex-wrap items-center gap-2 px-8 pb-6">
-            <LabelsPill
-              value={(values.labelIds as string[]) ?? []}
-              onChange={(next) =>
+            <IssueLabelSelect
+              labels={labelsData?.labels ?? []}
+              selectedIds={(values.labelIds as string[]) ?? []}
+              onToggle={(id) => {
+                const current = (values.labelIds as string[]) ?? [];
+                const next = current.includes(id)
+                  ? current.filter((x) => x !== id)
+                  : [...current, id];
                 form.setValue('labelIds', next, {
                   shouldValidate: form.formState.isSubmitted,
-                })
-              }
-              slug={slug}
+                });
+              }}
               disabled={busy}
+              isLoading={isLabelsLoading}
+              variant="pill"
+              align="start"
+              invalid={Boolean(showErrors && form.formState.errors.labelIds)}
+              onOpenChange={handlePanelOpenChange}
             />
             <DatePill
               value={values.dueDate as string | null | undefined}

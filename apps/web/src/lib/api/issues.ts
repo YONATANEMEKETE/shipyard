@@ -263,8 +263,9 @@ export function deleteLabel(
   slug: string,
   labelId: string,
 ): Promise<DeleteLabelResponse> {
-  return confirmRequest<DeleteLabelResponse>(
+  return requestJson<DeleteLabelResponse>(
     `${labelsBase(slug)}/${encodeURIComponent(labelId)}`,
+    { method: 'DELETE', body: JSON.stringify({ confirm: true }) },
     'Failed to delete label',
     IssuesApiError,
   );

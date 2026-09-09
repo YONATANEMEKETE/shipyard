@@ -78,26 +78,10 @@ function formatDue(value: string | null): string {
 }
 
 function LabelPill({ name, color }: { name: string; color: string }) {
-  const normalized = name.toLowerCase();
-  let bg = 'bg-secondary';
-  let text = 'text-ds-text-muted';
-  if (normalized === 'bug') {
-    bg = 'bg-ds-danger-soft';
-    text = 'text-ds-danger';
-  } else if (normalized === 'frontend') {
-    bg = 'bg-ds-info-soft';
-    text = 'text-ds-info';
-  } else if (normalized === 'backend') {
-    bg = 'bg-ds-brand-soft';
-    text = 'text-ds-brand';
-  }
   return (
     <span
-      className={cn(
-        'inline-flex h-5 items-center rounded-full px-2 text-[10px] font-medium leading-none',
-        bg,
-        text,
-      )}
+      className="inline-flex h-5 items-center rounded-full border border-transparent px-2 text-[10px] font-medium leading-none"
+      style={{ backgroundColor: `${color}18`, color }}
     >
       {name}
     </span>

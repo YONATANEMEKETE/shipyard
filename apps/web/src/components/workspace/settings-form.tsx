@@ -8,12 +8,16 @@ import {
   Container,
   Copy,
   Info,
+  Plus,
   Trash2,
   X,
   CheckCheck,
 } from 'lucide-react';
+import { useDeleteLabel, useLabels } from '@/hooks/use-issues';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
+import { CreateLabelDialog } from '@/components/workspace/create-label-dialog';
+import type { LabelCard } from '@shipyard/shared';
 
 import { nameSchema, type WorkspaceIconKey } from '@shipyard/shared';
 
@@ -73,6 +77,9 @@ export function SettingsForm({ slug }: { slug: string }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [confirmName, setConfirmName] = useState('');
   const [copied, setCopied] = useState(false);
+  const [createLabelOpen, setCreateLabelOpen] = useState(false);
+  const [editingLabel, setEditingLabel] = useState<LabelCard | null>(null);
+  const deleteLabel = useDeleteLabel(slug);
   const values = useWatch({ control: form.control });
   const parsed = settingsSchema.safeParse(values);
   const canSave = parsed.success;
@@ -80,6 +87,7 @@ export function SettingsForm({ slug }: { slug: string }) {
   const hasChanges = values.name !== defaultName || values.icon !== defaultIcon;
 
   const archived = isArchived(workspace);
+  const { data: labelsData, isPending: labelsPending } = useLabels(slug);
 
   const archiveMutation = useArchiveWorkspace(slug, {
     onSuccess: () => {
@@ -266,6 +274,108 @@ export function SettingsForm({ slug }: { slug: string }) {
               </div>
             </form>
           </Form>
+        </section>
+
+        <section className="flex w-full flex-col gap-[18px] rounded-xl border border-ds-border bg-ds-bg p-6">
+          <span className="font-mono text-[10px] font-semibold uppercase tracking-[1.2px] text-muted-foreground">
+            LABELS / WORKSPACE
+          </span>
+          <div className="flex w-full items-center justify-between gap-4">
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <h2 className="text-[15px] font-semibold leading-none tracking-[-0.2px] text-foreground">
+                Labels
+              </h2>
+              <p className="text-[11px] leading-[1.45] text-muted-foreground">
+                Organize issues across projects. Renames apply everywhere
+                instantly.
+              </p>
+            </div>
+            <Button
+              type="button"
+              onClick={() => {
+                setEditingLabel(null);
+                setCreateLabelOpen(true);
+              }}
+              className="h-8 shrink-0 gap-1.5 rounded-md bg-ds-brand px-3 text-xs font-semibold text-white hover:bg-ds-brand/90"
+            >
+              <Plus className="size-3.5" />
+              New label
+            </Button>
+          </div>
+          <div className="flex w-full flex-wrap items-center gap-2">
+            {labelsPending ? (
+              <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader variant="spinner" size={14} label="Loading labels" />
+                Loading labels…
+              </span>
+            ) : (labelsData?.labels ?? []).length > 0 ? (
+              (labelsData?.labels ?? []).map((label) => (
+                <span
+                  key={label.id}
+                  className="inline-flex h-[26px] items-center gap-1.5 rounded-full border border-transparent px-1.5 pl-2.5 text-xs font-medium"
+                  style={{
+                    backgroundColor: `${label.color}18`,
+                    color: label.color,
+                  }}
+                >
+                  <button
+                    type="button"
+                    aria-label={`Edit ${label.name}`}
+                    onClick={() => {
+                      setEditingLabel(label);
+                      setCreateLabelOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <span
+                      className="size-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: label.color }}
+                      aria-hidden
+                    />
+                    {label.name}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${label.name}`}
+                    onClick={() =>
+                      deleteLabel.mutate(
+                        { labelId: label.id },
+                        {
+                          onSuccess: () =>
+                            showToast({
+                              status: 'success',
+                              title: 'Label removed',
+                              description: label.name,
+                            }),
+                          onError: (e) =>
+                            showToast({
+                              status: 'error',
+                              title: 'Failed to remove label',
+                              description: (e as Error).message,
+                            }),
+                        },
+                      )
+                    }
+                    disabled={deleteLabel.isPending}
+                    className="grid size-4 shrink-0 place-items-center rounded-full text-current opacity-60 transition-opacity hover:opacity-100 disabled:opacity-30"
+                  >
+                    <X className="size-3" />
+                  </button>
+                </span>
+              ))
+            ) : (
+              <div className="flex w-full flex-col items-start gap-2 rounded-lg border border-dashed border-ds-border bg-ds-surface-subtle px-4 py-6">
+                <span className="inline-flex items-center gap-2 text-xs font-medium text-foreground">
+                  <Info className="size-3.5 text-muted-foreground" />
+                  No labels yet
+                </span>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  Create one to organize issues. Labels are workspace-wide and
+                  apply instantly.
+                </p>
+              </div>
+            )}
+          </div>
         </section>
 
         <section className="flex w-full flex-col gap-[18px] rounded-xl border border-ds-border bg-ds-bg p-6">
@@ -520,6 +630,16 @@ export function SettingsForm({ slug }: { slug: string }) {
           </DialogPrimitive.Content>
         </DialogPrimitive.Portal>
       </DialogPrimitive.Root>
+
+      <CreateLabelDialog
+        open={createLabelOpen}
+        onOpenChange={(open) => {
+          setCreateLabelOpen(open);
+          if (!open) setEditingLabel(null);
+        }}
+        slug={slug}
+        label={editingLabel}
+      />
     </div>
   );
 }

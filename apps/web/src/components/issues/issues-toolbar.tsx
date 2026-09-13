@@ -10,6 +10,7 @@ import {
   Folder,
   Kanban,
   LayoutList,
+  OctagonAlert,
   Search,
   Tag,
   User,
@@ -49,6 +50,8 @@ export interface IssueFilters {
   projectId?: string;
   labelId?: string;
   dueDate?: string;
+  /** Orthogonal blocked flag — `?blocked=` on the list endpoint (spec §3.5). */
+  blocked?: 'true' | 'false';
   order: 'asc' | 'desc';
 }
 
@@ -112,6 +115,7 @@ export function IssuesToolbar({
       projectId: undefined,
       labelId: undefined,
       dueDate: undefined,
+      blocked: undefined,
       order: 'desc',
     });
 
@@ -122,6 +126,7 @@ export function IssuesToolbar({
     filters.projectId !== undefined ||
     filters.labelId !== undefined ||
     filters.dueDate !== undefined ||
+    filters.blocked !== undefined ||
     filters.order !== 'desc';
 
   const scopeTabs: { value: IssueScope; label: string }[] = [
@@ -239,6 +244,50 @@ export function IssuesToolbar({
                       {opt.label}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={filters.blocked ?? 'ALL'}
+                onValueChange={(value) =>
+                  set({
+                    blocked:
+                      value === 'ALL' ? undefined : (value as 'true' | 'false'),
+                  })
+                }
+              >
+                <SelectTrigger
+                  className={cn(
+                    'h-[34px] gap-1.5 rounded-md! border-ds-border bg-ds-surface px-3 text-xs hover:border-ds-border',
+                    filters.blocked === 'true'
+                      ? 'text-ds-danger'
+                      : 'text-foreground',
+                  )}
+                >
+                  <OctagonAlert
+                    className={cn(
+                      'size-[14px]',
+                      filters.blocked === 'true'
+                        ? 'text-ds-danger'
+                        : 'text-muted-foreground',
+                    )}
+                  />
+                  <span className="truncate">
+                    {filters.blocked === 'true'
+                      ? 'Blocked'
+                      : filters.blocked === 'false'
+                        ? 'Not blocked'
+                        : 'Blocked'}
+                  </span>
+                </SelectTrigger>
+                <SelectContent className="w-max min-w-full">
+                  <SelectItem value="ALL">Any blocked state</SelectItem>
+                  <SelectItem value="true" className="whitespace-nowrap">
+                    Blocked
+                  </SelectItem>
+                  <SelectItem value="false" className="whitespace-nowrap">
+                    Not blocked
+                  </SelectItem>
                 </SelectContent>
               </Select>
 

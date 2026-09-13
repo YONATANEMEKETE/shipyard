@@ -8,7 +8,6 @@ import {
   Copy,
   Pencil,
   MessageSquare,
-  History,
   X,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -44,6 +43,7 @@ import { StatefulButton } from '@/components/motion/button/stateful';
 import { BlockedControl } from '@/components/issues/blocked-control';
 import { ArchiveIssueDialog } from '@/components/issues/archive-issue-dialog';
 import { DeleteIssueDialog } from '@/components/issues/delete-issue-dialog';
+import { IssueHistoryPanel } from '@/components/issues/issue-history-panel';
 import { IssueLabelSelect } from '@/components/issues/issue-label-select';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -229,7 +229,7 @@ export function IssueDetailPage({
   return (
     <div className="flex h-full min-h-0 w-full flex-col gap-5">
       {/* Header — Breadcrumb Row + Title Row + Meta + Divider per XyWG3 */}
-      <div className="flex w-full flex-col gap-3">
+      <div className="flex w-full shrink-0 flex-col gap-3">
         <div className="flex w-full items-center justify-between gap-3">
           <Link
             href={`/w/${slug}/issues`}
@@ -319,8 +319,9 @@ export function IssueDetailPage({
       </div>
 
       <div className="flex w-full min-h-0 flex-1 gap-6">
-        {/* Main column */}
-        <div className="flex min-w-0 flex-1 flex-col gap-5">
+        {/* Main column — the tabbed section below owns the page's only scroll
+            area, so the description and the rail stay put. */}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5">
           <div className="flex w-full flex-col gap-2">
             <div className="flex w-full items-center justify-between">
               <span className="font-mono text-[9px] font-semibold uppercase tracking-[1px] text-muted-foreground">
@@ -387,10 +388,15 @@ export function IssueDetailPage({
 
           <div className="h-px w-full bg-ds-border" aria-hidden />
 
-          <div className="flex w-full flex-col gap-3">
+          <div className="flex min-h-0 w-full flex-1 flex-col gap-3">
             <Tabs
               value={activeTab}
-              onValueChange={(v) => setActiveTab(v as never)}
+              // Ark hands back a details object, not a bare string. Treating it as
+              // a string stored an object as the tab value, so no trigger ever
+              // matched: both lost aria-selected and the indicator never moved.
+              onValueChange={(details) =>
+                setActiveTab(details.value as 'conversation' | 'history')
+              }
             >
               <TabsList variant="underline" className="gap-6">
                 {/* Trigger styling only — px-0 keeps the underline at the
@@ -401,40 +407,31 @@ export function IssueDetailPage({
                   value="conversation"
                   className="gap-1.5 px-0 text-[12.5px] aria-selected:text-ds-brand"
                 >
-                  <MessageSquare className="size-3.5" />
                   Conversation
                 </TabsTrigger>
                 <TabsTrigger
                   value="history"
                   className="gap-1.5 px-0 text-[12.5px] aria-selected:text-ds-brand"
                 >
-                  <History className="size-3.5" />
                   History
                 </TabsTrigger>
               </TabsList>
             </Tabs>
 
             {activeTab === 'conversation' ? (
-              <div className="flex min-h-[200px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-ds-border bg-ds-surface-subtle p-8 text-center">
-                <MessageSquare className="size-5 text-muted-foreground" />
-                <p className="text-sm font-medium text-foreground">
-                  No conversation yet
-                </p>
-                <p className="max-w-[320px] text-xs leading-relaxed text-muted-foreground">
-                  Comments will appear here. For now this tab is empty.
-                </p>
+              <div className="flex min-h-0 w-full flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="flex min-h-[200px] w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-ds-border bg-ds-surface-subtle p-8 text-center">
+                  <MessageSquare className="size-5 text-muted-foreground" />
+                  <p className="text-sm font-medium text-foreground">
+                    No conversation yet
+                  </p>
+                  <p className="max-w-[320px] text-xs leading-relaxed text-muted-foreground">
+                    Comments will appear here. For now this tab is empty.
+                  </p>
+                </div>
               </div>
             ) : (
-              <div className="flex min-h-[200px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-ds-border bg-ds-surface-subtle p-8 text-center">
-                <History className="size-5 text-muted-foreground" />
-                <p className="text-sm font-medium text-foreground">
-                  No history yet
-                </p>
-                <p className="max-w-[320px] text-xs leading-relaxed text-muted-foreground">
-                  All status, assignment and property changes will be listed
-                  here.
-                </p>
-              </div>
+              <IssueHistoryPanel slug={slug} issueId={issue.id} />
             )}
           </div>
         </div>

@@ -1,7 +1,10 @@
 import {
+  useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
+  type InfiniteData,
+  type UseInfiniteQueryOptions,
   type UseMutationOptions,
   type UseQueryOptions,
 } from '@tanstack/react-query';
@@ -107,24 +110,48 @@ export function useIssue(
   });
 }
 
-export function useIssueHistory(
+/** History page size — the timeline loads the first 10, then on demand. */
+export const HISTORY_PAGE_SIZE = 10;
+
+/**
+ * Issue history (#8) — cursor-paged and oldest first. This is the only reader
+ * of the history key: it is deliberately an infinite query rather than a plain
+ * one so the timeline and the tab count share a single cache entry instead of
+ * racing two queries under the same key.
+ *
+ * Manual, not infinite-scroll: the panel renders the pages it already has and
+ * asks for the next one only when the reader clicks.
+ */
+export function useInfiniteIssueHistory(
   slug: string | null | undefined,
   issueId: string | null | undefined,
   options?: Omit<
-    UseQueryOptions<ListIssueHistoryResponse, IssuesApiError>,
-    'queryKey' | 'queryFn' | 'enabled'
+    UseInfiniteQueryOptions<
+      ListIssueHistoryResponse,
+      IssuesApiError,
+      InfiniteData<ListIssueHistoryResponse, string | undefined>,
+      readonly unknown[],
+      string | undefined
+    >,
+    'queryKey' | 'queryFn' | 'initialPageParam' | 'getNextPageParam' | 'enabled'
   > & { enabled?: boolean },
 ) {
   const enabled =
     Boolean(slug) && Boolean(issueId) && (options?.enabled ?? true);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { enabled: _ignored, ...rest } = options ?? {};
-  return useQuery({
+  return useInfiniteQuery({
     queryKey:
       slug && issueId
         ? issueKeys.history(slug, issueId)
         : issueKeys.histories(),
-    queryFn: () => listIssueHistory(slug as string, issueId as string),
+    queryFn: ({ pageParam }) =>
+      listIssueHistory(slug as string, issueId as string, {
+        limit: HISTORY_PAGE_SIZE,
+        cursor: pageParam,
+      }),
+    initialPageParam: undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     enabled,
     ...rest,
   });
@@ -191,6 +218,11 @@ export function useUpdateIssue(
     onSuccess: (data, variables, context, mutation) => {
       queryClient.setQueryData(issueKeys.detail(slug, variables.issueId), data);
       void queryClient.invalidateQueries({ queryKey: issueKeys.lists() });
+      // Every PATCH can append history rows (one per changed concern), so the
+      // detail page's timeline must not keep serving the pre-write page.
+      void queryClient.invalidateQueries({
+        queryKey: issueKeys.history(slug, variables.issueId),
+      });
       // Labels live on the card; status/assignee/cycle/priority changes are
       // read on boards filtered by those values.
       onSuccess?.(data, variables, context, mutation);
@@ -215,6 +247,10 @@ export function useArchiveIssue(
     onSuccess: (data, variables, context, mutation) => {
       queryClient.setQueryData(issueKeys.detail(slug, variables.issueId), data);
       void queryClient.invalidateQueries({ queryKey: issueKeys.lists() });
+      // Archive / restore / label writes each append a history row.
+      void queryClient.invalidateQueries({
+        queryKey: issueKeys.history(slug, variables.issueId),
+      });
       onSuccess?.(data, variables, context, mutation);
     },
   });
@@ -237,6 +273,10 @@ export function useRestoreIssue(
     onSuccess: (data, variables, context, mutation) => {
       queryClient.setQueryData(issueKeys.detail(slug, variables.issueId), data);
       void queryClient.invalidateQueries({ queryKey: issueKeys.lists() });
+      // Archive / restore / label writes each append a history row.
+      void queryClient.invalidateQueries({
+        queryKey: issueKeys.history(slug, variables.issueId),
+      });
       onSuccess?.(data, variables, context, mutation);
     },
   });
@@ -288,6 +328,10 @@ export function useAttachLabel(
     onSuccess: (data, variables, context, mutation) => {
       queryClient.setQueryData(issueKeys.detail(slug, variables.issueId), data);
       void queryClient.invalidateQueries({ queryKey: issueKeys.lists() });
+      // Archive / restore / label writes each append a history row.
+      void queryClient.invalidateQueries({
+        queryKey: issueKeys.history(slug, variables.issueId),
+      });
       onSuccess?.(data, variables, context, mutation);
     },
   });
@@ -310,6 +354,10 @@ export function useDetachLabel(
     onSuccess: (data, variables, context, mutation) => {
       queryClient.setQueryData(issueKeys.detail(slug, variables.issueId), data);
       void queryClient.invalidateQueries({ queryKey: issueKeys.lists() });
+      // Archive / restore / label writes each append a history row.
+      void queryClient.invalidateQueries({
+        queryKey: issueKeys.history(slug, variables.issueId),
+      });
       onSuccess?.(data, variables, context, mutation);
     },
   });

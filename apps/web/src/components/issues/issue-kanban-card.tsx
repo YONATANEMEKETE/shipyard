@@ -150,7 +150,10 @@ export function IssueKanbanCard({
             <LabelPill key={label.id} name={label.name} color={label.color} />
           ))}
           {issue.blocked ? (
-            <span className="inline-flex h-5 items-center gap-1 rounded-full bg-ds-danger-soft px-2 text-[10px] font-semibold text-ds-danger">
+            <span
+              title={issue.blockedReason ?? undefined}
+              className="inline-flex h-5 items-center gap-1 rounded-full bg-ds-danger-soft px-2 text-[10px] font-semibold text-ds-danger"
+            >
               <OctagonAlert className="size-3 shrink-0" aria-hidden />
               Blocked
             </span>

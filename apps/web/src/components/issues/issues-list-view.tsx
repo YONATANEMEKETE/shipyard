@@ -126,7 +126,10 @@ function IssueRow({
         {issue.title}
       </span>
       {issue.blocked ? (
-        <span className="inline-flex h-[18px] shrink-0 items-center gap-1 rounded-full bg-ds-danger-soft px-[7px] text-[10px] font-semibold text-ds-danger">
+        <span
+          title={issue.blockedReason ?? undefined}
+          className="inline-flex h-[18px] shrink-0 items-center gap-1 rounded-full bg-ds-danger-soft px-[7px] text-[10px] font-semibold text-ds-danger"
+        >
           <OctagonAlert className="size-2.5" aria-hidden />
           Blocked
         </span>

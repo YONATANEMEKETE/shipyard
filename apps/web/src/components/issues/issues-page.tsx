@@ -63,6 +63,7 @@ export function IssuesPage({ slug }: { slug: string }) {
       labels: filters.labelId ? [filters.labelId] : undefined,
       dueDateFrom: filters.dueDate,
       dueDateTo: filters.dueDate,
+      blocked: filters.blocked,
       q: queryQ,
       sort: 'createdAt' as const,
       order: filters.order,
@@ -105,7 +106,8 @@ export function IssuesPage({ slug }: { slug: string }) {
     filters.assigneeId !== undefined ||
     filters.projectId !== undefined ||
     filters.labelId !== undefined ||
-    filters.dueDate !== undefined;
+    filters.dueDate !== undefined ||
+    filters.blocked !== undefined;
 
   const issues = issuesQuery.data?.issues ?? [];
 
@@ -119,10 +121,21 @@ export function IssuesPage({ slug }: { slug: string }) {
         IN_PROGRESS: 'In Progress',
         DONE: 'Done',
       }[status] ?? status;
+    // Dragging a blocked card into Done clears the flag and reason server-side
+    // in the same transaction (spec §3.3, rule 6). Read the card before the
+    // optimistic move so the toast can say the badge went with it.
+    const clearsBlocked =
+      status === 'DONE' &&
+      (issues.find((i) => i.id === issueId)?.blocked ?? false);
     return updateIssueMutation
       .mutateAsync({ issueId, body: { status } })
       .then(() => {
-        showToast({ status: 'success', title: `Moved to ${label}` });
+        showToast({
+          status: 'success',
+          title: clearsBlocked
+            ? `Moved to ${label} · blocked flag and reason cleared`
+            : `Moved to ${label}`,
+        });
       })
       .catch((error: unknown) => {
         const message =

@@ -41,6 +41,7 @@ import { cn } from '@/lib/utils';
 import type { IssueStatus } from '@shipyard/shared';
 import { useRouter } from 'next/navigation';
 import { Archive, Trash2 } from 'lucide-react';
+import { BlockedControl } from '@/components/issues/blocked-control';
 import { IssueLabelSelect } from '@/components/issues/issue-label-select';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -173,6 +174,34 @@ export function IssueDetailPage({
       },
     );
   };
+
+  /**
+   * Blocked writes resolve to a boolean instead of rejecting so the control's
+   * stateful button can show its success/error beat. The toast stays the single
+   * error surface, and no caller is left holding an unhandled rejection.
+   */
+  const onBlockedUpdate = (
+    patch: Record<string, unknown>,
+    opts: { title: string; description?: string },
+  ) =>
+    updateIssue.mutateAsync({ issueId: issue.id, body: patch as never }).then(
+      () => {
+        showToast({
+          status: 'success',
+          title: opts.title,
+          description: opts.description,
+        });
+        return true;
+      },
+      (e: unknown) => {
+        showToast({
+          status: 'error',
+          title: 'Update failed',
+          description: (e as Error).message,
+        });
+        return false;
+      },
+    );
 
   const cycleName = issue.cycleId
     ? (cyclesData?.cycles.find((c) => c.id === issue.cycleId)?.name ??
@@ -414,10 +443,16 @@ export function IssueDetailPage({
                 onValueChange={(v) => {
                   const label =
                     STATUS_OPTIONS.find((o) => o.value === v)?.label ?? v;
+                  // Moving a blocked issue to Done clears the flag and reason
+                  // server-side in the same transaction (spec §3.3, rule 6) —
+                  // say so, otherwise the badge just vanishes without a trace.
+                  const clearsBlocked = v === 'DONE' && issue.blocked;
                   onUpdate(
                     { status: v },
                     {
-                      title: `Moved to ${label}`,
+                      title: clearsBlocked
+                        ? `Moved to ${label} · blocked flag and reason cleared`
+                        : `Moved to ${label}`,
                       description: issue.identifier,
                     },
                   );
@@ -869,19 +904,42 @@ export function IssueDetailPage({
               </Popover>
             </div>
 
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-muted-foreground">Blocked</span>
-              <span className="flex items-center gap-1.5 text-xs font-medium text-foreground">
-                <span
-                  className={cn(
-                    'size-2 rounded-full',
-                    issue.blocked ? 'bg-ds-danger' : 'bg-ds-text-muted',
-                  )}
-                  aria-hidden
-                />
-                {issue.blocked ? 'Yes' : 'No'}
-              </span>
-            </div>
+            <BlockedControl
+              blocked={issue.blocked}
+              blockedReason={issue.blockedReason}
+              status={issue.status}
+              archived={Boolean(issue.archivedAt)}
+              pending={updateIssue.isPending}
+              onSet={(reason) =>
+                onBlockedUpdate(
+                  { blocked: true, blockedReason: reason },
+                  {
+                    title: 'Marked as blocked',
+                    description: reason
+                      ? `${issue.identifier} — ${reason}`
+                      : issue.identifier,
+                  },
+                )
+              }
+              onEditReason={(reason) =>
+                onBlockedUpdate(
+                  { blockedReason: reason },
+                  {
+                    title: reason ? 'Reason updated' : 'Reason cleared',
+                    description: issue.identifier,
+                  },
+                )
+              }
+              onClear={() =>
+                onBlockedUpdate(
+                  { blocked: false },
+                  {
+                    title: 'Unblocked',
+                    description: issue.identifier,
+                  },
+                )
+              }
+            />
 
             <div className="h-px w-full bg-ds-border" aria-hidden />
             <span className="text-[11px] text-muted-foreground">

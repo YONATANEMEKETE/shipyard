@@ -154,11 +154,7 @@ export function IssuesToolbar({
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
-                  className={
-                    tab.value === 'ARCHIVED'
-                      ? undefined
-                      : 'gap-1.5 aria-selected:text-ds-brand'
-                  }
+                  className="gap-1.5 aria-selected:text-ds-brand"
                 >
                   {tab.label}
                   {count !== undefined ? (

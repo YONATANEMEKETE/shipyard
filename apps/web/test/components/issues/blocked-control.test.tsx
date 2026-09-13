@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -156,6 +156,69 @@ describe('BlockedControl — editing the reason while blocked', () => {
     await user.click(screen.getByTestId('blocked-control-submit'));
 
     expect(onEditReason).toHaveBeenCalledExactlyOnceWith(null);
+  });
+
+  it('swaps the unblock label for a bare loader while the write is in flight', async () => {
+    const user = userEvent.setup();
+    let resolve!: (ok: boolean) => void;
+    const onClear = vi.fn(
+      () =>
+        new Promise<boolean>((r) => {
+          resolve = r;
+        }),
+    );
+    render(
+      <BlockedControl
+        blocked
+        blockedReason="Waiting on IdP fix"
+        status="TODO"
+        onSet={vi.fn()}
+        onEditReason={vi.fn()}
+        onClear={onClear}
+      />,
+    );
+    await openPopover(user);
+
+    const unblock = screen.getByTestId('blocked-control-unblock');
+    expect(within(unblock).getByText('Unblock')).toBeInTheDocument();
+
+    await user.click(unblock);
+
+    // Loader only — the visible label is gone and the button reports busy. The
+    // spinner carries an sr-only "Unblocking issue" for screen readers, so
+    // assert on the visible label rather than on textContent.
+    expect(within(unblock).queryByText('Unblock')).toBeNull();
+    expect(
+      screen.getByRole('status', { name: 'Unblocking issue' }),
+    ).toBeInTheDocument();
+    expect(unblock).toHaveAttribute('aria-busy', 'true');
+
+    resolve(true);
+    // Success closes the popover, so there is no third beat to show.
+    await waitFor(() =>
+      expect(screen.queryByTestId('blocked-control-popover')).toBeNull(),
+    );
+  });
+
+  it('locks the sibling actions while a write is in flight', async () => {
+    const user = userEvent.setup();
+    const onClear = vi.fn(() => new Promise<boolean>(() => {}));
+    render(
+      <BlockedControl
+        blocked
+        blockedReason="Waiting on IdP fix"
+        status="TODO"
+        onSet={vi.fn()}
+        onEditReason={vi.fn()}
+        onClear={onClear}
+      />,
+    );
+    await openPopover(user);
+    await user.click(screen.getByTestId('blocked-control-unblock'));
+
+    // Both actions PATCH the same issue — no concurrent writes.
+    expect(screen.getByTestId('blocked-control-submit')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
   });
 
   it('unblocks without a confirmation step', async () => {

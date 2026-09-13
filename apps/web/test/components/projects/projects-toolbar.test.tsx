@@ -149,7 +149,8 @@ describe('ProjectsToolbar — filter controls', () => {
     expect(
       screen.getByRole('button', { name: 'Sort ascending' }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Clear' })).toBeNull();
+    // Clear is unconditional — the archived scope is the only place it drops.
+    expect(screen.getByRole('button', { name: 'Clear' })).toBeInTheDocument();
   });
 
   it('defaults to List view when no preference exists yet', () => {
@@ -260,13 +261,20 @@ describe('ProjectsToolbar — filter controls', () => {
     );
   });
 
-  it('Clear appears with active filters and resets them', async () => {
+  it('Clear is always available and resets every filter to defaults', async () => {
     const user = userEvent.setup();
     const { onFiltersChange } = renderHarness();
 
-    await user.type(screen.getByPlaceholderText('Find projects…'), 'pay');
+    // Present before any filter is touched — Clear is not gated on there being
+    // something to clear.
+    const clear = screen.getByRole('button', { name: 'Clear' });
 
-    const clear = await screen.findByRole('button', { name: 'Clear' });
+    await user.type(screen.getByPlaceholderText('Find projects…'), 'pay');
+    await user.click(screen.getByRole('button', { name: 'Sort ascending' }));
+    expect(onFiltersChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ order: 'asc' }),
+    );
+
     await user.click(clear);
     expect(onFiltersChange).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -274,6 +282,9 @@ describe('ProjectsToolbar — filter controls', () => {
         ownerId: undefined,
         startDate: undefined,
         targetDate: undefined,
+        // Sort direction resets with the rest — a cleared toolbar must read as
+        // "nothing applied", not "everything but the sort".
+        order: 'desc',
       }),
     );
   });
@@ -299,6 +310,8 @@ describe('ProjectsToolbar — filter controls', () => {
     expect(screen.queryByRole('tab', { name: 'Kanban view' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Owner' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Start' })).toBeNull();
+    // Clear belongs to the filter row, so it goes with it.
+    expect(screen.queryByRole('button', { name: 'Clear' })).toBeNull();
     // Search itself remains (it still filters the archived list)
     expect(screen.getByPlaceholderText('Find projects…')).toBeInTheDocument();
   });

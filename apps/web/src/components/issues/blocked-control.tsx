@@ -8,6 +8,7 @@ import {
   StatefulButton,
   type ButtonState,
 } from '@/components/motion/button/stateful';
+import { Loader } from '@/components/motion/loader';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -83,7 +84,8 @@ export function BlockedControl({
 }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(blockedReason ?? '');
-  const [state, setState] = useState<ButtonState>('idle');
+  const [submitState, setSubmitState] = useState<ButtonState>('idle');
+  const [unblockState, setUnblockState] = useState<ButtonState>('idle');
   const timerRef = useRef<number | null>(null);
 
   const clearTimer = () => {
@@ -102,7 +104,8 @@ export function BlockedControl({
       setDraft(blockedReason ?? '');
     } else {
       clearTimer();
-      setState('idle');
+      setSubmitState('idle');
+      setUnblockState('idle');
     }
     setOpen(next);
   };
@@ -112,32 +115,40 @@ export function BlockedControl({
   const reasonChanged = normalized !== (blockedReason ?? null);
   const showCounter = trimmed.length >= COUNTER_FROM;
 
+  // Both actions write to the same issue, so neither may fire while the other
+  // is in flight or showing its success beat. An error beat releases both, so a
+  // retry is never gated on a timer.
+  const committing = submitState === 'loading' || unblockState === 'loading';
+  const settling = submitState === 'success' || unblockState === 'success';
+  const locked = committing || settling;
+
   /**
-   * Drives the stateful button. A handler that returns a promise gets the
-   * loading → success/error beats; a sync handler just commits and closes,
+   * Drives one button's state machine. A handler that returns a promise gets
+   * the loading → success/error beats; a sync handler just commits and closes,
    * which is what the mocked handlers in tests do.
    */
-  const run = (action: () => BlockedResult, onSuccess: () => void) => {
+  const run = (
+    action: () => BlockedResult,
+    target: (next: ButtonState) => void,
+    onSuccess: () => void,
+  ) => {
     const result = action();
     if (!(result instanceof Promise)) {
       onSuccess();
       return;
     }
-    setState('loading');
+    target('loading');
     void result.then((ok) => {
       if (ok !== false) {
-        setState('success');
+        target('success');
         timerRef.current = window.setTimeout(() => {
-          setState('idle');
+          target('idle');
           onSuccess();
         }, SUCCESS_HOLD);
       } else {
         // Stay open so the reason is still there to retry against.
-        setState('error');
-        timerRef.current = window.setTimeout(
-          () => setState('idle'),
-          ERROR_HOLD,
-        );
+        target('error');
+        timerRef.current = window.setTimeout(() => target('idle'), ERROR_HOLD);
       }
     });
   };
@@ -147,11 +158,13 @@ export function BlockedControl({
       if (!reasonChanged) return;
       run(
         () => onEditReason(normalized),
+        setSubmitState,
         () => setOpen(false),
       );
     } else {
       run(
         () => onSet(normalized),
+        setSubmitState,
         () => setOpen(false),
       );
     }
@@ -274,21 +287,38 @@ export function BlockedControl({
                   size="sm"
                   variant="ghost"
                   data-testid="blocked-control-unblock"
+                  aria-busy={unblockState === 'loading'}
+                  disabled={locked}
                   onClick={() => {
                     run(
                       () => onClear(),
+                      setUnblockState,
                       () => setOpen(false),
                     );
                   }}
                   className="text-ds-danger hover:bg-ds-danger-soft hover:text-ds-danger"
                 >
-                  Unblock
+                  {/* Loader only, no copy. StatefulButton can't express this:
+                      its label slot bails on a 0-width measurement, so an
+                      empty label keeps its old width while the icon slot
+                      expands and the button grows around the spinner. */}
+                  {unblockState === 'loading' ? (
+                    <Loader
+                      variant="spinner"
+                      size={14}
+                      className="text-current"
+                      label="Unblocking issue"
+                    />
+                  ) : (
+                    'Unblock'
+                  )}
                 </Button>
               ) : null}
               <Button
                 type="button"
                 size="sm"
                 variant="ghost"
+                disabled={locked}
                 onClick={() => setOpen(false)}
               >
                 Cancel
@@ -296,12 +326,12 @@ export function BlockedControl({
               <StatefulButton
                 type="button"
                 size="sm"
-                state={state}
+                state={submitState}
                 loadingText={blocked ? 'Saving' : 'Blocking'}
                 successText={blocked ? 'Saved' : 'Blocked'}
                 errorText="Try again"
                 data-testid="blocked-control-submit"
-                disabled={blocked && !reasonChanged}
+                disabled={locked || (blocked && !reasonChanged)}
                 onClick={submit}
                 className="bg-ds-brand font-semibold text-white hover:bg-ds-brand/90"
               >

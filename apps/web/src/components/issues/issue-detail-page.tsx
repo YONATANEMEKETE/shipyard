@@ -25,12 +25,11 @@ import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/ui/error-state';
 import { Loader } from '@/components/motion/loader';
 import {
-  useArchiveIssue,
   useAttachLabel,
-  useDeleteIssue,
   useDetachLabel,
   useIssue,
   useLabels,
+  useRestoreIssue,
   useUpdateIssue,
 } from '@/hooks/use-issues';
 import { useMembers } from '@/hooks/use-members';
@@ -40,8 +39,11 @@ import { useToast } from '@/components/providers/toast-provider';
 import { cn } from '@/lib/utils';
 import type { IssueStatus } from '@shipyard/shared';
 import { useRouter } from 'next/navigation';
-import { Archive, Trash2 } from 'lucide-react';
+import { Archive, RotateCw, Trash2 } from 'lucide-react';
+import { StatefulButton } from '@/components/motion/button/stateful';
 import { BlockedControl } from '@/components/issues/blocked-control';
+import { ArchiveIssueDialog } from '@/components/issues/archive-issue-dialog';
+import { DeleteIssueDialog } from '@/components/issues/delete-issue-dialog';
 import { IssueLabelSelect } from '@/components/issues/issue-label-select';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -107,6 +109,8 @@ export function IssueDetailPage({
   const [descDraft, setDescDraft] = useState('');
   const [copied, setCopied] = useState(false);
   const [dueOpen, setDueOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const router = useRouter();
   const { data: membersData } = useMembers(slug);
@@ -116,10 +120,9 @@ export function IssueDetailPage({
   const hasMembers = membersData ? membersData.members.length > 0 : true;
   const hasProjects = projectsData ? projectsData.projects.length > 0 : true;
   const hasCycles = cyclesData ? cyclesData.cycles.length > 0 : true;
-  const archiveIssue = useArchiveIssue(slug);
-  const deleteIssue = useDeleteIssue(slug);
   const attachLabel = useAttachLabel(slug);
   const detachLabel = useDetachLabel(slug);
+  const restoreIssue = useRestoreIssue(slug);
 
   if (isPending) {
     return (
@@ -951,74 +954,56 @@ export function IssueDetailPage({
 
           <div className="flex flex-col gap-1">
             <div className="h-px w-full bg-ds-border" aria-hidden />
-            <button
-              type="button"
-              onClick={() => {
-                archiveIssue.mutate(
-                  { issueId: issue.id },
-                  {
-                    onSuccess: () => {
-                      showToast({
-                        status: 'success',
-                        title: 'Issue archived',
-                        description: issue.identifier,
-                      });
-                      router.push(`/w/${slug}/issues`);
+            {/* Archived issues swap the Archive row for a direct Restore —
+                no confirm (restoring is non-destructive). The mutation
+                updates the detail cache, so this row flips back to
+                "Archive issue" on success. */}
+            {issue.archivedAt ? (
+              <StatefulButton
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  restoreIssue.mutate(
+                    { issueId: issue.id },
+                    {
+                      onSuccess: () =>
+                        showToast({
+                          status: 'success',
+                          title: 'Issue restored',
+                          description: `${issue.identifier} is back in active views.`,
+                        }),
+                      onError: (e) =>
+                        showToast({
+                          status: 'error',
+                          title: "Couldn't restore issue",
+                          description: (e as Error).message,
+                        }),
                     },
-                    onError: (e) =>
-                      showToast({
-                        status: 'error',
-                        title: 'Archive failed',
-                        description: (e as Error).message,
-                      }),
-                  },
-                );
-              }}
-              disabled={archiveIssue.isPending || !!issue.archivedAt}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[12.5px] font-medium text-muted-foreground transition-colors hover:bg-ds-bg hover:text-foreground disabled:opacity-50"
-            >
-              <Archive className="size-3.5 shrink-0" />
-              {issue.archivedAt ? 'Archived' : 'Archive issue'}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const confirm = window.prompt(
-                  `Type ${issue.identifier} to confirm delete`,
-                );
-                if (confirm !== issue.identifier) {
-                  if (confirm !== null)
-                    showToast({
-                      status: 'error',
-                      title: 'Confirmation failed',
-                      description: `Type ${issue.identifier} exactly`,
-                    });
-                  return;
+                  )
                 }
-                deleteIssue.mutate(
-                  {
-                    issueId: issue.id,
-                    body: { confirmIdentifier: issue.identifier },
-                  },
-                  {
-                    onSuccess: () => {
-                      showToast({
-                        status: 'success',
-                        title: 'Issue deleted',
-                        description: issue.identifier,
-                      });
-                      router.push(`/w/${slug}/issues`);
-                    },
-                    onError: (e) =>
-                      showToast({
-                        status: 'error',
-                        title: 'Delete failed',
-                        description: (e as Error).message,
-                      }),
-                  },
-                );
-              }}
-              disabled={deleteIssue.isPending}
+                className="w-full justify-start gap-2 rounded-md px-2 text-[12.5px] hover:bg-ds-bg"
+                state={restoreIssue.isPending ? 'loading' : 'idle'}
+                loadingText="Restoring…"
+                successText="Restored"
+                icon={<RotateCw className="size-3.5 shrink-0" />}
+                disabled={restoreIssue.isPending}
+              >
+                Restore
+              </StatefulButton>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setArchiveOpen(true)}
+                className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[12.5px] font-medium text-muted-foreground transition-colors hover:bg-ds-bg hover:text-foreground disabled:opacity-50"
+              >
+                <Archive className="size-3.5 shrink-0" />
+                Archive issue
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setDeleteOpen(true)}
               className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[12.5px] font-medium text-ds-danger hover:bg-ds-danger-soft"
             >
               <Trash2 className="size-3.5 shrink-0" />
@@ -1027,6 +1012,23 @@ export function IssueDetailPage({
           </div>
         </div>
       </div>
+
+      {/* Archive / delete confirms — both leave this page on success: the
+          issue is gone from the active views either way. */}
+      <ArchiveIssueDialog
+        open={archiveOpen}
+        onOpenChange={setArchiveOpen}
+        slug={slug}
+        issue={issue}
+        onArchived={() => router.push(`/w/${slug}/issues`)}
+      />
+      <DeleteIssueDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        slug={slug}
+        issue={issue}
+        onDeleted={() => router.push(`/w/${slug}/issues`)}
+      />
     </div>
   );
 }

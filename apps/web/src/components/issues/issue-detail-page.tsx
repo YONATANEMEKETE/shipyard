@@ -393,14 +393,21 @@ export function IssueDetailPage({
               onValueChange={(v) => setActiveTab(v as never)}
             >
               <TabsList variant="underline" className="gap-6">
+                {/* Trigger styling only — px-0 keeps the underline at the
+                    label width (base is px-3, which overshoots it). The
+                    active state is Ark's aria-selected, not Radix's
+                    data-state — data-[state=active] never matched here. */}
                 <TabsTrigger
                   value="conversation"
-                  className="gap-1.5 data-[state=active]:text-ds-brand"
+                  className="gap-1.5 px-0 text-[12.5px] aria-selected:text-ds-brand"
                 >
                   <MessageSquare className="size-3.5" />
                   Conversation
                 </TabsTrigger>
-                <TabsTrigger value="history" className="gap-1.5">
+                <TabsTrigger
+                  value="history"
+                  className="gap-1.5 px-0 text-[12.5px] aria-selected:text-ds-brand"
+                >
                   <History className="size-3.5" />
                   History
                 </TabsTrigger>

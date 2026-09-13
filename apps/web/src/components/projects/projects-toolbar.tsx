@@ -75,8 +75,13 @@ export function ProjectsToolbar({
   const setViewPref = useSetViewPreference(slug);
 
   const { data: roster } = useMembers(slug);
-  // Unfiltered active total for the All tab count badge.
+  // Unfiltered totals for the scope tab count badges — the API splits active
+  // and archived, so each tab counts its own scope (the archived call shares
+  // the parent's cache entry while archived mode is on).
   const { data: scopeCounts } = useProjects(slug);
+  const { data: archivedScopeCounts } = useProjects(slug, {
+    archived: 'true',
+  });
 
   const set = (patch: Partial<ProjectFilters>) =>
     onChange({ ...filters, ...patch });
@@ -118,7 +123,17 @@ export function ProjectsToolbar({
                   {scopeCounts ? scopeCounts.projects.length : 0}
                 </span>
               </TabsTrigger>
-              <TabsTrigger value="ARCHIVED">Archived</TabsTrigger>
+              <TabsTrigger
+                value="ARCHIVED"
+                className="gap-1.5 aria-selected:text-ds-brand"
+              >
+                Archived
+                <span className="text-[10px] font-semibold text-muted-foreground">
+                  {archivedScopeCounts
+                    ? archivedScopeCounts.projects.length
+                    : 0}
+                </span>
+              </TabsTrigger>
             </TabsList>
           </Tabs>
         ) : null}

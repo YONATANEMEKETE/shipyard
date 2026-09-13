@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ViewPreference, WorkspaceMemberCard } from '@shipyard/shared';
 import type React from 'react';
@@ -15,6 +15,10 @@ import {
 //    we stub them exactly like the settings/members suites do. ─────────────
 let viewPrefData: ViewPreference | undefined = undefined;
 let rosterData: { members: WorkspaceMemberCard[] } = { members: [] };
+// Scope-count fixtures — two active projects, one archived. Each badge must
+// count its own scope (the archived one is not part of the active total).
+const mockActiveProjects = [{ id: 'prj_active_1' }, { id: 'prj_active_2' }];
+const mockArchivedProjects = [{ id: 'prj_archived_1' }];
 const mockSetView = vi.fn();
 
 vi.mock('@/hooks/use-projects', async () => {
@@ -25,8 +29,16 @@ vi.mock('@/hooks/use-projects', async () => {
     ...actual,
     useViewPreference: () => ({ data: viewPrefData }),
     useSetViewPreference: () => ({ mutate: mockSetView, isPending: false }),
-    // Scope-count query — empty workspace in tests (badge shows 0).
-    useProjects: () => ({ data: { projects: [] } }),
+    // Scope-count queries — badges read the unfiltered active and archived
+    // totals, so the stub answers per scope.
+    useProjects: (_slug: string, params?: { archived?: string }) => ({
+      data: {
+        projects:
+          params?.archived === 'true'
+            ? mockArchivedProjects
+            : mockActiveProjects,
+      },
+    }),
   };
 });
 
@@ -131,9 +143,12 @@ describe('ProjectsToolbar — filter controls', () => {
     // Search input (left)
     expect(screen.getByPlaceholderText('Find projects…')).toBeInTheDocument();
 
-    // All / Archived scope tabs (underline style, All carries the count)
-    expect(screen.getByRole('tab', { name: /All/ })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Archived' })).toBeInTheDocument();
+    // All / Archived scope tabs (underline style) — both carry their own
+    // scope count, so the archived badge is not the active total.
+    const allTab = screen.getByRole('tab', { name: /All/ });
+    expect(within(allTab).getByText('2')).toBeInTheDocument();
+    const archivedTab = screen.getByRole('tab', { name: /Archived/ });
+    expect(within(archivedTab).getByText('1')).toBeInTheDocument();
 
     // View switch — List/Kanban icon tabs
     expect(screen.getByRole('tab', { name: 'List view' })).toBeInTheDocument();
@@ -293,7 +308,7 @@ describe('ProjectsToolbar — filter controls', () => {
     const user = userEvent.setup();
     const { onArchivedChange } = renderHarness();
 
-    await user.click(screen.getByRole('tab', { name: 'Archived' }));
+    await user.click(screen.getByRole('tab', { name: /Archived/ }));
     expect(onArchivedChange).toHaveBeenCalledWith(true);
   });
 
@@ -301,7 +316,7 @@ describe('ProjectsToolbar — filter controls', () => {
     renderHarness({ archived: true });
 
     // Scope tabs still there, Archived selected
-    expect(screen.getByRole('tab', { name: 'Archived' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: /Archived/ })).toHaveAttribute(
       'aria-selected',
       'true',
     );
@@ -319,7 +334,7 @@ describe('ProjectsToolbar — filter controls', () => {
   it('omits the scope tabs when onArchivedChange is not provided', () => {
     renderHarness({ onArchivedChange: undefined });
 
-    expect(screen.queryByRole('tab', { name: 'Archived' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: /Archived/ })).toBeNull();
     expect(screen.queryByText('All')).toBeNull();
     // View switch unaffected
     expect(

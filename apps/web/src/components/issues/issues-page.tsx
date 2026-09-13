@@ -11,6 +11,7 @@ import {
   type IssueScope,
 } from '@/components/issues/issues-toolbar';
 import { IssuesListView } from '@/components/issues/issues-list-view';
+import { ArchivedIssuesList } from '@/components/issues/archived-issues-list';
 import { IssuesKanbanView } from '@/components/issues/issues-kanban-view';
 import { CreateIssueDialog } from '@/components/issues/create-issue-dialog';
 import { useWorkspace } from '@/hooks/use-workspaces';
@@ -187,9 +188,18 @@ export function IssuesPage({ slug }: { slug: string }) {
         counts={counts}
       />
 
-      {/* Content area — list / kanban (archived is list-only). */}
+      {/* Content area — list / kanban; archived is its own read-only list. */}
       <div className="flex min-h-0 flex-1 flex-col">
-        {scope === 'ARCHIVED' || view === 'LIST' ? (
+        {scope === 'ARCHIVED' ? (
+          <ArchivedIssuesList
+            slug={slug}
+            issues={issues}
+            search={filters.search}
+            loading={issuesQuery.isPending}
+            error={issuesQuery.isError}
+            onRetry={() => issuesQuery.refetch()}
+          />
+        ) : view === 'LIST' ? (
           <IssuesListView
             issues={issues}
             loading={issuesQuery.isPending}

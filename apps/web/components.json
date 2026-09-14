@@ -20,6 +20,7 @@
   "iconLibrary": "lucide",
   "registries": {
     "@beui": "https://beui.dev/r/{name}.json",
-    "@shark": "https://shark.vini.one/r/{name}.json"
+    "@shark": "https://shark.vini.one/r/{name}.json",
+    "@evilcharts": "https://evilcharts.com/r/{name}.json"
   }
 }

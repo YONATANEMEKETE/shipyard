@@ -7,7 +7,6 @@ import {
   ChevronLeft,
   Copy,
   Pencil,
-  MessageSquare,
   X,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -37,6 +36,7 @@ import { useCycles } from '@/hooks/use-cycles';
 import { useToast } from '@/components/providers/toast-provider';
 import { cn } from '@/lib/utils';
 import type { IssueStatus } from '@shipyard/shared';
+import { useInfiniteComments, useCreateComment } from '@/hooks/use-comments';
 import { useRouter } from 'next/navigation';
 import { Archive, RotateCw, Trash2 } from 'lucide-react';
 import { StatefulButton } from '@/components/motion/button/stateful';
@@ -44,6 +44,8 @@ import { BlockedControl } from '@/components/issues/blocked-control';
 import { ArchiveIssueDialog } from '@/components/issues/archive-issue-dialog';
 import { DeleteIssueDialog } from '@/components/issues/delete-issue-dialog';
 import { IssueHistoryPanel } from '@/components/issues/issue-history-panel';
+import { IssueCommentComposer } from '@/components/issues/issue-comment-composer';
+import { IssueConversation } from '@/components/issues/issue-conversation';
 import { IssueLabelSelect } from '@/components/issues/issue-label-select';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -123,6 +125,23 @@ export function IssueDetailPage({
   const attachLabel = useAttachLabel(slug);
   const detachLabel = useDetachLabel(slug);
   const restoreIssue = useRestoreIssue(slug);
+
+  // ── Conversation (F8) ──────────────────────────────────────────────────
+  // One cache entry per issue, shared by the thread and the composer.
+  const commentsQuery = useInfiniteComments(slug, issueId);
+  // Pages flatten oldest → newest, so the thread reads top-down and the newest
+  // comment ends up next to the composer.
+  const comments =
+    commentsQuery.data?.pages.flatMap((page) => page.comments) ?? [];
+  const createComment = useCreateComment(slug, issue?.id ?? '', {
+    onError: (error) => {
+      showToast({
+        status: 'error',
+        title: "Couldn't post comment",
+        description: error.message || 'Please try again.',
+      });
+    },
+  });
 
   if (isPending) {
     return (
@@ -419,16 +438,55 @@ export function IssueDetailPage({
             </Tabs>
 
             {activeTab === 'conversation' ? (
-              <div className="flex min-h-0 w-full flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                <div className="flex min-h-[200px] w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-ds-border bg-ds-surface-subtle p-8 text-center">
-                  <MessageSquare className="size-5 text-muted-foreground" />
-                  <p className="text-sm font-medium text-foreground">
-                    No conversation yet
-                  </p>
-                  <p className="max-w-[320px] text-xs leading-relaxed text-muted-foreground">
-                    Comments will appear here. For now this tab is empty.
-                  </p>
+              <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
+                {/* Thread — scrolls under the composer, which stays put. */}
+                <div className="flex min-h-0 w-full flex-1 flex-col overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {commentsQuery.isPending ? (
+                    <div className="flex min-h-full w-full items-center justify-center">
+                      <Loader
+                        size={28}
+                        variant="spinner"
+                        label="Loading conversation"
+                      />
+                    </div>
+                  ) : commentsQuery.isError ? (
+                    <div className="flex min-h-full w-full items-center justify-center">
+                      <ErrorState
+                        title="Couldn't load conversation"
+                        description="We ran into a problem fetching the comments."
+                        action={
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => commentsQuery.refetch()}
+                            className="h-8 gap-2 rounded-md border-ds-border bg-ds-surface px-3 text-xs font-semibold"
+                          >
+                            <RotateCw className="size-3.5" />
+                            Try again
+                          </Button>
+                        }
+                      />
+                    </div>
+                  ) : (
+                    <IssueConversation
+                      comments={comments}
+                      hasMore={commentsQuery.hasNextPage}
+                      isLoadingMore={commentsQuery.isFetchingNextPage}
+                      onLoadMore={() => void commentsQuery.fetchNextPage()}
+                    />
+                  )}
                 </div>
+
+                {/* Composer — pinned to the bottom of the panel. The promise it
+                    receives keeps the draft on failure and drives the pending
+                    beat on the Comment action. */}
+                <IssueCommentComposer
+                  slug={slug}
+                  disabled={Boolean(issue.archivedAt)}
+                  onSubmit={(body) =>
+                    createComment.mutateAsync({ content: body })
+                  }
+                />
               </div>
             ) : (
               <IssueHistoryPanel slug={slug} issueId={issue.id} />

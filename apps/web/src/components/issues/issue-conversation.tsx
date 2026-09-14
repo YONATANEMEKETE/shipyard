@@ -9,7 +9,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import {
   mentionTokenMatches,
@@ -241,7 +241,11 @@ function CommentEntry({
   };
 
   return (
-    <div className="flex w-full gap-2.5 rounded-lg p-2">
+    <div
+      id={`comment-${comment.id}`}
+      data-slot="comment"
+      className="flex w-full gap-2.5 rounded-lg p-2 scroll-mt-4"
+    >
       {author.image ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -392,6 +396,17 @@ export function IssueConversation({
 }) {
   // One dialog for the whole thread, not one per comment.
   const [deleteTarget, setDeleteTarget] = useState<CommentCard | null>(null);
+
+  // Mention notifications deep-link to #comment-<id>. The browser resolves the
+  // hash before the thread is in the DOM, so re-run the scroll whenever the
+  // comment list changes — first page, then each "show more".
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash.startsWith('#comment-')) return;
+    document
+      .getElementById(hash.slice(1))
+      ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [comments]);
 
   if (comments.length === 0) {
     return (

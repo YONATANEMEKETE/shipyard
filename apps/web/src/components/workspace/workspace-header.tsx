@@ -2,7 +2,6 @@
 
 import { usePathname } from 'next/navigation';
 import {
-  Bell,
   Building2,
   Calendar,
   CircleCheck,
@@ -21,7 +20,7 @@ import {
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
 import { BloomMenu } from '@/components/motion/bloom-menu';
-import { Float } from '@/components/ui/float';
+import { NotificationsBell } from '@/components/notifications/notifications-bell';
 import { Input } from '@/components/ui/input';
 import {
   Tooltip,
@@ -157,28 +156,8 @@ export function WorkspaceHeader({
         />
       </div>
 
-      {/* Notifications */}
-      <TooltipProvider delayDuration={100}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="relative shrink-0">
-              <button
-                type="button"
-                aria-label="Notifications"
-                className="grid size-8 place-items-center rounded-lg border border-ds-border bg-ds-surface text-foreground transition-colors hover:border-ds-border-strong sm:size-9"
-              >
-                <Bell className="h-4 w-4 sm:h-[17px] sm:w-[17px]" />
-              </button>
-              <Float
-                placement="top-end"
-                aria-hidden
-                className="size-2 rounded-full bg-ds-accent ring-2 ring-ds-bg !translate-x-1/4 !-translate-y-1/4"
-              />
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">Notifications</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      {/* Notifications — global per recipient, not per workspace */}
+      <NotificationsBell />
 
       {/* Leave workspace — always available, Owner sees transfer variant */}
       <TooltipProvider delayDuration={100}>

@@ -27,6 +27,32 @@ export const handlers = [
       },
     });
   }),
+  // ── Notifications (F6) ──────────────────────────────────────────────────
+  // Static paths are registered before `:notificationId` so the row handler
+  // never swallows `/unread-count`. Defaults are "empty inbox"; tests override
+  // per-case via server.use(...).
+  http.get('*/api/v1/notifications/unread-count', () => {
+    return HttpResponse.json({ data: { unreadCount: 0 } });
+  }),
+  http.post('*/api/v1/notifications/read-all', () => {
+    return HttpResponse.json({ data: { markedCount: 0 } });
+  }),
+  http.get('*/api/v1/notifications', () => {
+    return HttpResponse.json({ data: { notifications: [], nextCursor: null } });
+  }),
+  http.post('*/api/v1/notifications/:notificationId/read', ({ params }) => {
+    return HttpResponse.json({
+      data: { id: params.notificationId, readAt: new Date().toISOString() },
+    });
+  }),
+  http.delete('*/api/v1/notifications/:notificationId', ({ params }) => {
+    return HttpResponse.json({
+      data: { deletedNotificationId: params.notificationId },
+    });
+  }),
+  http.delete('*/api/v1/notifications', () => {
+    return HttpResponse.json({ data: { deletedCount: 0 } });
+  }),
   http.all('http://localhost:4000/*', () => {
     return HttpResponse.json(
       { error: { code: 'NOT_IMPLEMENTED', message: 'No handler registered' } },

@@ -1,14 +1,24 @@
 'use client';
 
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Hourglass } from 'lucide-react';
+import {
+  Archive,
+  Calendar as CalendarIcon,
+  Hourglass,
+  RotateCw,
+  Trash2,
+} from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { CycleDetail } from '@shipyard/shared';
 
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
+import {
+  StatefulButton,
+  type ButtonState,
+} from '@/components/motion/button/stateful';
 import {
   Popover,
   PopoverContent,
@@ -43,6 +53,10 @@ const CycleProgressChart = dynamic(
   },
 );
 
+/** How long the restore button holds each beat before settling. */
+const SUCCESS_HOLD = 700;
+const ERROR_HOLD = 1600;
+
 /**
  * Cycles properties rail — "Progress Card" + "Cycle Properties Card" from
  * shipyard.pen (Screen / Cycles - Detail, OEV9C): a 320px column holding the
@@ -62,6 +76,9 @@ export function CyclePropertiesRail({
   progressLoading = false,
   editable = true,
   onSaveDates,
+  onArchive,
+  onDelete,
+  onRestore,
 }: {
   cycle: CycleDetail;
   /** The cycle's issues grouped by status — drives the ring's slices. */
@@ -74,10 +91,49 @@ export function CyclePropertiesRail({
     startDate?: string;
     endDate?: string;
   }) => Promise<boolean>;
+  /** Opens the archive confirm. Omitted for a member, or an Active cycle. */
+  onArchive?: () => void;
+  /** Opens the delete confirm. Omitted unless the cycle is a future Planned. */
+  onDelete?: () => void;
+  /** Restores an archived cycle in place. Resolves false on failure. */
+  onRestore?: () => Promise<boolean>;
 }) {
   const percent = cycleProgressPercent(cycle);
   const { total, completed } = cycle.progress;
   const statusMeta = CYCLE_GROUP_META[cycle.status];
+
+  // Restore is the one lifecycle write that happens in place (no confirm —
+  // restoring is non-destructive), so it owns a beat here like the header's
+  // action. Archive and Delete open confirms instead.
+  const [restoreState, setRestoreState] = useState<ButtonState>('idle');
+  const restoreTimer = useRef<number | null>(null);
+  const clearRestoreTimer = () => {
+    if (restoreTimer.current !== null) {
+      window.clearTimeout(restoreTimer.current);
+      restoreTimer.current = null;
+    }
+  };
+  useEffect(() => clearRestoreTimer, []);
+
+  const runRestore = async () => {
+    if (!onRestore || restoreState === 'loading') return;
+    clearRestoreTimer();
+    setRestoreState('loading');
+    const ok = await onRestore();
+    setRestoreState(ok ? 'success' : 'error');
+    restoreTimer.current = window.setTimeout(
+      () => {
+        restoreTimer.current = null;
+        setRestoreState('idle');
+      },
+      ok ? SUCCESS_HOLD : ERROR_HOLD,
+    );
+  };
+
+  const isArchived = Boolean(cycle.archivedAt);
+  const showRestore = isArchived && Boolean(onRestore);
+  const showArchive = !isArchived && Boolean(onArchive);
+  const showDelete = !isArchived && Boolean(onDelete);
 
   return (
     <div className="flex w-full shrink-0 flex-col gap-4 lg:w-[320px]">
@@ -187,6 +243,57 @@ export function CyclePropertiesRail({
           </span>
         </div>
       </section>
+
+      {/* Lifecycle — pushed to the bottom of the rail, divider first, per the
+          pen's "Lifecycle Section". Rows appear only where the transition is
+          legal: no Archive on an Active cycle (complete first), no Delete once
+          the range has started, and Restore replaces both while archived. */}
+      {showRestore || showArchive || showDelete ? (
+        <>
+          <div className="flex-1" aria-hidden />
+          <section
+            aria-label="Lifecycle"
+            className="flex w-full flex-col gap-0.5"
+          >
+            <div className="h-px w-full bg-ds-border" aria-hidden />
+            {showRestore ? (
+              <StatefulButton
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={runRestore}
+                className="w-full justify-start gap-2 rounded-md px-2 py-[9px] text-[12.5px] font-medium hover:bg-ds-bg"
+                state={restoreState}
+                loadingText="Restoring…"
+                successText="Restored"
+                icon={<RotateCw className="size-3.5 shrink-0" />}
+              >
+                Restore cycle
+              </StatefulButton>
+            ) : null}
+            {showArchive ? (
+              <button
+                type="button"
+                onClick={onArchive}
+                className="flex w-full items-center gap-2 rounded-md px-2 py-[9px] text-left text-[12.5px] font-medium text-muted-foreground transition-colors hover:bg-ds-bg hover:text-foreground"
+              >
+                <Archive aria-hidden className="size-3.5 shrink-0" />
+                Archive cycle
+              </button>
+            ) : null}
+            {showDelete ? (
+              <button
+                type="button"
+                onClick={onDelete}
+                className="flex w-full items-center gap-2 rounded-md px-2 py-[9px] text-left text-[12.5px] font-medium text-ds-danger transition-colors hover:bg-ds-danger-soft"
+              >
+                <Trash2 aria-hidden className="size-3.5 shrink-0" />
+                Delete cycle
+              </button>
+            ) : null}
+          </section>
+        </>
+      ) : null}
     </div>
   );
 }

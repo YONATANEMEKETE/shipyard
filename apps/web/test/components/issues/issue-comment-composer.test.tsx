@@ -104,6 +104,23 @@ describe('IssueCommentComposer — the field', () => {
     expect(screen.getByRole('button', { name: 'Comment' })).toBeEnabled();
   });
 
+  it('submits on Shift+Enter and leaves plain Enter to the newline', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    renderComposer({ onSubmit });
+
+    await user.type(field(), 'Line one');
+    // Comments are multi-line, so plain Enter still breaks the line.
+    await user.keyboard('{Enter}');
+    expect(field()).toHaveValue('Line one\n');
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    await user.type(field(), 'Line two');
+    await user.keyboard('{Shift>}{Enter}{/Shift}');
+
+    expect(onSubmit).toHaveBeenCalledExactlyOnceWith('Line one\nLine two');
+  });
+
   it('shows the pending beat while the post is in flight', async () => {
     const user = userEvent.setup();
     let resolve!: () => void;

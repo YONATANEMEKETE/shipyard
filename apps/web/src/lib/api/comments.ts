@@ -1,4 +1,9 @@
-import type { CommentCard, CreateCommentRequest } from '@shipyard/shared';
+import type {
+  CommentCard,
+  CreateCommentRequest,
+  DeleteCommentResponse,
+  UpdateCommentRequest,
+} from '@shipyard/shared';
 
 import { requestJson } from '@/lib/api/request';
 
@@ -80,6 +85,49 @@ export function createComment(
     commentsBase(slug, issueId),
     { method: 'POST', body: JSON.stringify(body) },
     'Failed to post comment',
+    CommentsApiError,
+  );
+}
+
+function commentUrl(slug: string, issueId: string, commentId: string): string {
+  return `${commentsBase(slug, issueId)}/${encodeURIComponent(commentId)}`;
+}
+
+/**
+ * #4 — full content replacement, author-only server-side. The response is the
+ * authoritative card: `editedAt` set and mentions recomputed against current
+ * members, with zero re-notification (edits never re-notify, rule 4).
+ */
+export function updateComment(
+  slug: string,
+  issueId: string,
+  commentId: string,
+  body: UpdateCommentRequest,
+): Promise<CommentCard> {
+  return requestJson<CommentCard>(
+    commentUrl(slug, issueId, commentId),
+    { method: 'PATCH', body: JSON.stringify(body) },
+    'Failed to update comment',
+    CommentsApiError,
+  );
+}
+
+/**
+ * #5 — author-only, no tombstone. The row is gone on success, so the response
+ * is only the id the client drops from the cached conversation.
+ *
+ * `confirm: true` is the literal destructive-endpoint contract (same precedent
+ * as labels/cycles); omitting it is a 400 CONFIRMATION_REQUIRED.
+ */
+export function deleteComment(
+  slug: string,
+  issueId: string,
+  commentId: string,
+): Promise<DeleteCommentResponse> {
+  return requestJson<DeleteCommentResponse>(
+    commentUrl(slug, issueId, commentId),
+    { method: 'DELETE', body: JSON.stringify({ confirm: true }) },
+    'Failed to delete comment',
     CommentsApiError,
   );
 }

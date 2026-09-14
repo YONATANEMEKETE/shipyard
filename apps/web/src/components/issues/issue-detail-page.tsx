@@ -31,12 +31,18 @@ import {
   useUpdateIssue,
 } from '@/hooks/use-issues';
 import { useMembers } from '@/hooks/use-members';
+import { useSession } from '@/hooks/use-session';
 import { useProjects } from '@/hooks/use-projects';
 import { useCycles } from '@/hooks/use-cycles';
 import { useToast } from '@/components/providers/toast-provider';
 import { cn } from '@/lib/utils';
 import type { IssueStatus } from '@shipyard/shared';
-import { useInfiniteComments, useCreateComment } from '@/hooks/use-comments';
+import {
+  useInfiniteComments,
+  useCreateComment,
+  useUpdateComment,
+  useDeleteComment,
+} from '@/hooks/use-comments';
 import { useRouter } from 'next/navigation';
 import { Archive, RotateCw, Trash2 } from 'lucide-react';
 import { StatefulButton } from '@/components/motion/button/stateful';
@@ -99,6 +105,7 @@ export function IssueDetailPage({
   issueId: string;
 }) {
   const { data: issue, isPending, isError, refetch } = useIssue(slug, issueId);
+  const { data: session } = useSession();
   const { showToast } = useToast();
   const updateIssue = useUpdateIssue(slug);
 
@@ -138,6 +145,33 @@ export function IssueDetailPage({
       showToast({
         status: 'error',
         title: "Couldn't post comment",
+        description: error.message || 'Please try again.',
+      });
+    },
+  });
+  // Edit/delete are author-only server-side; the thread only renders the
+  // actions for the viewer's own rows. Both write the authoritative card (or
+  // drop it) into the shared cache, so the thread never refetches.
+  const updateComment = useUpdateComment(slug, issue?.id ?? '', {
+    onSuccess: () => {
+      showToast({ status: 'success', title: 'Comment updated' });
+    },
+    onError: (error) => {
+      showToast({
+        status: 'error',
+        title: "Couldn't update comment",
+        description: error.message || 'Please try again.',
+      });
+    },
+  });
+  const deleteComment = useDeleteComment(slug, issue?.id ?? '', {
+    onSuccess: () => {
+      showToast({ status: 'success', title: 'Comment deleted' });
+    },
+    onError: (error) => {
+      showToast({
+        status: 'error',
+        title: "Couldn't delete comment",
         description: error.message || 'Please try again.',
       });
     },
@@ -470,9 +504,20 @@ export function IssueDetailPage({
                   ) : (
                     <IssueConversation
                       comments={comments}
+                      slug={slug}
+                      viewerId={session?.user?.id}
+                      // Archived issues freeze every comment write (spec
+                      // §3.6), so the row actions hide with the composer.
+                      readOnly={Boolean(issue.archivedAt)}
                       hasMore={commentsQuery.hasNextPage}
                       isLoadingMore={commentsQuery.isFetchingNextPage}
                       onLoadMore={() => void commentsQuery.fetchNextPage()}
+                      onEditComment={(commentId, content) =>
+                        updateComment.mutateAsync({ commentId, content })
+                      }
+                      onDeleteComment={(commentId) =>
+                        deleteComment.mutateAsync(commentId)
+                      }
                     />
                   )}
                 </div>

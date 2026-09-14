@@ -1,6 +1,7 @@
 'use client';
 
 import { format } from 'date-fns';
+import { X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
@@ -16,6 +17,7 @@ import { ArchiveCycleDialog } from '@/components/cycles/archive-cycle-dialog';
 import { DeleteCycleDialog } from '@/components/cycles/delete-cycle-dialog';
 import { CycleIssuesList } from '@/components/cycles/cycle-issues-list';
 import { useWorkspace } from '@/hooks/use-workspaces';
+import { cn } from '@/lib/utils';
 import {
   emptyStatusCounts,
   type IssueStatusCounts,
@@ -93,6 +95,8 @@ export function CycleDetailPage({
   const router = useRouter();
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  /** Below `lg` the properties rail is a right-hand drawer, like the issues one. */
+  const [railOpen, setRailOpen] = useState(false);
   // Archive and Delete are OWNER|ADMIN at the guard layer, so Members get no
   // affordance rather than a button that could only 403.
   const canManage = workspace?.role !== 'MEMBER';
@@ -276,6 +280,7 @@ export function CycleDetailPage({
         slug={slug}
         cycle={cycle}
         onLifecycleAction={runLifecycleAction}
+        onOpenDetails={() => setRailOpen(true)}
       />
 
       {/* Goal is editable while the cycle is Planned or Active: a completed
@@ -304,22 +309,63 @@ export function CycleDetailPage({
           />
         </div>
 
-        <CyclePropertiesRail
-          cycle={cycle}
-          statusCounts={statusCounts}
-          progressLoading={issuesQuery.isPending}
-          editable={!cycle.archivedAt && cycle.status !== 'COMPLETED'}
-          onSaveDates={saveDates}
-          // Archive is legal on Planned and Completed; Delete only on a
-          // future Planned (its issues are merely unassigned, and the name is
-          // released), which is why the range has to be in the future.
-          onArchive={canManage ? () => setArchiveOpen(true) : undefined}
-          onDelete={
-            canManage && canDelete ? () => setDeleteOpen(true) : undefined
-          }
-          onRestore={canManage ? restore : undefined}
-        />
+        {/* Properties rail — one instance, responsive classes only (the same
+            trick as the issues rail): below `lg` it is a right-hand drawer over
+            the page, at `lg` and up the inline 320px column it always was. A
+            stacked column buried the details under a long issue list. */}
+        <div
+          className={cn(
+            'fixed inset-y-2 right-2 z-40 flex w-[90%] max-w-[340px] transform-gpu flex-col gap-4 overflow-y-auto rounded-xl border border-ds-border bg-ds-surface p-4 shadow-xl transition-transform duration-300 ease-out [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+            'lg:static lg:inset-auto lg:z-auto lg:min-h-0 lg:w-[320px] lg:max-w-none lg:shrink-0 lg:self-stretch lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none lg:transition-none',
+            railOpen
+              ? 'translate-x-0'
+              : // `invisible` (not just pointer-events) keeps the closed drawer
+                // out of the tab order and the a11y tree; `lg:visible` puts it
+                // back for the inline column.
+                'pointer-events-none invisible translate-x-[calc(100%+24px)] lg:visible lg:pointer-events-auto lg:translate-x-0',
+          )}
+        >
+          {/* Drawer-only header — the inline column needs no title or close. */}
+          <div className="flex items-center justify-between gap-2 lg:hidden">
+            <span className="font-mono text-[9px] font-semibold uppercase tracking-[1px] text-muted-foreground">
+              Cycle details
+            </span>
+            <button
+              type="button"
+              onClick={() => setRailOpen(false)}
+              aria-label="Close details"
+              className="grid size-7 shrink-0 place-items-center rounded-md text-ds-text-muted transition-colors hover:bg-ds-bg hover:text-foreground"
+            >
+              <X className="size-3.5" aria-hidden />
+            </button>
+          </div>
+
+          <CyclePropertiesRail
+            cycle={cycle}
+            statusCounts={statusCounts}
+            progressLoading={issuesQuery.isPending}
+            editable={!cycle.archivedAt && cycle.status !== 'COMPLETED'}
+            onSaveDates={saveDates}
+            // Archive is legal on Planned and Completed; Delete only on a
+            // future Planned (its issues are merely unassigned, and the name is
+            // released), which is why the range has to be in the future.
+            onArchive={canManage ? () => setArchiveOpen(true) : undefined}
+            onDelete={
+              canManage && canDelete ? () => setDeleteOpen(true) : undefined
+            }
+            onRestore={canManage ? restore : undefined}
+          />
+        </div>
       </div>
+
+      {/* Backdrop for the rail drawer — `lg` uses the inline column instead. */}
+      {railOpen ? (
+        <div
+          aria-hidden
+          onClick={() => setRailOpen(false)}
+          className="fixed inset-0 z-30 bg-[#16151259] backdrop-blur-[1px] lg:hidden"
+        />
+      ) : null}
 
       <ArchiveCycleDialog
         open={archiveOpen}

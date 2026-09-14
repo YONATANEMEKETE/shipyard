@@ -136,7 +136,7 @@ export function CyclePropertiesRail({
   const showDelete = !isArchived && Boolean(onDelete);
 
   return (
-    <div className="flex w-full shrink-0 flex-col gap-4 lg:w-[320px]">
+    <div className="flex w-full flex-col gap-4">
       {/* Progress card — derived from issues, never stored (data-model D8). */}
       <section
         aria-label="Progress"

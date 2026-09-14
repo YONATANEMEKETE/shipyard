@@ -26,9 +26,64 @@ export const commentContentSchema = z
 export type CommentContent = z.infer<typeof commentContentSchema>;
 
 // Single-token @handle grammar — one word, no spaces (D6). Resolution is
-// case-insensitive against full `user.name` or any whitespace-separated word
-// of it, among current workspace members only. Unknown tokens stay literal.
+// case-insensitive against full `user.name`, any whitespace-separated word of
+// it, or the dashed name slug (below), among current workspace members only.
+// Unknown tokens stay literal.
 export const mentionTokenRegex = /@([A-Za-z0-9_.-]+)/g;
+
+// ── Mention handles (D6) ──
+//
+// A token can never contain a space, so a full display name is not writable
+// as-is. The handle is therefore the first name word *while that word is unique
+// in the directory*; when two members share it ("Yonatanem 11" vs
+// "Yonatanem 55") the handle becomes the whole name slugged with dashes
+// ("Yonatanem-55"). That is still one regex token, and it resolves to exactly
+// one member — the ambiguity that made `@Yonatanem` fan out to three people.
+// Bare first-word tokens still resolve to every matcher (manual typing, old
+// content); the composer simply stops writing them when they are ambiguous.
+
+/**
+ * Lowercased, dash-joined name — the unambiguous single-token handle. Every
+ * character outside the token grammar (`mentionTokenRegex`) becomes a dash, so
+ * the slug is always writable and never matched as a prefix of itself.
+ */
+export function mentionSlug(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9_.-]+/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/** One token against one display name — the single rule both sides resolve by. */
+export function mentionTokenMatches(token: string, name: string): boolean {
+  const needle = token.toLowerCase();
+  const lower = name.toLowerCase();
+  return (
+    lower === needle ||
+    lower.split(/\s+/).includes(needle) ||
+    mentionSlug(name) === needle
+  );
+}
+
+/**
+ * The single-token handle for `name`, given every display name in the workspace
+ * (`directory`, viewer included — their name collides too). Returns the first
+ * word when it identifies one member, else the dashed slug.
+ */
+export function mentionHandleFor(
+  name: string,
+  directory: readonly string[],
+): string {
+  const first = name.trim().split(/\s+/)[0] ?? name.trim();
+  const needle = first.toLowerCase();
+  const sharing = directory.filter(
+    (other) => (other.trim().split(/\s+/)[0] ?? '').toLowerCase() === needle,
+  ).length;
+  return sharing > 1 ? mentionSlug(name) : first;
+}
 
 // ── Request contracts ──
 

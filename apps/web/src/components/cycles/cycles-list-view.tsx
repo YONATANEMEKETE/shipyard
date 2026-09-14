@@ -18,6 +18,10 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import type { CycleFilters } from '@/components/cycles/cycles-toolbar';
 import {
+  CYCLE_GROUP_META,
+  cycleProgressPercent,
+} from '@/components/cycles/cycle-progress';
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -25,35 +29,6 @@ import {
 } from '@/components/ui/tooltip';
 
 const GROUP_ORDER: CycleStatus[] = ['PLANNED', 'ACTIVE', 'COMPLETED'];
-
-// Group dot + progress-bar tones, read off "Cycles Grouped List" in
-// shipyard.pen: Planned → brand dot / warning bar, Active → info, Completed →
-// success.
-const GROUP_META: Record<
-  CycleStatus,
-  { label: string; dot: string; bar: string }
-> = {
-  PLANNED: { label: 'Planned', dot: 'bg-ds-brand', bar: 'bg-ds-warning' },
-  ACTIVE: { label: 'Active', dot: 'bg-ds-info', bar: 'bg-ds-info' },
-  COMPLETED: {
-    label: 'Completed',
-    dot: 'bg-ds-success',
-    bar: 'bg-ds-success',
-  },
-};
-
-/**
- * Progress shown on a row. The API derives `{ total, completed, percent }`
- * from the cycle's non-archived issues and returns `percent: null` when the
- * cycle tracks no issues — display that as 0%, never a dash.
- *
- * Deliberately NOT forced to 100% for COMPLETED cycles: completing a cycle
- * leaves unfinished issues open (spec rule 9), so a completed cycle can
- * legitimately read 65%.
- */
-function progressPercent(cycle: CycleCard): number {
-  return cycle.progress.percent ?? 0;
-}
 
 /** "Dec 15 – Dec 28" (en dash, day precision) per the design's Cycle Dates. */
 function formatRange(start: string, end: string): string {
@@ -77,7 +52,7 @@ function CycleRow({
   muted?: boolean;
   onOpen: () => void;
 }) {
-  const pct = progressPercent(cycle);
+  const pct = cycleProgressPercent(cycle);
   return (
     <div
       onClick={onOpen}
@@ -231,7 +206,7 @@ export function CyclesListView({
           />
         ) : (
           grouped.map((group) => {
-            const meta = GROUP_META[group.status];
+            const meta = CYCLE_GROUP_META[group.status];
             const isCollapsed = collapsed.has(group.status);
             return (
               <section key={group.status} aria-label={meta.label}>

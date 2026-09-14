@@ -12,6 +12,7 @@ import {
   type ButtonState,
 } from '@/components/motion/button/stateful';
 import { CycleStatusBadge } from '@/components/cycles/cycle-status-badge';
+import { cycleLengthLabel } from '@/components/cycles/cycle-progress';
 
 /**
  * Cycles detail header — the "Detail Header" from shipyard.pen
@@ -56,14 +57,6 @@ const LIFECYCLE_ACTION: Record<
 /** How long the stateful button holds each beat before settling. */
 const SUCCESS_HOLD = 700;
 const ERROR_HOLD = 1600;
-
-/** Day-precision, inclusive both ends — a one-day cycle is a 1-day cycle. */
-function cycleLengthLabel(startDate: string, endDate: string): string {
-  const start = new Date(`${startDate}T12:00:00`).getTime();
-  const end = new Date(`${endDate}T12:00:00`).getTime();
-  const days = Math.round((end - start) / 86_400_000) + 1;
-  return `${days}-day cycle`;
-}
 
 export function CycleDetailHeader({
   slug,

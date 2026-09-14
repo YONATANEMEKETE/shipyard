@@ -41,9 +41,8 @@ export interface ListIssuesArgs {
   workspaceId: string;
   where: Prisma.IssueWhereInput;
   orderBy: Prisma.IssueOrderByWithRelationInput[];
-  take: number;
-  skip?: number;
-  cursor?: { id: string };
+  /** Optional cap (My Work cards); omit to fetch every matching issue. */
+  take?: number;
 }
 
 export interface ListHistoryArgs {
@@ -62,13 +61,15 @@ export const issuesRepository = {
       where: { workspaceId: args.workspaceId, ...args.where },
       include: issueInclude(),
       orderBy: args.orderBy,
-      take: args.take,
-      ...(args.skip !== undefined ? { skip: args.skip } : {}),
-      ...(args.cursor !== undefined ? { cursor: args.cursor } : {}),
+      ...(args.take !== undefined ? { take: args.take } : {}),
     });
   },
 
-  /** Unpaginated fetch for the priority-rank sort (ranked in the service). */
+  /**
+   * Full fetch for the priority-rank sort (ranked in the service). Issue lists
+   * are unpaginated in the MVP, so there is no window cap — every matching row
+   * is ranked.
+   */
   listIssuesForPrioritySort(
     client: DbClient,
     args: { workspaceId: string; where: Prisma.IssueWhereInput },
@@ -76,10 +77,6 @@ export const issuesRepository = {
     return client.issue.findMany({
       where: { workspaceId: args.workspaceId, ...args.where },
       include: issueInclude(),
-      // Cap: priority sort is ranked in memory (Postgres enums don't carry
-      // the D9 rank). Workspaces past this cap still paginate — the service
-      // slices the ranked window. Raised if F10 search changes the shape.
-      take: 1000,
     });
   },
 

@@ -266,11 +266,11 @@ export const issueHistoryCardSchema = z.object({
 
 export type IssueHistoryCard = z.infer<typeof issueHistoryCardSchema>;
 
-// Collection pages — cursor pagination (spec Q4 resolved). `nextCursor null`
-// ⇒ end of results. Cursor is sort-specific (api-design §5.1).
+// Collection read — returns every matching issue (MVP: no pagination; the web
+// groups the full set by status, and workspaces are small). Issue history
+// below keeps its cursor contract.
 export const listIssuesResponseSchema = z.object({
   issues: z.array(issueCardSchema),
-  nextCursor: z.string().nullable(),
 });
 
 export type ListIssuesResponse = z.infer<typeof listIssuesResponseSchema>;

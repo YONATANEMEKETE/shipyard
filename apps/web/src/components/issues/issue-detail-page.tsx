@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   Copy,
   Pencil,
+  SlidersHorizontal,
   X,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -120,6 +121,8 @@ export function IssueDetailPage({
   const [dueOpen, setDueOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  /** Below `lg` the properties rail is a right-hand drawer instead of a column. */
+  const [railOpen, setRailOpen] = useState(false);
 
   const router = useRouter();
   const { data: membersData } = useMembers(slug);
@@ -292,6 +295,16 @@ export function IssueDetailPage({
             Back to Issues
           </Link>
           <div className="flex shrink-0 items-center gap-2">
+            {/* Same rail, different doorway — see the rail's own responsive
+                classes below. Hidden once it is an inline column again. */}
+            <button
+              type="button"
+              onClick={() => setRailOpen(true)}
+              className="inline-flex h-[22px] shrink-0 items-center gap-1.5 rounded-sm border border-ds-border bg-ds-surface-subtle px-2 text-[11px] font-semibold text-ds-text-muted transition-colors hover:text-foreground lg:hidden"
+            >
+              <SlidersHorizontal className="size-3 shrink-0" aria-hidden />
+              Details
+            </button>
             <span className="inline-flex h-[22px] items-center justify-center rounded-sm border border-ds-border bg-ds-surface-subtle px-2 font-mono text-[10px] font-semibold leading-none text-ds-text-muted">
               {issue.identifier}
             </span>
@@ -539,8 +552,38 @@ export function IssueDetailPage({
           </div>
         </div>
 
-        {/* Properties rail — Details + spacer + Lifecycle per QASC1/Akitx */}
-        <div className="hidden w-[320px] shrink-0 flex-col gap-4 self-stretch lg:flex min-h-0">
+        {/* Properties rail — Details + spacer + Lifecycle per QASC1/Akitx.
+            One instance, responsive classes only (same trick as the project
+            detail panel): below `lg` it is a right-hand drawer over the page,
+            at `lg` and up it is the inline 320px column it always was. Nine
+            select controls behind a breakpoint were unreachable on a phone. */}
+        <div
+          className={cn(
+            'fixed inset-y-2 right-2 z-40 flex w-[90%] max-w-[340px] transform-gpu flex-col gap-4 overflow-y-auto rounded-xl border border-ds-border bg-ds-surface p-4 shadow-xl transition-transform duration-300 ease-out [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+            'lg:static lg:inset-auto lg:z-auto lg:min-h-0 lg:w-[320px] lg:max-w-none lg:shrink-0 lg:self-stretch lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none lg:transition-none',
+            railOpen
+              ? 'translate-x-0'
+              : // `invisible` (not just pointer-events) keeps the closed drawer
+                // out of the tab order and the a11y tree; `lg:visible` puts it
+                // back for the inline column.
+                'pointer-events-none invisible translate-x-[calc(100%+24px)] lg:visible lg:pointer-events-auto lg:translate-x-0',
+          )}
+        >
+          {/* Drawer-only header — the inline column needs no title or close. */}
+          <div className="flex items-center justify-between gap-2 lg:hidden">
+            <span className="font-mono text-[9px] font-semibold uppercase tracking-[1px] text-muted-foreground">
+              Issue details
+            </span>
+            <button
+              type="button"
+              onClick={() => setRailOpen(false)}
+              aria-label="Close details"
+              className="grid size-7 shrink-0 place-items-center rounded-md text-ds-text-muted transition-colors hover:bg-ds-bg hover:text-foreground"
+            >
+              <X className="size-3.5" aria-hidden />
+            </button>
+          </div>
+
           <div className="flex flex-col gap-3">
             <span className="font-mono text-[9px] font-semibold uppercase tracking-[1px] text-muted-foreground">
               Details
@@ -1119,6 +1162,15 @@ export function IssueDetailPage({
           </div>
         </div>
       </div>
+
+      {/* Backdrop for the rail drawer — `lg` uses the inline column instead. */}
+      {railOpen ? (
+        <div
+          aria-hidden
+          onClick={() => setRailOpen(false)}
+          className="fixed inset-0 z-30 bg-[#16151259] backdrop-blur-[1px] lg:hidden"
+        />
+      ) : null}
 
       {/* Archive / delete confirms — both leave this page on success: the
           issue is gone from the active views either way. */}

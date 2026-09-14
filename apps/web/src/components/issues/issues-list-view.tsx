@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { IssuePriorityBadge } from '@/components/issues/issue-priority-badge';
-import { IssueLabelPills } from '@/components/issues/issue-label-pill';
+import { IssueLabelPill } from '@/components/issues/issue-label-pill';
 import {
   Tooltip,
   TooltipContent,
@@ -36,6 +36,9 @@ const GROUP_META: Record<IssueStatus, { label: string; dot: string }> = {
   IN_PROGRESS: { label: 'In Progress', dot: 'bg-ds-brand' },
   DONE: { label: 'Done', dot: 'bg-ds-success' },
 };
+
+/** Label pills shown per row before they collapse into a `+N` count. */
+const MAX_ROW_LABELS = 2;
 
 const AVATAR_TONES = [
   'bg-ds-brand',
@@ -103,6 +106,19 @@ function statusIcon(status: IssueStatus) {
   }
 }
 
+/**
+ * One list row. The row is a fixed-height flex line, so every column either
+ * truncates (the title) or is capped — a row that needs more width than it has
+ * would push the whole list sideways instead of scrolling, which is exactly how
+ * it used to break on narrow screens.
+ *
+ * Responsive ladder, widest first:
+ *   - every width: priority, identifier, title, blocked flag, assignee
+ *   - `sm` and up: label pills (max 2 + a `+N` count) and due date
+ *   - `sm` and up: the status icon — rows are grouped by status, so on a phone
+ *     it only repeats the group header and the width is better spent on the
+ *     title
+ */
 function IssueRow({
   issue,
   onOpen,
@@ -111,6 +127,8 @@ function IssueRow({
   onOpen?: () => void;
 }) {
   const overdue = isOverdue(issue.dueDate);
+  const shownLabels = issue.labels.slice(0, MAX_ROW_LABELS);
+  const hiddenLabelCount = issue.labels.length - shownLabels.length;
   return (
     <button
       type="button"
@@ -121,7 +139,9 @@ function IssueRow({
       <span className="shrink-0 font-mono text-[10px] font-semibold leading-none text-ds-text-muted">
         {issue.identifier}
       </span>
-      {statusIcon(issue.status)}
+      <span className="hidden shrink-0 sm:block">
+        {statusIcon(issue.status)}
+      </span>
       <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium leading-none text-foreground">
         {issue.title}
       </span>
@@ -134,7 +154,28 @@ function IssueRow({
           Blocked
         </span>
       ) : null}
-      <IssueLabelPills labels={issue.labels} />
+      {shownLabels.length > 0 ? (
+        <span className="hidden shrink-0 items-center gap-1 sm:flex">
+          {shownLabels.map((label) => (
+            <IssueLabelPill
+              key={label.id}
+              label={label}
+              className="max-w-[96px]"
+            />
+          ))}
+          {hiddenLabelCount > 0 ? (
+            <span
+              title={issue.labels
+                .slice(MAX_ROW_LABELS)
+                .map((label) => label.name)
+                .join(', ')}
+              className="inline-flex h-[18px] shrink-0 items-center rounded-full border border-ds-border px-[6px] text-[10px] font-medium leading-none text-ds-text-muted"
+            >
+              +{hiddenLabelCount}
+            </span>
+          ) : null}
+        </span>
+      ) : null}
       <span
         className={cn(
           'hidden w-[52px] shrink-0 text-right text-[11.5px] leading-none sm:block',
@@ -209,9 +250,17 @@ export function IssuesListView({
   const showEmpty = !loading && !error && grouped.length === 0;
   const centered = loading || error || showEmpty;
 
-  if (centered) {
-    return (
-      <div className="flex min-h-[280px] flex-1 flex-col items-center justify-center">
+  return (
+    <div className="flex h-full w-full flex-col">
+      {/* The list owns its scroll area, like Projects and Archived: header and
+          toolbar hold still and only the rows move. Without this the list grew
+          past its flex parent and the shell clipped it instead of scrolling. */}
+      <div
+        className={cn(
+          'relative min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+          centered && 'flex flex-col items-center justify-center',
+        )}
+      >
         {loading ? (
           <Loader2
             aria-label="Loading issues"
@@ -235,7 +284,7 @@ export function IssuesListView({
               ) : undefined
             }
           />
-        ) : (
+        ) : showEmpty ? (
           <EmptyState
             icon={Inbox}
             title={hasActiveFilters ? 'No issues match' : 'No issues yet'}
@@ -245,97 +294,98 @@ export function IssuesListView({
                 : 'Create your first issue to start tracking work.'
             }
           />
+        ) : (
+          <div className="flex w-full flex-col">
+            {grouped.map((group) => {
+              const isCollapsed = collapsed.has(group.status);
+              return (
+                <section
+                  key={group.status}
+                  aria-label={group.meta.label}
+                  className="flex w-full flex-col"
+                >
+                  <div className="flex h-9 w-full items-center gap-2 border-b border-ds-border bg-ds-surface-subtle px-4">
+                    <button
+                      type="button"
+                      aria-expanded={!isCollapsed}
+                      aria-controls={`group-${group.status}`}
+                      onClick={() => toggle(group.status)}
+                      className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                    >
+                      <span
+                        className={cn(
+                          'grid size-6 shrink-0 place-items-center rounded-md text-ds-text-muted transition-transform duration-200',
+                          isCollapsed ? '-rotate-90' : 'rotate-0',
+                        )}
+                        aria-hidden
+                      >
+                        <ChevronRight className="size-3.5" />
+                      </span>
+                      <span
+                        aria-hidden
+                        className={cn(
+                          'size-2 shrink-0 rounded-full',
+                          group.meta.dot,
+                        )}
+                      />
+                      <span className="text-[12.5px] font-semibold leading-none text-foreground">
+                        {group.meta.label}
+                      </span>
+                      <span className="font-mono text-[10px] font-semibold leading-none text-ds-text-muted">
+                        {group.issues.length}
+                      </span>
+                    </button>
+                    {group.status !== 'DONE' ? (
+                      <TooltipProvider delayDuration={100}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label={`New ${group.meta.label} issue`}
+                              onClick={() => onAddIssue?.(group.status)}
+                              className="grid size-6 shrink-0 place-items-center rounded-md text-ds-text-muted transition-colors hover:bg-ds-bg hover:text-foreground"
+                            >
+                              <Plus className="size-3.5" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">
+                            New {group.meta.label} issue
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
+                      <span className="size-6 shrink-0" aria-hidden />
+                    )}
+                  </div>
+                  <AnimatePresence initial={false}>
+                    {!isCollapsed ? (
+                      <motion.div
+                        id={`group-${group.status}`}
+                        key="content"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                        className="overflow-hidden"
+                      >
+                        <div className="flex w-full flex-col">
+                          {group.issues.map((issue) => (
+                            <IssueRow
+                              key={issue.id}
+                              issue={issue}
+                              onOpen={() => onOpenIssue?.(issue)}
+                            />
+                          ))}
+                        </div>
+                      </motion.div>
+                    ) : null}
+                  </AnimatePresence>
+                </section>
+              );
+            })}
+          </div>
         )}
       </div>
-    );
-  }
-
-  return (
-    <div className="flex w-full flex-col">
-      {grouped.map((group) => {
-        const isCollapsed = collapsed.has(group.status);
-        return (
-          <section
-            key={group.status}
-            aria-label={group.meta.label}
-            className="flex w-full flex-col"
-          >
-            <div className="flex h-9 w-full items-center gap-2 border-b border-ds-border bg-ds-surface-subtle px-4">
-              <button
-                type="button"
-                aria-expanded={!isCollapsed}
-                aria-controls={`group-${group.status}`}
-                onClick={() => toggle(group.status)}
-                className="flex min-w-0 flex-1 items-center gap-2 text-left"
-              >
-                <span
-                  className={cn(
-                    'grid size-6 shrink-0 place-items-center rounded-md text-ds-text-muted transition-transform duration-200',
-                    isCollapsed ? '-rotate-90' : 'rotate-0',
-                  )}
-                  aria-hidden
-                >
-                  <ChevronRight className="size-3.5" />
-                </span>
-                <span
-                  aria-hidden
-                  className={cn('size-2 shrink-0 rounded-full', group.meta.dot)}
-                />
-                <span className="text-[12.5px] font-semibold leading-none text-foreground">
-                  {group.meta.label}
-                </span>
-                <span className="font-mono text-[10px] font-semibold leading-none text-ds-text-muted">
-                  {group.issues.length}
-                </span>
-              </button>
-              {group.status !== 'DONE' ? (
-                <TooltipProvider delayDuration={100}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        aria-label={`New ${group.meta.label} issue`}
-                        onClick={() => onAddIssue?.(group.status)}
-                        className="grid size-6 shrink-0 place-items-center rounded-md text-ds-text-muted transition-colors hover:bg-ds-bg hover:text-foreground"
-                      >
-                        <Plus className="size-3.5" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      New {group.meta.label} issue
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ) : (
-                <span className="size-6 shrink-0" aria-hidden />
-              )}
-            </div>
-            <AnimatePresence initial={false}>
-              {!isCollapsed ? (
-                <motion.div
-                  id={`group-${group.status}`}
-                  key="content"
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
-                  className="overflow-hidden"
-                >
-                  <div className="flex w-full flex-col">
-                    {group.issues.map((issue) => (
-                      <IssueRow
-                        key={issue.id}
-                        issue={issue}
-                        onOpen={() => onOpenIssue?.(issue)}
-                      />
-                    ))}
-                  </div>
-                </motion.div>
-              ) : null}
-            </AnimatePresence>
-          </section>
-        );
-      })}
     </div>
   );
 }

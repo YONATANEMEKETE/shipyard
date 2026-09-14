@@ -140,7 +140,7 @@ export function IssuesToolbar({
   return (
     <div className="flex w-full flex-col gap-3">
       {/* Top row — scope tabs + view switch */}
-      <div className="flex w-full flex-wrap items-center justify-between gap-3">
+      <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-3">
         <Tabs
           value={scope}
           onValueChange={(details) =>
@@ -197,7 +197,7 @@ export function IssuesToolbar({
 
       {/* Bottom row — search + pills + sort, Clear at right */}
       <div className="flex w-full flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           <Input
             value={filters.search}
             onChange={(value) => set({ search: value })}
@@ -223,7 +223,7 @@ export function IssuesToolbar({
               >
                 <SelectTrigger className="h-[34px] gap-1.5 rounded-md! border-ds-border bg-ds-surface px-3 text-xs text-foreground hover:border-ds-border">
                   <Flag className="size-[14px] text-muted-foreground" />
-                  <span className="truncate">
+                  <span className="min-w-0 truncate">
                     {filters.priority
                       ? PRIORITY_LABEL[filters.priority]
                       : 'Priority'}
@@ -268,7 +268,7 @@ export function IssuesToolbar({
                         : 'text-muted-foreground',
                     )}
                   />
-                  <span className="truncate">
+                  <span className="min-w-0 truncate">
                     {filters.blocked === 'true'
                       ? 'Blocked'
                       : filters.blocked === 'false'
@@ -423,7 +423,9 @@ function AssigneePillValue({
   const selected = assigneeId
     ? members.find((m) => m.userId === assigneeId)
     : undefined;
-  return <span className="truncate">{selected?.name ?? 'Assignee'}</span>;
+  return (
+    <span className="min-w-0 truncate">{selected?.name ?? 'Assignee'}</span>
+  );
 }
 
 function ProjectPillValue({
@@ -436,7 +438,9 @@ function ProjectPillValue({
   const selected = projectId
     ? projects.find((p) => p.id === projectId)
     : undefined;
-  return <span className="truncate">{selected?.name ?? 'Project'}</span>;
+  return (
+    <span className="min-w-0 truncate">{selected?.name ?? 'Project'}</span>
+  );
 }
 
 function LabelPillValue({
@@ -447,7 +451,7 @@ function LabelPillValue({
   labels: { id: string; name: string }[];
 }) {
   const selected = labelId ? labels.find((l) => l.id === labelId) : undefined;
-  return <span className="truncate">{selected?.name ?? 'Labels'}</span>;
+  return <span className="min-w-0 truncate">{selected?.name ?? 'Labels'}</span>;
 }
 
 function DueDateFilter({

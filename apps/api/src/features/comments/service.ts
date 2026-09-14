@@ -4,7 +4,7 @@ import type {
   DeleteCommentResponse,
   UpdateCommentRequest,
 } from '@shipyard/shared';
-import { mentionTokenRegex } from '@shipyard/shared';
+import { mentionTokenMatches, mentionTokenRegex } from '@shipyard/shared';
 import { logger } from '../../common/logger/index.js';
 import { resolveImageUrl } from '../../common/storage/imageUrl.js';
 import { prisma } from '../../common/db/client.js';
@@ -42,11 +42,15 @@ const LIST_LIMIT_DEFAULT = 50;
 
 /**
  * Resolve `@tokens` against current members (data-model D6): a token hits a
- * member when it equals (case-insensitive) the full display name or any
- * whitespace-separated word of it. Returns distinct userIds in encounter
+ * member when it equals (case-insensitive) the full display name, any
+ * whitespace-separated word of it, or the dashed name slug the composer writes
+ * for members who share a first name. Returns distinct userIds in encounter
  * order — the composite PK would collapse dupes anyway, but resolving once
- * keeps the fan-out list exact. Ambiguous tokens resolve to every matcher
- * (documented: double-notify beats silent-miss until handles exist).
+ * keeps the fan-out list exact.
+ *
+ * A bare first-name token still resolves to every matcher: the composer no
+ * longer writes one when it is ambiguous, but hand-typed text and pre-existing
+ * comments keep resolving to all of them (double-notify beats silent-miss).
  */
 export function resolveMentionedUserIds(
   content: string,
@@ -58,14 +62,10 @@ export function resolveMentionedUserIds(
   for (const match of tokens) {
     const token = match[1];
     if (!token) continue;
-    const needle = token.toLowerCase();
     for (const member of members) {
-      const words = member.name.toLowerCase().split(/\s+/);
-      if (member.name.toLowerCase() === needle || words.includes(needle)) {
-        if (!seen.has(member.userId)) {
-          seen.add(member.userId);
-          resolved.push(member.userId);
-        }
+      if (mentionTokenMatches(token, member.name) && !seen.has(member.userId)) {
+        seen.add(member.userId);
+        resolved.push(member.userId);
       }
     }
   }

@@ -64,7 +64,6 @@ import type { ListHistoryQuery, ListIssuesQuery } from './schemas.js';
 /** F9 My Work bound (dashboard data-model §2.2 — locked product decision). */
 const MY_WORK_LIMIT = 10;
 
-const LIST_LIMIT_DEFAULT = 25;
 const HISTORY_LIMIT_DEFAULT = 50;
 
 const PRIORITY_RANK: Record<IssuePriority, number> = {
@@ -208,36 +207,6 @@ function decodeCursor<T>(cursor: string): T {
   }
 }
 
-interface ListCursorPayload {
-  s: string;
-  o: string;
-  id: string;
-}
-
-function decodeListCursor(cursor: string): ListCursorPayload {
-  const payload = decodeCursor<Partial<ListCursorPayload>>(cursor);
-  if (
-    typeof payload.s !== 'string' ||
-    typeof payload.o !== 'string' ||
-    typeof payload.id !== 'string' ||
-    payload.id.length === 0
-  ) {
-    throw new AppError(400, 'VALIDATION_ERROR', 'Invalid cursor');
-  }
-  return { s: payload.s, o: payload.o, id: payload.id };
-}
-
-async function assertCursorIssueExists(
-  client: DbClient,
-  id: string,
-): Promise<void> {
-  const row = await client.issue.findUnique({
-    where: { id },
-    select: { id: true },
-  });
-  if (!row) throw new AppError(400, 'VALIDATION_ERROR', 'Invalid cursor');
-}
-
 async function resolveIssue(
   issueId: string,
   context: WorkspaceRequestContext,
@@ -326,7 +295,6 @@ export const issuesService = {
   ): Promise<ListIssuesResponse> {
     const sort = query.sort ?? 'createdAt';
     const order = query.order ?? 'desc';
-    const limit = query.limit ?? LIST_LIMIT_DEFAULT;
 
     const where: Prisma.IssueWhereInput = {
       archivedAt: query.archived === 'true' ? { not: null } : null,
@@ -338,7 +306,7 @@ export const issuesService = {
         query.assigneeId === 'me' ? actorUserId : query.assigneeId;
     }
     if (query.projectId) where.projectId = query.projectId;
-    // F7: cycle filter ANDs with every other filter/sort/search/cursor.
+    // F7: cycle filter ANDs with every other filter/sort/search.
     if (query.cycleId) where.cycleId = query.cycleId;
     if (query.labels && query.labels.length > 0) {
       where.AND = query.labels.map((labelId) => ({
@@ -371,7 +339,8 @@ export const issuesService = {
     }
 
     // Priority rank is a service concept (D9) — Postgres enums don't carry
-    // it, so rank in memory over a bounded window.
+    // it, so rank in memory. MVP lists are unpaginated: every matching row is
+    // returned ranked.
     if (sort === 'priority') {
       const rows = await issuesRepository.listIssuesForPrioritySort(prisma, {
         workspaceId: context.workspaceId,
@@ -385,29 +354,7 @@ export const issuesService = {
         if (a.id === b.id) return 0;
         return (a.id < b.id ? -1 : 1) * direction;
       });
-
-      let start = 0;
-      if (query.cursor !== undefined) {
-        const payload = decodeListCursor(query.cursor);
-        if (payload.s !== sort || payload.o !== order) {
-          throw new AppError(400, 'VALIDATION_ERROR', 'Invalid cursor');
-        }
-        const index = ranked.findIndex((row) => row.id === payload.id);
-        if (index === -1) {
-          throw new AppError(400, 'VALIDATION_ERROR', 'Invalid cursor');
-        }
-        start = index + 1;
-      }
-      const page = ranked.slice(start, start + limit);
-      const hasMore = ranked.length > start + limit;
-      const last = page[page.length - 1];
-      return {
-        issues: page.map(toCard),
-        nextCursor:
-          hasMore && last
-            ? encodeCursor({ s: sort, o: order, id: last.id })
-            : null,
-      };
+      return { issues: ranked.map(toCard) };
     }
 
     const orderBy: Prisma.IssueOrderByWithRelationInput[] = [
@@ -415,36 +362,12 @@ export const issuesService = {
       { id: order },
     ];
 
-    let skip: number | undefined;
-    let cursor: { id: string } | undefined;
-    if (query.cursor !== undefined) {
-      const payload = decodeListCursor(query.cursor);
-      if (payload.s !== sort || payload.o !== order) {
-        throw new AppError(400, 'VALIDATION_ERROR', 'Invalid cursor');
-      }
-      await assertCursorIssueExists(prisma, payload.id);
-      cursor = { id: payload.id };
-      skip = 1;
-    }
-
     const rows = await issuesRepository.listIssues(prisma, {
       workspaceId: context.workspaceId,
       where,
       orderBy,
-      take: limit + 1,
-      ...(skip !== undefined ? { skip } : {}),
-      ...(cursor !== undefined ? { cursor } : {}),
     });
-    const hasMore = rows.length > limit;
-    const page = hasMore ? rows.slice(0, limit) : rows;
-    const last = page[page.length - 1];
-    return {
-      issues: page.map(toCard),
-      nextCursor:
-        hasMore && last
-          ? encodeCursor({ s: sort, o: order, id: last.id })
-          : null,
-    };
+    return { issues: rows.map(toCard) };
   },
 
   // ── Detail (#2) ────────────────────────────────────────────────────────

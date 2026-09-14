@@ -72,12 +72,12 @@ export interface ListIssuesParams {
   q?: string;
   sort?: 'createdAt' | 'updatedAt' | 'priority' | 'dueDate' | 'seqNumber';
   order?: 'asc' | 'desc';
-  limit?: number;
-  cursor?: string;
   archived?: 'true' | 'false';
 }
 
-function buildListQuery(params?: ListIssuesParams): string {
+// Shared query serializer. The issues list takes only filters/sort (MVP lists
+// are unpaginated); history still passes its own limit/cursor through here.
+function buildListQuery(params?: object): string {
   if (!params) return '';
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {

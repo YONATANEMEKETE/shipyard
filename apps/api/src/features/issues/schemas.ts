@@ -70,9 +70,12 @@ const limitSchema = z.preprocess((value) => {
   return value;
 }, z.number().int().min(1).max(100).optional());
 
-// List filters/sort/cursor (api-design.md §5.1). Query values arrive as
-// strings; `blocked`/`archived` stay string enums here and the service maps
-// them to booleans so the wire shape stays explicit at the boundary.
+// List filters/sort (api-design.md §5.1). MVP lists are unpaginated — the
+// full result set is returned and the web groups it by status. History reads
+// (below) keep their own `limit`/`cursor`.
+// Query values arrive as strings; `blocked`/`archived` stay string enums here
+// and the service maps them to booleans so the wire shape stays explicit at
+// the boundary.
 export const listIssuesQuerySchema = z.object({
   status: multiEnum(issueStatusSchema),
   priority: multiEnum(issuePrioritySchema),
@@ -91,8 +94,6 @@ export const listIssuesQuerySchema = z.object({
     .enum(['createdAt', 'updatedAt', 'priority', 'dueDate', 'seqNumber'])
     .optional(),
   order: z.enum(['asc', 'desc']).optional(),
-  limit: limitSchema,
-  cursor: z.string().min(1).optional(),
   archived: z.enum(['true', 'false']).optional(),
 });
 

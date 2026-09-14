@@ -101,7 +101,6 @@ interface IssueCard {
 
 interface ListPage {
   issues: IssueCard[];
-  nextCursor: string | null;
 }
 
 interface MemberCard {
@@ -231,7 +230,6 @@ describe('issues list (integration)', () => {
     const fresh = await list('');
     expect(fresh.status).toBe(200);
     expect(fresh.page.issues.map((i) => i.id)).toEqual([live.id]);
-    expect(fresh.page.nextCursor).toBeNull();
 
     const archived = await list('?archived=true');
     expect(archived.page.issues.map((i) => i.id)).toEqual([gone.id]);
@@ -396,56 +394,39 @@ describe('issues list (integration)', () => {
     ).toEqual(['second', 'first']);
   });
 
-  it('rejects bad sort/order/limit (400 VALIDATION_ERROR)', async () => {
-    for (const query of [
-      '?sort=bogus',
-      '?order=sideways',
-      '?limit=0',
-      '?limit=101',
-      '?blocked=yes',
-    ]) {
+  it('rejects bad sort/order (400 VALIDATION_ERROR)', async () => {
+    for (const query of ['?sort=bogus', '?order=sideways', '?blocked=yes']) {
       const res = await list(query);
       expect(res.status).toBe(400);
       expect(errorCodeOf(res.raw)).toBe('VALIDATION_ERROR');
     }
   });
 
-  // ── Pagination ─────────────────────────────────────────────────────────
+  // ── No pagination (MVP lists are unpaginated) ──────────────────────────
 
-  it('walks forward with cursors until nextCursor is null', async () => {
+  it('returns every matching issue and ignores limit/cursor params', async () => {
     await createIssue({ title: 'one' });
     await createIssue({ title: 'two' });
     await createIssue({ title: 'three' });
 
-    const first = await list('?limit=2&sort=seqNumber&order=asc');
-    expect(first.page.issues.map((i) => i.title)).toEqual(['one', 'two']);
-    expect(first.page.nextCursor).toBeTruthy();
+    const all = await list('?sort=seqNumber&order=asc');
+    expect(all.page.issues.map((i) => i.title)).toEqual([
+      'one',
+      'two',
+      'three',
+    ]);
 
-    const second = await list(
-      `?limit=2&sort=seqNumber&order=asc&cursor=${first.page.nextCursor}`,
+    // Legacy pagination params are stripped by validation and have no effect —
+    // a client still sending them receives the full set, not a first page.
+    const legacy = await list(
+      '?limit=1&cursor=anything&sort=seqNumber&order=asc',
     );
-    expect(second.page.issues.map((i) => i.title)).toEqual(['three']);
-    expect(second.page.nextCursor).toBeNull();
-  });
-
-  it('rejects malformed cursors and sort-mismatched cursors (400)', async () => {
-    await createIssue({ title: 'only' });
-    const malformed = await list('?cursor=!!!not-a-cursor!!!');
-    expect(malformed.status).toBe(400);
-    expect(errorCodeOf(malformed.raw)).toBe('VALIDATION_ERROR');
-
-    const first = await list('?limit=1&sort=createdAt&order=desc');
-    // Create a second issue so a second page exists and the cursor is real.
-    await createIssue({ title: 'second' });
-    const headed = await list('?limit=1&sort=createdAt&order=desc');
-    expect(headed.page.nextCursor).toBeTruthy();
-    void first;
-
-    const mismatched = await list(
-      `?limit=1&sort=seqNumber&order=asc&cursor=${headed.page.nextCursor}`,
-    );
-    expect(mismatched.status).toBe(400);
-    expect(errorCodeOf(mismatched.raw)).toBe('VALIDATION_ERROR');
+    expect(legacy.status).toBe(200);
+    expect(legacy.page.issues.map((i) => i.title)).toEqual([
+      'one',
+      'two',
+      'three',
+    ]);
   });
 
   // ── View preference (reused F4 endpoints, scope=ISSUE) ─────────────────

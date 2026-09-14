@@ -219,5 +219,4 @@ export const MOCK_ISSUES: IssueCard[] = [
 
 export const MOCK_LIST_RESPONSE = {
   issues: MOCK_ISSUES,
-  nextCursor: null as string | null,
 };

@@ -1,6 +1,7 @@
 'use client';
 
 import { Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -23,9 +24,10 @@ import { useWorkspace } from '@/hooks/use-workspaces';
  *
  * Creating a cycle happens here (page or group `+` → CreateCycleDialog); the
  * mutation invalidates the list family, so a new PLANNED cycle appears in its
- * group without a manual refetch. The detail panel (row click) lands next.
+ * group without a manual refetch. A row opens that cycle's detail page.
  */
 export function CyclesPage({ slug }: { slug: string }) {
+  const router = useRouter();
   const { data: workspace } = useWorkspace(slug);
   // Create is OWNER|ADMIN only (api-design §4.1) — Members see no affordance.
   const canCreate = workspace?.role !== 'MEMBER';
@@ -105,6 +107,7 @@ export function CyclesPage({ slug }: { slug: string }) {
           loading={cyclesQuery.isPending}
           error={cyclesQuery.isError}
           onRetry={() => cyclesQuery.refetch()}
+          onOpenCycle={(cycle) => router.push(`/w/${slug}/cycles/${cycle.id}`)}
           onAddCycle={canCreate ? () => setCreateOpen(true) : undefined}
         />
       </div>

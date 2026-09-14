@@ -14,6 +14,7 @@ import { CycleGoalSection } from '@/components/cycles/cycle-goal-section';
 import { CyclePropertiesRail } from '@/components/cycles/cycle-properties-rail';
 import { ArchiveCycleDialog } from '@/components/cycles/archive-cycle-dialog';
 import { DeleteCycleDialog } from '@/components/cycles/delete-cycle-dialog';
+import { CycleIssuesList } from '@/components/cycles/cycle-issues-list';
 import { useWorkspace } from '@/hooks/use-workspaces';
 import {
   emptyStatusCounts,
@@ -44,10 +45,13 @@ import {
  * label and the meta line advance together. The goal writes the same way.
  *
  * The rail's ring is sliced by *issue* status, which the cycle payload does not
- * carry (`CycleProgress` is just total/completed/percent) — so the page also
- * reads the cycle's issues (`?cycleId=`) and groups them client-side. The list
+ * carry (`CycleProgress` is just total/completed/percent) — so the page reads
+ * the cycle's issues (`?cycleId=`) and groups them client-side. The list
  * endpoint is deliberately unpaginated so exactly this kind of grouping stays
  * complete, and it matches the Issues page's own groups.
+ *
+ * That same query feeds the issues section under the goal, so the roster and
+ * the ring can never disagree — and the section costs no extra request.
  */
 
 /** Post-write copy per transition — the state that was left, not entered. */
@@ -283,6 +287,20 @@ export function CycleDetailPage({
             goal={cycle.goal}
             editable={!cycle.archivedAt && cycle.status !== 'COMPLETED'}
             onSave={saveGoal}
+          />
+
+          <div className="h-px w-full bg-ds-border" aria-hidden />
+
+          {/* The cycle's roster — read-only here; adding issues happens on
+              the Issues page, which owns the create flow. */}
+          <CycleIssuesList
+            issues={issuesQuery.data?.issues ?? []}
+            loading={issuesQuery.isPending}
+            error={issuesQuery.isError}
+            onRetry={() => issuesQuery.refetch()}
+            onOpenIssue={(issue) =>
+              router.push(`/w/${slug}/issues/${issue.id}`)
+            }
           />
         </div>
 

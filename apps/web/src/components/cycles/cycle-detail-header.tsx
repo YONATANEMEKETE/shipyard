@@ -1,7 +1,7 @@
 'use client';
 
 import { format } from 'date-fns';
-import { CheckCheck, ChevronLeft, Copy } from 'lucide-react';
+import { CheckCheck, ChevronLeft, Copy, SlidersHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
@@ -62,11 +62,14 @@ export function CycleDetailHeader({
   slug,
   cycle,
   onLifecycleAction,
+  onOpenDetails,
 }: {
   slug: string;
   cycle: CycleDetail;
   /** Runs the active status's lifecycle write. Resolves false on failure. */
   onLifecycleAction: () => Promise<boolean>;
+  /** Opens the rail drawer below `lg` — same rail, different doorway. */
+  onOpenDetails?: () => void;
 }) {
   const [copied, setCopied] = useState(false);
   const [buttonState, setButtonState] = useState<ButtonState>('idle');
@@ -124,6 +127,18 @@ export function CycleDetailHeader({
         </Link>
 
         <div className="flex shrink-0 items-center gap-2">
+          {/* The rail is an inline column from `lg` up and a drawer below it,
+              so this doorway hides once there is room for the column. */}
+          {onOpenDetails ? (
+            <button
+              type="button"
+              onClick={onOpenDetails}
+              className="inline-flex h-[22px] shrink-0 items-center gap-1.5 rounded-sm border border-ds-border bg-ds-surface-subtle px-2 text-[11px] font-semibold text-ds-text-muted transition-colors hover:text-foreground lg:hidden"
+            >
+              <SlidersHorizontal className="size-3 shrink-0" aria-hidden />
+              Details
+            </button>
+          ) : null}
           <span
             title={`${format(start, 'MMM d, yyyy')} – ${format(end, 'MMM d, yyyy')}`}
             className="inline-flex h-[22px] items-center justify-center rounded border border-ds-border bg-ds-bg px-2 font-mono text-[10px] font-semibold text-muted-foreground"

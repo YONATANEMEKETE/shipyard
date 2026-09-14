@@ -268,6 +268,28 @@ describe('comments mentions (integration)', () => {
     expect(createMentionSpy).toHaveBeenCalledTimes(2);
   });
 
+  it('the dashed slug the composer writes resolves to exactly one matcher', async () => {
+    await addNamedMember(uniqueEmail('mayac'), 'Maya Chen');
+    const mayaP = await addNamedMember(uniqueEmail('mayap'), 'Maya Patel');
+
+    const { card } = await postComment('@maya-patel just you');
+
+    expect(card.mentions.map((m) => m.userId)).toEqual([mayaP.userId]);
+    expect(card.mentions.map((m) => m.name)).toEqual(['Maya Patel']);
+    expect(await mentionJoins(card.id)).toEqual([mayaP.userId]);
+    expect(createMentionSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('a slug only matches the member whose name it is', async () => {
+    const mayaC = await addNamedMember(uniqueEmail('mayac'), 'Maya Chen');
+    const mayaP = await addNamedMember(uniqueEmail('mayap'), 'Maya Patel');
+
+    const { card } = await postComment('@maya-chen hello');
+
+    expect(card.mentions.map((m) => m.userId)).toEqual([mayaC.userId]);
+    expect(card.mentions.map((m) => m.userId)).not.toContain(mayaP.userId);
+  });
+
   it('a member who left stays literal — no join, no fan-out', async () => {
     const leaver = await addNamedMember(uniqueEmail('leaver'), 'Leo Park');
     await createTestApp()

@@ -3,6 +3,11 @@
 import type { LabelCard } from '@shipyard/shared';
 import { cn } from '@/lib/utils';
 
+/**
+ * Label pill — soft tinted chip. The name truncates rather than widening the
+ * pill (callers cap it with a `max-w-*`), so an unusually long label can't
+ * stretch a row past its container.
+ */
 export function IssueLabelPill({
   label,
   className,
@@ -19,7 +24,7 @@ export function IssueLabelPill({
       style={{ backgroundColor: `${label.color}18`, color: label.color }}
       title={label.name}
     >
-      {label.name}
+      <span className="min-w-0 truncate">{label.name}</span>
     </span>
   );
 }

@@ -1,17 +1,28 @@
 'use client';
 
+import { format } from 'date-fns';
+import { useMemo } from 'react';
+
 import type { CycleStatus } from '@shipyard/shared';
 
 import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/ui/error-state';
 import { Loader } from '@/components/motion/loader';
 import { CycleDetailHeader } from '@/components/cycles/cycle-detail-header';
+import { CycleGoalSection } from '@/components/cycles/cycle-goal-section';
+import { CyclePropertiesRail } from '@/components/cycles/cycle-properties-rail';
+import {
+  emptyStatusCounts,
+  type IssueStatusCounts,
+} from '@/components/cycles/cycle-progress';
+import { useIssues } from '@/hooks/use-issues';
 import { useToast } from '@/components/providers/toast-provider';
 import {
   useCompleteCycle,
   useCycle,
   useReopenCycle,
   useStartCycle,
+  useUpdateCycle,
 } from '@/hooks/use-cycles';
 
 /**
@@ -25,10 +36,13 @@ import {
  * cycle's current status and resolves to a boolean, so the header's stateful
  * button can show its own beat and the toast stays the single error surface.
  * A successful write invalidates the detail, so the status chip, the button
- * label and the meta line advance together.
+ * label and the meta line advance together. The goal writes the same way.
  *
- * The body (goal, issue list, progress card) and the properties rail come
- * next, so nothing renders below the header yet.
+ * The rail's ring is sliced by *issue* status, which the cycle payload does not
+ * carry (`CycleProgress` is just total/completed/percent) — so the page also
+ * reads the cycle's issues (`?cycleId=`) and groups them client-side. The list
+ * endpoint is deliberately unpaginated so exactly this kind of grouping stays
+ * complete, and it matches the Issues page's own groups.
  */
 
 /** Post-write copy per transition — the state that was left, not entered. */
@@ -65,6 +79,20 @@ export function CycleDetailPage({
   const startCycle = useStartCycle(slug);
   const completeCycle = useCompleteCycle(slug);
   const reopenCycle = useReopenCycle(slug);
+  const updateCycle = useUpdateCycle(slug);
+
+  // The cycle's issues, only for the ring's status breakdown. Same filters the
+  // API's `progress` derives from: non-archived issues of this cycle.
+  const issuesQuery = useIssues(
+    slug,
+    cycle ? { cycleId: cycle.id } : undefined,
+    { enabled: Boolean(cycle) },
+  );
+  const statusCounts: IssueStatusCounts = useMemo(() => {
+    const counts = emptyStatusCounts();
+    for (const issue of issuesQuery.data?.issues ?? []) counts[issue.status]++;
+    return counts;
+  }, [issuesQuery.data]);
 
   /** Resolves false on failure so the caller can render an error beat. */
   const runLifecycleAction = async (): Promise<boolean> => {
@@ -87,6 +115,60 @@ export function CycleDetailPage({
       showToast({
         status: 'error',
         title: 'Cycle update failed',
+        description:
+          error instanceof Error ? error.message : 'Please try again.',
+      });
+      return false;
+    }
+  };
+
+  /** Same contract as the lifecycle write: boolean, toast owns the error. */
+  const saveGoal = async (goal: string | null): Promise<boolean> => {
+    if (!cycle) return false;
+    try {
+      await updateCycle.mutateAsync({ cycleId: cycle.id, body: { goal } });
+      showToast({
+        status: 'success',
+        title: 'Goal updated',
+        description: `${cycle.name} — goal saved`,
+      });
+      return true;
+    } catch (error) {
+      showToast({
+        status: 'error',
+        title: "Couldn't update goal",
+        description:
+          error instanceof Error ? error.message : 'Please try again.',
+      });
+      return false;
+    }
+  };
+
+  /**
+   * Date edits send only the changed field. The server re-runs the overlap and
+   * single-active checks, so a conflicting range comes back as a 409 with the
+   * offending cycle named in the message — surfaced through the toast.
+   */
+  const saveDates = async (patch: {
+    startDate?: string;
+    endDate?: string;
+  }): Promise<boolean> => {
+    if (!cycle) return false;
+    try {
+      const next = await updateCycle.mutateAsync({
+        cycleId: cycle.id,
+        body: patch,
+      });
+      showToast({
+        status: 'success',
+        title: 'Dates updated',
+        description: `${next.name} — ${format(new Date(`${next.startDate}T12:00:00`), 'MMM d')} – ${format(new Date(`${next.endDate}T12:00:00`), 'MMM d')}`,
+      });
+      return true;
+    } catch (error) {
+      showToast({
+        status: 'error',
+        title: "Couldn't update dates",
         description:
           error instanceof Error ? error.message : 'Please try again.',
       });
@@ -130,6 +212,27 @@ export function CycleDetailPage({
         cycle={cycle}
         onLifecycleAction={runLifecycleAction}
       />
+
+      {/* Goal is editable while the cycle is Planned or Active: a completed
+          cycle is read-only at the API until it is reopened, and archived
+          cycles stay frozen. The rail's dates follow the same rule. */}
+      <div className="flex w-full min-h-0 flex-1 flex-col gap-6 lg:flex-row">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5">
+          <CycleGoalSection
+            goal={cycle.goal}
+            editable={!cycle.archivedAt && cycle.status !== 'COMPLETED'}
+            onSave={saveGoal}
+          />
+        </div>
+
+        <CyclePropertiesRail
+          cycle={cycle}
+          statusCounts={statusCounts}
+          progressLoading={issuesQuery.isPending}
+          editable={!cycle.archivedAt && cycle.status !== 'COMPLETED'}
+          onSaveDates={saveDates}
+        />
+      </div>
     </div>
   );
 }

@@ -1,8 +1,15 @@
 'use client';
 
 import { format } from 'date-fns';
-import { ChevronDown, MessageSquare } from 'lucide-react';
-import type { ReactNode } from 'react';
+import {
+  AtSign,
+  ChevronDown,
+  MessageSquare,
+  Pencil,
+  Trash2,
+  X,
+} from 'lucide-react';
+import { useState, type ReactNode } from 'react';
 
 import {
   mentionTokenMatches,
@@ -11,7 +18,19 @@ import {
   type CommentMentionCard,
 } from '@shipyard/shared';
 import { StatefulButton } from '@/components/motion/button/stateful';
+import { DeleteCommentDialog } from '@/components/issues/delete-comment-dialog';
+import {
+  MentionField,
+  mentionFieldFrameFocusClass,
+} from '@/components/issues/mention-field';
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 function initialsOf(name: string): string {
@@ -113,8 +132,114 @@ function CommentBody({ comment }: { comment: CommentCard }) {
   );
 }
 
-function CommentEntry({ comment }: { comment: CommentCard }) {
+/**
+ * The author's own row actions — hidden until the comment's content is hovered
+ * or something inside it takes focus, so the thread reads as prose until you
+ * reach for it. They keep their space while hidden (opacity, not display), so
+ * revealing them never nudges the timestamp.
+ *
+ * This is a convenience, not a permission: the API re-asserts authorship on
+ * both routes and roles never override it (spec rule 3).
+ */
+function CommentActions({
+  onEdit,
+  onDelete,
+}: {
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const buttonClass =
+    'grid size-6 shrink-0 place-items-center rounded-md border border-transparent text-ds-text-muted transition-all duration-150 focus-visible:outline-none active:scale-95';
+  const editClass =
+    'hover:border-ds-border hover:bg-ds-surface hover:text-foreground focus-visible:border-ds-border focus-visible:bg-ds-surface focus-visible:text-foreground';
+  const deleteClass =
+    'hover:border-ds-danger/30 hover:bg-ds-danger-soft hover:text-ds-danger focus-visible:border-ds-danger/30 focus-visible:bg-ds-danger-soft focus-visible:text-ds-danger';
+
+  return (
+    <div className="ml-auto flex shrink-0 items-center gap-1 opacity-0 transition-opacity duration-150 group-hover/comment:opacity-100 group-focus-within/comment:opacity-100">
+      {/* One provider for the pair, so moving between the two icons skips the
+          delay instead of waiting it out twice. */}
+      <TooltipProvider delayDuration={100}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={onEdit}
+              aria-label="Edit comment"
+              className={cn(buttonClass, editClass)}
+            >
+              <Pencil className="size-3.5" aria-hidden />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">Edit comment</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={onDelete}
+              aria-label="Delete comment"
+              className={cn(buttonClass, deleteClass)}
+            >
+              <Trash2 className="size-3.5" aria-hidden />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">Delete comment</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
+  );
+}
+
+function CommentEntry({
+  comment,
+  slug,
+  isOwn,
+  readOnly,
+  onEditComment,
+  onRequestDelete,
+}: {
+  comment: CommentCard;
+  slug: string;
+  isOwn: boolean;
+  readOnly: boolean;
+  onEditComment?: (commentId: string, content: string) => Promise<unknown>;
+  onRequestDelete: (comment: CommentCard) => void;
+}) {
   const { author } = comment;
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(comment.content);
+  const [saving, setSaving] = useState(false);
+
+  const next = draft.trim();
+  // A same-content body is a server-side no-op (api-design #4), so the action
+  // stays off until something actually changed — no accidental "(edited)".
+  const canSave = next !== '' && next !== comment.content.trim() && !saving;
+
+  const startEdit = () => {
+    setDraft(comment.content);
+    setEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setEditing(false);
+    setDraft(comment.content);
+  };
+
+  const save = async () => {
+    if (!canSave) return;
+    setSaving(true);
+    try {
+      await onEditComment?.(comment.id, next);
+      setEditing(false);
+    } catch {
+      // Swallowed on purpose — the page surfaces the failure and the draft
+      // stays in the field so nothing the author wrote is lost.
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="flex w-full gap-2.5 rounded-lg p-2">
       {author.image ? (
@@ -137,7 +262,7 @@ function CommentEntry({ comment }: { comment: CommentCard }) {
         </span>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+      <div className="group/comment flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex w-full items-center gap-2">
           <span className="shrink-0 text-[12.5px] font-semibold leading-none text-foreground">
             {author.name}
@@ -146,11 +271,76 @@ function CommentEntry({ comment }: { comment: CommentCard }) {
             {format(new Date(comment.createdAt), 'MMM d, HH:mm')}
             {comment.editedAt ? ' (edited)' : ''}
           </span>
+          {isOwn && !readOnly && !editing ? (
+            <CommentActions
+              onEdit={startEdit}
+              onDelete={() => onRequestDelete(comment)}
+            />
+          ) : null}
         </div>
 
-        <div className="flex w-full flex-col rounded-lg bg-ds-surface-subtle px-3 py-2.5">
-          <CommentBody comment={comment} />
-        </div>
+        {editing ? (
+          // Editing happens in place, in the same bordered container as the
+          // composer, so the field (and its @ suggestions) is unchanged between
+          // writing a comment and fixing one.
+          <div
+            className={cn(
+              'flex w-full flex-col gap-2.5 rounded-lg border border-ds-border bg-ds-surface px-3 py-2.5',
+              mentionFieldFrameFocusClass,
+            )}
+          >
+            <MentionField
+              slug={slug}
+              value={draft}
+              onChange={setDraft}
+              ariaLabel="Edit your comment"
+              autoFocus
+              onSubmit={() => void save()}
+              suggestAbove={false}
+            />
+            <div className="flex w-full items-center justify-end gap-2">
+              <span className="mr-auto flex items-center gap-1 text-[11px] leading-none text-ds-text-muted">
+                <AtSign aria-hidden className="size-3 shrink-0" />
+                Mention members with @
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={cancelEdit}
+                disabled={saving}
+                className="h-[26px] gap-1.5 rounded-md px-2.5 text-xs font-medium text-ds-text-muted hover:text-foreground"
+              >
+                <X className="size-3.5" aria-hidden />
+                Cancel
+              </Button>
+              <StatefulButton
+                type="button"
+                size="sm"
+                onClick={() => void save()}
+                state={saving ? 'loading' : 'idle'}
+                loadingText="Saving…"
+                disabled={!canSave}
+                className="h-[26px] rounded-md bg-ds-brand px-3 text-xs font-semibold text-white hover:bg-ds-brand/90 disabled:opacity-50"
+              >
+                Save
+              </StatefulButton>
+            </div>
+          </div>
+        ) : (
+          <div
+            className={cn(
+              // Only the comment's own container reacts to the pointer — the
+              // avatar, name and timestamp stay inert. The hairline lives at
+              // rest so the bubble never changes size when it appears, and
+              // px/py are 1px tighter to pay for it.
+              'flex w-full flex-col rounded-lg border border-transparent bg-ds-surface-subtle px-[11px] py-[9px] transition-colors duration-150',
+              'hover:border-ds-border hover:bg-ds-surface',
+            )}
+          >
+            <CommentBody comment={comment} />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -171,20 +361,38 @@ function CommentEntry({ comment }: { comment: CommentCard }) {
  * comments and each click appends NEWER ones — newest last, next to the
  * composer. It reads like the history panel's control, mirrored downwards.
  *
- * Author-only hover actions (edit / delete-with-confirm) are not built yet.
+ * Authorship: the viewer's own rows reveal edit / delete-with-confirm on hover.
+ * The page owns the mutations (they carry the toasts and the cache writes);
+ * this component only knows how to open an editor and ask for a confirmation.
  */
 export function IssueConversation({
   comments,
+  slug,
+  viewerId,
+  readOnly = false,
   hasMore = false,
   isLoadingMore = false,
   onLoadMore,
+  onEditComment,
+  onDeleteComment,
 }: {
   comments: CommentCard[];
+  /** Directory slug — the inline editor's mention suggestions come from it. */
+  slug: string;
+  /** Better Auth id of the viewer; own rows are the only ones with actions. */
+  viewerId?: string;
+  /** Archived issues freeze every comment write (spec §3.6) — actions hide. */
+  readOnly?: boolean;
   /** Older pages remain on the server. */
   hasMore?: boolean;
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
+  onEditComment?: (commentId: string, content: string) => Promise<unknown>;
+  onDeleteComment?: (commentId: string) => Promise<unknown>;
 }) {
+  // One dialog for the whole thread, not one per comment.
+  const [deleteTarget, setDeleteTarget] = useState<CommentCard | null>(null);
+
   if (comments.length === 0) {
     return (
       <div className="flex min-h-0 w-full flex-1 items-center justify-center">
@@ -200,7 +408,15 @@ export function IssueConversation({
   return (
     <div className="flex w-full flex-col">
       {comments.map((comment) => (
-        <CommentEntry key={comment.id} comment={comment} />
+        <CommentEntry
+          key={comment.id}
+          comment={comment}
+          slug={slug}
+          isOwn={Boolean(viewerId) && comment.author.userId === viewerId}
+          readOnly={readOnly}
+          onEditComment={onEditComment}
+          onRequestDelete={setDeleteTarget}
+        />
       ))}
 
       {/* Manual pagination — newer comments arrive on click, appended below
@@ -221,6 +437,18 @@ export function IssueConversation({
           </StatefulButton>
         </div>
       ) : null}
+
+      <DeleteCommentDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        comment={deleteTarget}
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          await onDeleteComment?.(deleteTarget.id);
+        }}
+      />
     </div>
   );
 }

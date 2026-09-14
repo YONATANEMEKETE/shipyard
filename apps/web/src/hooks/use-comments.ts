@@ -6,12 +6,18 @@ import {
   type UseInfiniteQueryOptions,
   type UseMutationOptions,
 } from '@tanstack/react-query';
-import type { CommentCard, CreateCommentRequest } from '@shipyard/shared';
+import type {
+  CommentCard,
+  CreateCommentRequest,
+  DeleteCommentResponse,
+} from '@shipyard/shared';
 
 import {
   CommentsApiError,
   createComment,
+  deleteComment,
   listComments,
+  updateComment,
   type ListCommentsResponse,
 } from '@/lib/api/comments';
 
@@ -105,6 +111,88 @@ export function useCreateComment(
         };
       });
       onSuccess?.(card, variables, context, mutation);
+    },
+  });
+}
+
+/**
+ * #4 — edit own comment. The server is authoritative here in a way create is
+ * not: it sets `editedAt` and recomputes `mentions[]` against current members,
+ * so the returned card is spliced over the cached one rather than refetched.
+ * Nothing re-notifies (rule 4), so no notification cache invalidation.
+ */
+export function useUpdateComment(
+  slug: string,
+  issueId: string,
+  options?: UseMutationOptions<
+    CommentCard,
+    CommentsApiError,
+    { commentId: string; content: string },
+    unknown
+  >,
+) {
+  const queryClient = useQueryClient();
+  const { onSuccess, ...rest } = options ?? {};
+  return useMutation({
+    mutationFn: ({ commentId, content }) =>
+      updateComment(slug, issueId, commentId, { content }),
+    ...rest,
+    onSuccess: (card, variables, context, mutation) => {
+      queryClient.setQueryData<
+        InfiniteData<ListCommentsResponse, string | undefined>
+      >(commentKeys.list(slug, issueId), (prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          pages: prev.pages.map((page) => ({
+            ...page,
+            comments: page.comments.map((comment) =>
+              comment.id === card.id ? card : comment,
+            ),
+          })),
+        };
+      });
+      onSuccess?.(card, variables, context, mutation);
+    },
+  });
+}
+
+/**
+ * #5 — delete own comment. No tombstone: the row is dropped from whichever
+ * cached page holds it, so the thread closes up without a refetch. Mentions and
+ * the comment's notification rows died with it server-side (D8).
+ */
+export function useDeleteComment(
+  slug: string,
+  issueId: string,
+  options?: UseMutationOptions<
+    DeleteCommentResponse,
+    CommentsApiError,
+    string,
+    unknown
+  >,
+) {
+  const queryClient = useQueryClient();
+  const { onSuccess, ...rest } = options ?? {};
+  return useMutation({
+    mutationFn: (commentId: string) => deleteComment(slug, issueId, commentId),
+    ...rest,
+    onSuccess: (response, variables, context, mutation) => {
+      queryClient.setQueryData<
+        InfiniteData<ListCommentsResponse, string | undefined>
+      >(commentKeys.list(slug, issueId), (prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          pages: prev.pages.map((page) => ({
+            ...page,
+            comments: page.comments.filter(
+              (comment) => comment.id !== response.deletedCommentId,
+            ),
+          })),
+        };
+      });
+      onSuccess?.(response, variables, context, mutation);
     },
   });
 }

@@ -1,6 +1,5 @@
 'use client';
 
-import { format, isSameWeek, isToday, isYesterday } from 'date-fns';
 import {
   Calendar,
   ChevronDown,
@@ -15,6 +14,12 @@ import type { LucideIcon } from 'lucide-react';
 import { Fragment } from 'react';
 import type { ActivityArea, ActivityEventCard } from '@shipyard/shared';
 
+import {
+  ACTIVITY_BUCKET_LABEL,
+  activityTimeOf,
+  groupByActivityBucket,
+  type ActivityBucket,
+} from '@/components/activity/activity-grouping';
 import { StatefulButton } from '@/components/motion/button/stateful';
 import { Loader } from '@/components/motion/loader';
 import { Button } from '@/components/ui/button';
@@ -40,18 +45,10 @@ import { cn } from '@/lib/utils';
  * Pagination is manual, like the issue-detail history tab: 25 rows per page
  * and a "Load more" button that walks `nextCursor` until it is null. No
  * infinite scroll, no auto-fetch on mount.
+ *
+ * The date bucketing lives in `activity-grouping.ts` — the dashboard rail's
+ * timeline groups the same rows, and two copies would drift.
  */
-
-/** Group buckets, in render order. */
-const BUCKETS = ['today', 'yesterday', 'week', 'earlier'] as const;
-type Bucket = (typeof BUCKETS)[number];
-
-const BUCKET_LABEL: Record<Bucket, string> = {
-  today: 'Today',
-  yesterday: 'Yesterday',
-  week: 'This week',
-  earlier: 'Earlier',
-};
 
 /** Area → the glyph the design pairs with each event family. */
 const AREA_ICON: Record<ActivityArea, LucideIcon> = {
@@ -62,29 +59,6 @@ const AREA_ICON: Record<ActivityArea, LucideIcon> = {
   comments: MessageSquare,
   cycles: Calendar,
 };
-
-function bucketOf(iso: string): Bucket {
-  const date = new Date(iso);
-  if (isToday(date)) return 'today';
-  if (isYesterday(date)) return 'yesterday';
-  // Monday-start weeks, matching the workspace's cycle weeks.
-  if (isSameWeek(date, new Date(), { weekStartsOn: 1 })) return 'week';
-  return 'earlier';
-}
-
-/**
- * Time shown at the row's trailing edge. Only today/yesterday carry their day
- * in the group header, so the looser buckets have to name the day themselves —
- * otherwise "This week" and "Earlier" rows stack up as a run of bare clock
- * times with no way to tell which day each landed on.
- */
-function timeOf(iso: string, bucket: Bucket): string {
-  const date = new Date(iso);
-  if (bucket === 'today' || bucket === 'yesterday')
-    return format(date, 'HH:mm');
-  if (bucket === 'week') return format(date, 'EEE HH:mm');
-  return format(date, 'MMM d');
-}
 
 function initialsOf(name: string): string {
   return name
@@ -101,7 +75,7 @@ function ActivityRow({
   avatarUrl,
 }: {
   event: ActivityEventCard;
-  bucket: Bucket;
+  bucket: ActivityBucket;
   /** The actor's avatar, when the roster still knows this member. */
   avatarUrl?: string | null;
 }) {
@@ -137,7 +111,7 @@ function ActivityRow({
       </span>
 
       <span className="shrink-0 font-mono text-[11px] leading-none text-ds-text-muted">
-        {timeOf(event.createdAt, bucket)}
+        {activityTimeOf(event.createdAt, bucket)}
       </span>
     </div>
   );
@@ -216,12 +190,9 @@ export function ActivityFeed({
     );
   }
 
-  // One pass per bucket, in fixed order — the API already returns newest-first,
-  // so filtering preserves the ordering inside each group.
-  const groups = BUCKETS.map((bucket) => ({
-    bucket,
-    rows: events.filter((event) => bucketOf(event.createdAt) === bucket),
-  })).filter((group) => group.rows.length > 0);
+  // Rows arrive newest-first (the API's only order), so the helper's bucket
+  // filter preserves the ordering inside each group.
+  const groups = groupByActivityBucket(events);
 
   return (
     <div className="flex w-full flex-col">
@@ -230,7 +201,7 @@ export function ActivityFeed({
           key={group.bucket}
           className={cn('flex w-full flex-col', groupIndex > 0 && 'pt-4')}
         >
-          <DayDivider label={BUCKET_LABEL[group.bucket]} />
+          <DayDivider label={ACTIVITY_BUCKET_LABEL[group.bucket]} />
           {group.rows.map((event, index) => (
             <Fragment key={event.id}>
               <ActivityRow

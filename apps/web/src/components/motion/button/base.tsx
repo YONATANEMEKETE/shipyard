@@ -15,7 +15,6 @@ import {
   useState,
 } from 'react';
 import { EASE_OUT, SPRING_PRESS } from '@/lib/ease';
-import { useHoverCapable } from '@/lib/hooks/use-hover-capable';
 import { cn } from '@/lib/utils';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'outline';
@@ -47,7 +46,10 @@ type Ripple = { id: number; x: number; y: number; size: number };
 
 const VARIANT_CLASS: Record<ButtonVariant, string> = {
   primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
-  secondary: 'border border-border bg-card text-foreground hover:border-border',
+  // `hover:border-border` alone was a no-op (same colour the variant already
+  // rests on), so the tint is what actually carries hover here.
+  secondary:
+    'border border-border bg-card text-foreground hover:border-border hover:bg-primary/5',
   ghost: 'text-muted-foreground hover:text-foreground hover:bg-primary/5',
   outline:
     'border border-border bg-transparent text-foreground hover:bg-primary/5',
@@ -60,6 +62,17 @@ const SIZE_CLASS: Record<ButtonSize, string> = {
   icon: 'size-9 rounded-md',
 };
 
+/**
+ * Interaction feedback model (DS 04 `Control States`): hover changes *colour*,
+ * press changes *scale*.
+ *
+ * There is deliberately no hover scale. Scaling the button scales everything
+ * inside it, so the icon drifts out from under the pointer at the same moment
+ * the label does — the two move together and the whole control appears to
+ * slide rather than respond. Colour on hover gives the same "this is
+ * interactive" signal without displacing any glyph, and `whileTap` still
+ * compresses on press, which is the moment scale reads as physical.
+ */
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   function Button(
     {
@@ -75,7 +88,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref,
   ) {
     const reduce = useReducedMotion();
-    const canHover = useHoverCapable();
     const [ripples, setRipples] = useState<Ripple[]>([]);
     const nextId = useRef(0);
 
@@ -105,7 +117,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         type="button"
         whileTap={reduce ? undefined : { scale: pressScale }}
-        whileHover={reduce || !canHover ? undefined : { scale: 1.02 }}
         transition={SPRING_PRESS}
         onPointerDown={handlePointerDown}
         className={cn(
@@ -165,13 +176,11 @@ export const ButtonLink = forwardRef<HTMLAnchorElement, ButtonLinkProps>(
     ref,
   ) {
     const reduce = useReducedMotion();
-    const canHover = useHoverCapable();
 
     return (
       <motion.a
         ref={ref}
         whileTap={reduce ? undefined : { scale: pressScale }}
-        whileHover={reduce || !canHover ? undefined : { scale: 1.02 }}
         transition={SPRING_PRESS}
         className={cn(
           'inline-flex items-center justify-center font-medium select-none',

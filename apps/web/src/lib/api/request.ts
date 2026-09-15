@@ -98,6 +98,37 @@ export async function requestJson<T>(
     },
   });
 
+  return readResponse<T>(response, fallbackMessage, ErrorCtor);
+}
+
+/**
+ * Multipart variant — the one route that is not JSON (avatar upload).
+ *
+ * Content-Type is deliberately left unset: the browser writes it with the
+ * generated `boundary=`, and a hand-set `multipart/form-data` without that
+ * boundary makes the server parse an empty body instead of failing loudly.
+ */
+export async function requestForm<T>(
+  input: string,
+  body: FormData,
+  fallbackMessage: string,
+  ErrorCtor: ApiErrorCtor = ApiError,
+): Promise<T> {
+  const response = await fetch(input, {
+    method: 'POST',
+    body,
+    credentials: 'include',
+  });
+
+  return readResponse<T>(response, fallbackMessage, ErrorCtor);
+}
+
+/** Shared unwrap: error envelope → 204 → `{ data }`. */
+async function readResponse<T>(
+  response: Response,
+  fallbackMessage: string,
+  ErrorCtor: ApiErrorCtor,
+): Promise<T> {
   if (!response.ok) {
     const envelope = await parseErrorEnvelope(response, fallbackMessage);
     throw new ErrorCtor({

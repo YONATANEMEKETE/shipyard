@@ -7,7 +7,11 @@ import { authClient } from '@/lib/auth-client';
  *
  * Three tiers:
  *   1. Public — / and /(marketing)/* : always reachable, even authed stays.
- *   2. Auth pages — /(auth)/* : authed users redirect to /.
+ *   2. Auth pages — /(auth)/* : never require a session. Only the credential
+ *      entry screens (sign-in/sign-up) bounce an authenticated visitor; the
+ *      token-driven ones stay reachable, because a signed-in user is exactly
+ *      who uses them (change-email → /verify-email, first password →
+ *      /forgot-password → /reset-password).
  *   3. Protected — /onboarding, /select-workspace, /w/*, /settings/* :
  *      unauth → /sign-in. Account Settings is session-scoped but
  *      workspace-free, so it is protected without a workspace context.
@@ -27,6 +31,18 @@ const AUTH_PAGES = [
   '/verify-email',
   '/error',
 ] as const;
+
+/**
+ * The subset of auth pages that turns an authenticated visitor away.
+ *
+ * Credential entry only. The others are token- or action-driven and must stay
+ * reachable while signed in — a change-email confirmation lands on
+ * /verify-email, and setting a first password walks /forgot-password →
+ * /reset-password. Bouncing those sent the visitor to /w and discarded the
+ * token before the page could consume it, which is the single job those pages
+ * exist to do.
+ */
+const SIGNED_OUT_ONLY_PAGES = ['/sign-in', '/sign-up'] as const;
 
 const PROTECTED_PREFIXES = [
   '/onboarding',
@@ -48,6 +64,12 @@ export function hasSessionCookie(request: NextRequest): boolean {
 
 export function isAuthPage(pathname: string): boolean {
   return AUTH_PAGES.some(
+    (page) => pathname === page || pathname.startsWith(`${page}/`),
+  );
+}
+
+export function isSignedOutOnlyPage(pathname: string): boolean {
+  return SIGNED_OUT_ONLY_PAGES.some(
     (page) => pathname === page || pathname.startsWith(`${page}/`),
   );
 }
@@ -91,6 +113,12 @@ export default async function proxy(request: NextRequest) {
   // Protected: /onboarding, /select-workspace, /w/* — require session.
 
   if (onAuthPage) {
+    // Reachable either way: no session needed, and a session is no reason to
+    // be turned away.
+    if (!isSignedOutOnlyPage(pathname)) {
+      return NextResponse.next();
+    }
+
     const mustValidate = hasSessionCookie(request);
     const authed = mustValidate ? await isAuthenticated(request) : false;
     if (authed) {

@@ -137,6 +137,28 @@ const CIRCLE_ORIGIN: Record<RectStart, string> = {
   'bottom-up': '50% 100%',
 };
 
+/**
+ * Mirrors next-themes' `attribute: "class"` application into the DOM
+ * synchronously.
+ *
+ * next-themes writes the class from a *passive* effect, which runs after the
+ * browser has already captured the view transition's "new" frame. Left to it,
+ * the reveal animates the old theme over itself and the real change snaps in
+ * only once the transition has finished — the flicker this toggle used to have.
+ * Writing the class here, inside the transition callback and therefore before
+ * the new frame is captured, is what makes the reveal actually show the new
+ * theme. next-themes' own effect then re-applies the same value, a no-op, and
+ * still owns the state/localStorage side of the switch.
+ */
+function applyThemeClass(value: 'light' | 'dark') {
+  const root = document.documentElement;
+  root.classList.remove('light', 'dark');
+  root.classList.add(value);
+  // next-themes sets this when `enableColorScheme` is on (it is, by default) so
+  // native scrollbars and form controls flip with the theme.
+  root.style.colorScheme = value;
+}
+
 export function useThemeToggle({
   variant = 'rectangle',
   start = 'bottom-up',
@@ -178,7 +200,12 @@ export function useThemeToggle({
       document as Document & {
         startViewTransition(cb: () => void): { finished: Promise<void> };
       }
-    ).startViewTransition(() => setTheme(next));
+    ).startViewTransition(() => {
+      // Synchronous DOM write first, so the captured "new" frame is the new
+      // theme; then hand the value to next-themes for its state and storage.
+      applyThemeClass(next);
+      setTheme(next);
+    });
 
     vt.finished.finally(() => {
       delete root.dataset.beuiVt;

@@ -42,3 +42,14 @@ overrides:
   # qs <6.16.0: array-limit bypass and DoS via attacker-controlled isBuffer
   # (transitive of express→body-parser and supertest→superagent).
   'qs@<6.16.0': ^6.16.0
+  # next <16.3.3: unauthenticated RCE on Windows-hosted servers and RCE in the
+  # Image Optimization API with AVIF (GHSA-p293-qw3h-jr36, GHSA-2xp9-vwfh-vxw4).
+  # @react-email/ui pins next 16.3.0 exactly; force every copy onto the patched
+  # 16.3.x line.
+  'next@<16.3.3': ^16.3.5
+  # sharp <0.35.4: libheif vulnerabilities (GHSA-rgj7-g3m4-5g8c) pulled in via
+  # next's optional dependency.
+  'sharp@<0.35.4': ^0.35.4
+  # js-yaml <4.3.2: CPU exhaustion via empty merge sources in maxTotalMergeKeys
+  # (GHSA-2883-xcg3-v3hh) — pulled by cosmiconfig, eslint, and others.
+  'js-yaml@<4.3.2': ^4.3.2

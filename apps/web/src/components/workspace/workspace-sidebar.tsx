@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Bell,
+  Activity,
   Calendar,
   CircleCheck,
   Folder,
@@ -41,7 +41,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Projects', href: '/projects', icon: Folder },
   { label: 'Cycles', href: '/cycles', icon: Calendar },
   { label: 'Members', href: '/members', icon: Users },
-  { label: 'Notifications', href: '/notifications', icon: Bell, badge: 3 },
+  { label: 'Activity', href: '/activity', icon: Activity },
   {
     label: 'Workspace Settings',
     href: '/settings',

@@ -44,6 +44,10 @@ export const AUTH_CODE_MAP: Record<string, MappedAuthError> = {
   USER_ALREADY_EXISTS: conflict(),
   USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL: conflict(),
   USER_ALREADY_HAS_PASSWORD: conflict(),
+  // Raised by set-password (the Auth extension route) when a credential row
+  // already has one — the settings card reads it to flip from set to change
+  // rather than reporting a generic bad request.
+  PASSWORD_ALREADY_SET: conflict(),
   SOCIAL_ACCOUNT_ALREADY_LINKED: conflict(),
   LINKED_ACCOUNT_ALREADY_EXISTS: conflict(),
 

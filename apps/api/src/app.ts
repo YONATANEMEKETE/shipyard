@@ -39,6 +39,7 @@ import { workspaceActivityRouter } from './features/activity/routes.js';
 import { workspaceSearchRouter } from './features/search/routes.js';
 import { workspaceDashboardRouter } from './features/dashboard/routes.js';
 import { settingsRouter } from './features/settings/routes.js';
+import { authExtensionRouter } from './features/auth/routes.js';
 import {
   defaultAvatarStorage,
   setAvatarStorage,
@@ -100,6 +101,11 @@ export function createApp(options: CreateAppOptions = {}): express.Express {
 
     sendSuccess(response, readiness);
   });
+
+  // Auth extension — routes better-auth deliberately leaves to the app
+  // (`serverOnly` endpoints removed from its own HTTP surface). Mounted
+  // BEFORE the catch-all below, which owns every other subpath.
+  app.use('/api/v1/auth', authExtensionRouter);
 
   // Better Auth — handles all subpaths under /api/v1/auth (sign-in, sign-up,
   // session, reset-password, verify-email, oauth callbacks, ...).

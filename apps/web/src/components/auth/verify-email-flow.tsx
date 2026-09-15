@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useQueryClient } from '@tanstack/react-query';
 import { CircleCheck, Loader2, TriangleAlert } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ export function VerifyEmailFlow({
 }) {
   const [state, setState] = useState<VerifyState>('verifying');
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!token) return;
@@ -48,13 +50,18 @@ export function VerifyEmailFlow({
       });
       if (cancelled) return;
       setState(error ? 'error' : 'success');
+      // Clicking this link is what commits the change — a change-email
+      // verification rewrites the address on the user row. Everything cached
+      // is user-scoped, and the session query holds a 5-minute staleTime, so
+      // the sidebar would keep showing the old address without this.
+      if (!error) void queryClient.invalidateQueries();
     };
 
     void verify();
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, queryClient]);
 
   // Success is transient: show the confirmation beat, then continue into
   // the workspace automatically (or back to the invitation being accepted).

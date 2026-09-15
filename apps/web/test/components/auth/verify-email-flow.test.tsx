@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const mockVerifyEmail = vi.fn();
 const mockReplace = vi.fn();
@@ -14,6 +15,25 @@ vi.mock('next/navigation', () => ({
 
 import { VerifyEmailFlow } from '@/components/auth/verify-email-flow';
 
+/**
+ * The flow invalidates cached queries on success (a change-email
+ * verification rewrites the user row), so it needs a real client. Each render
+ * gets a fresh one, and it is returned so tests can spy on invalidations.
+ */
+function renderFlow(props: { token?: string; next?: string } = {}) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+
+  const result = render(
+    <QueryClientProvider client={queryClient}>
+      <VerifyEmailFlow {...props} />
+    </QueryClientProvider>,
+  );
+
+  return { ...result, queryClient };
+}
+
 describe('VerifyEmailFlow — user behaviour (isolated)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -22,7 +42,7 @@ describe('VerifyEmailFlow — user behaviour (isolated)', () => {
   });
 
   it('shows invalid link when no token provided and does not call API', () => {
-    render(<VerifyEmailFlow />);
+    renderFlow();
 
     expect(
       screen.getByRole('heading', { name: /this link isn.*t valid/i }),
@@ -37,7 +57,7 @@ describe('VerifyEmailFlow — user behaviour (isolated)', () => {
   });
 
   it('shows invalid link for empty string token', () => {
-    render(<VerifyEmailFlow token="" />);
+    renderFlow({ token: '' });
 
     expect(
       screen.getByRole('heading', { name: /this link isn.*t valid/i }),
@@ -48,7 +68,7 @@ describe('VerifyEmailFlow — user behaviour (isolated)', () => {
   it('shows verifying state initially when token provided', () => {
     mockVerifyEmail.mockReturnValue(new Promise(() => {}));
 
-    render(<VerifyEmailFlow token="tok_123" />);
+    renderFlow({ token: 'tok_123' });
 
     expect(
       screen.getByRole('heading', { name: /verifying your email/i }),
@@ -64,7 +84,7 @@ describe('VerifyEmailFlow — user behaviour (isolated)', () => {
   it('shows success after verification and auto-redirects after 1.4s', async () => {
     mockVerifyEmail.mockResolvedValue({ error: null });
 
-    render(<VerifyEmailFlow token="tok_success" />);
+    renderFlow({ token: 'tok_success' });
 
     expect(
       await screen.findByRole('heading', {
@@ -82,7 +102,7 @@ describe('VerifyEmailFlow — user behaviour (isolated)', () => {
   it('shows error when verification fails', async () => {
     mockVerifyEmail.mockResolvedValue({ error: { message: 'invalid' } });
 
-    render(<VerifyEmailFlow token="tok_bad" />);
+    renderFlow({ token: 'tok_bad' });
 
     expect(
       await screen.findByRole('heading', {
@@ -100,7 +120,7 @@ describe('VerifyEmailFlow — user behaviour (isolated)', () => {
     let resolve!: (v: unknown) => void;
     mockVerifyEmail.mockReturnValue(new Promise((r) => (resolve = r)));
 
-    const { unmount } = render(<VerifyEmailFlow token="tok_cancel" />);
+    const { unmount } = renderFlow({ token: 'tok_cancel' });
 
     expect(
       screen.getByRole('heading', { name: /verifying your email/i }),
@@ -117,7 +137,7 @@ describe('VerifyEmailFlow — user behaviour (isolated)', () => {
   it('calls verify with callbackURL / for autoSignIn cookie', async () => {
     mockVerifyEmail.mockResolvedValue({ error: null });
 
-    render(<VerifyEmailFlow token="tok_cb" />);
+    renderFlow({ token: 'tok_cb' });
 
     await screen.findByRole('heading', {
       name: /email verified successfully/i,
@@ -130,10 +150,38 @@ describe('VerifyEmailFlow — user behaviour (isolated)', () => {
     );
   });
 
+  it('invalidates cached queries on success so the stale session cannot win', async () => {
+    mockVerifyEmail.mockResolvedValue({ error: null });
+
+    const { queryClient } = renderFlow({ token: 'tok_invalidate' });
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+
+    await screen.findByRole('heading', {
+      name: /email verified successfully/i,
+    });
+
+    // A change-email verification rewrites the user row; without this the
+    // session query would keep the old address for its 5-minute staleTime.
+    expect(invalidate).toHaveBeenCalled();
+  });
+
+  it('leaves the cache alone when verification fails', async () => {
+    mockVerifyEmail.mockResolvedValue({ error: { message: 'invalid' } });
+
+    const { queryClient } = renderFlow({ token: 'tok_noinvalidate' });
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+
+    await screen.findByRole('heading', {
+      name: /we couldn.*t verify your email/i,
+    });
+
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+
   it('cleans up redirect timer on unmount after success', async () => {
     mockVerifyEmail.mockResolvedValue({ error: null });
 
-    const { unmount } = render(<VerifyEmailFlow token="tok_t" />);
+    const { unmount } = renderFlow({ token: 'tok_t' });
 
     await screen.findByRole('heading', {
       name: /email verified successfully/i,

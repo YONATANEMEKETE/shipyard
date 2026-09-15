@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Check, Lock, Pencil, Upload, UserRound, X } from 'lucide-react';
+import { Check, Pencil, Upload, UserRound, X } from 'lucide-react';
 import { useRef, useState, type ChangeEvent } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import type { UpdateProfileRequest } from '@shipyard/shared';
@@ -11,9 +11,13 @@ import {
   updateProfileSchema,
 } from '@shipyard/shared';
 
-import { Button } from '@/components/motion/button/base';
 import { StatefulButton } from '@/components/motion/button/stateful';
 import { useToast } from '@/components/providers/toast-provider';
+import { EmailChangeRow } from '@/components/settings/email-change-row';
+import {
+  CONTROL_CLASS,
+  FIELD_CLASS_NAMES,
+} from '@/components/settings/field-styles';
 import { Form, FormField } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import {
@@ -41,10 +45,10 @@ import { cn } from '@/lib/utils';
  * `.strict()`), never a local copy, so the client rejects exactly what the
  * API would.
  *
- * Wiring status: avatar + display name. The photo is managed through
- * `useUploadAvatar` / `useClearAvatar`, the name through `useUpdateProfile`.
- * Email is read-only display; the change flow (`authClient.changeEmail`) is
- * still inert on the button.
+ * Wiring status: avatar, display name and email. The photo is managed
+ * through `useUploadAvatar` / `useClearAvatar`, the name through
+ * `useUpdateProfile`, and email through `EmailChangeRow` — which is a
+ * confirmation flow (`authClient.changeEmail`), not a save.
  */
 
 const AVATAR_ACCEPT = avatarMimeAllowlist.join(',');
@@ -74,15 +78,6 @@ function avatarPickProblem(file: File): string | null {
   }
   return null;
 }
-
-/** Shared by all three cards' controls: 36px tall, 8px radius, 12px label. */
-const CONTROL_CLASS = 'h-9 gap-2 rounded-lg px-3.5 text-xs font-semibold';
-
-const FIELD_CLASS_NAMES = {
-  label: 'px-1 text-[11px] font-semibold',
-  field: 'rounded-lg border-ds-border',
-  input: 'text-xs',
-} as const;
 
 export function ProfileCard() {
   // ── Profile read — one query seeds every field on the card ──
@@ -302,27 +297,9 @@ export function ProfileCard() {
 
           {/* Email is Auth-owned: displayed but never written here — the API
               has no email route by design (the profile schema is `.strict()`,
-              so an `email` key is a 400). Editing deep-links into Auth.
-              `items-end` keeps the ghost button on the field's baseline, not
-              the label's. */}
-          <div className="flex w-full items-end gap-3">
-            <Input
-              label="Email"
-              value={profile?.email ?? ''}
-              readOnly
-              className="min-w-0 flex-1"
-              leftIcon={<Lock className="size-[15px]" />}
-              classNames={FIELD_CLASS_NAMES}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              className={`${CONTROL_CLASS} shrink-0 text-foreground`}
-            >
-              <Pencil className="size-[15px]" />
-              Change email
-            </Button>
-          </div>
+              so an `email` key is a 400). The row owns its own confirmation
+              flow. */}
+          <EmailChangeRow email={profile?.email ?? ''} />
 
           <div className="flex w-full items-center gap-3">
             <StatefulButton

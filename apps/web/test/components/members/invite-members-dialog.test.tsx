@@ -19,6 +19,19 @@ vi.mock('@/components/providers/toast-provider', () => ({
   useToast: () => ({ showToast: mockShowToast }),
 }));
 
+// MembersPage reads `useRouter`; render it without an app-router context by
+// stubbing the module like the other component tests do.
+const mockReplace = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    replace: mockReplace,
+    push: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
+}));
+
 vi.mock('@/hooks/use-invitations', () => ({
   useInviteMembers: (_slug: string, options: unknown) => {
     mockInviteOptions = options as typeof mockInviteOptions;

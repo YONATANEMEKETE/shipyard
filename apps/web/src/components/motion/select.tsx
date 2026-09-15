@@ -423,6 +423,13 @@ export interface SelectItemProps {
   disabled?: boolean;
   className?: string;
   children: ReactNode;
+  /**
+   * The label `SelectValue` renders for this option. Defaults to `children`
+   * when it is a plain string; pass it explicitly when the item renders rich
+   * content (an avatar plus a name, say) so the trigger never falls back to
+   * echoing the raw `value` back at the reader.
+   */
+  label?: string;
 }
 
 export function SelectItem({
@@ -430,13 +437,14 @@ export function SelectItem({
   disabled = false,
   className,
   children,
+  label: labelProp,
 }: SelectItemProps) {
   const ctx = useSelectContext('SelectItem');
   // Destructure the stable callbacks so the effect deps don't reference `ctx`
   // itself (ctx is memoized in Select, but the lint rule wants the narrowest deps).
   const { register, unregister } = ctx;
   const selected = ctx.value === value;
-  const label = typeof children === 'string' ? children : value;
+  const label = labelProp ?? (typeof children === 'string' ? children : value);
 
   useLayoutEffect(() => {
     register(value, label);

@@ -19,7 +19,11 @@ const limitSchema = z.preprocess((value: unknown) => {
 // Unknown filter values match zero rows (filters, not scope — never 404).
 export const listActivityQuerySchema = z.object({
   area: activityAreaSchema.optional(),
-  actorId: z.string().cuid().optional(),
+  // A User.id, not a cuid — Better Auth mints its own 32-char ids, and the
+  // frozen `activity_event.actorId` column stores that id verbatim. Same
+  // validator as issues' `assigneeId` and projects' `ownerId`, the other two
+  // filters that key off a user rather than a workspace-owned row.
+  actorId: z.string().min(1).optional(),
   entityType: activityEntityTypeSchema.optional(),
   limit: limitSchema,
   cursor: z.string().min(1).optional(),

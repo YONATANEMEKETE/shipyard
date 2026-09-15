@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { BloomMenu } from '@/components/motion/bloom-menu';
 import { NotificationsBell } from '@/components/notifications/notifications-bell';
-import { Input } from '@/components/ui/input';
+import { SearchDialog } from '@/components/search/search-dialog';
 import {
   Tooltip,
   TooltipContent,
@@ -77,6 +77,7 @@ export function WorkspaceHeader({
   const [projectCreateOpen, setProjectCreateOpen] = useState(false);
   const [issueCreateOpen, setIssueCreateOpen] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const label = usePageContext(slug);
   const { data: workspace } = useWorkspace(slug);
   const archived = isArchived(workspace);
@@ -137,28 +138,22 @@ export function WorkspaceHeader({
 
       <div className="flex-1" />
 
-      {/* Global search — hidden on mobile, visible from sm+ */}
-      <div className="hidden sm:block">
-        <Input
-          type="text"
-          placeholder="Search workspace…"
-          aria-label="Search workspace"
-          className="w-[200px] lg:w-[280px]"
-          leftIcon={<Search />}
-          rightIcon={
-            <span className="inline-flex h-[22px] items-center justify-center rounded border border-ds-border bg-ds-sidebar px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-              ⌘ K
-            </span>
-          }
-          classNames={{
-            field:
-              'h-9 rounded-lg border-ds-border bg-ds-surface hover:border-ds-border-strong',
-            input: 'pl-9 pr-12 text-xs',
-            leftIcon: 'left-2.5 [&_svg]:h-[15px] [&_svg]:w-[15px]',
-            rightIcon: 'pr-1.5',
-          }}
-        />
-      </div>
+      {/* Global search — icon at every breakpoint; opens the ⌘K dialog. */}
+      <button
+        type="button"
+        aria-label="Search workspace"
+        aria-keyshortcuts="Meta+K"
+        onClick={() => setSearchOpen(true)}
+        className="grid size-8 shrink-0 place-items-center rounded-lg border border-ds-border bg-ds-surface text-muted-foreground transition-colors hover:border-ds-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-focus sm:size-9"
+      >
+        <Search className="h-4 w-4 sm:h-[17px] sm:w-[17px]" aria-hidden />
+      </button>
+      <SearchDialog
+        slug={slug}
+        workspaceName={workspace?.name ?? 'this workspace'}
+        open={searchOpen}
+        onOpenChange={setSearchOpen}
+      />
 
       {/* Notifications — global per recipient, not per workspace */}
       <NotificationsBell />

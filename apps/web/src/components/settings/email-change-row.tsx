@@ -125,8 +125,11 @@ export function EmailChangeRow({ email }: { email: string }) {
   if (mode === 'pending') {
     return (
       <div className="flex w-full flex-col gap-1.5">
-        <div className="flex w-full items-end gap-3">
-          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        {/* Stacks below `sm`: 'Use a different address' beside a resend button
+            needs more width than a phone has, and a squeezed pair reads worse
+            than two lines. */}
+        <div className="flex w-full flex-col items-start gap-3 sm:flex-row sm:items-end">
+          <div className="flex w-full min-w-0 flex-col gap-1.5 sm:flex-1">
             <span className="px-1 text-[11px] font-semibold text-foreground">
               Email
             </span>
@@ -141,7 +144,7 @@ export function EmailChangeRow({ email }: { email: string }) {
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
             <StatefulButton
               type="button"
               variant="ghost"
@@ -183,7 +186,7 @@ export function EmailChangeRow({ email }: { email: string }) {
 
   if (mode === 'editing') {
     return (
-      <div className="flex w-full items-end gap-3">
+      <div className="flex w-full flex-col items-start gap-3 sm:flex-row sm:items-end">
         <Input
           label="New email"
           value={draft}
@@ -201,12 +204,12 @@ export function EmailChangeRow({ email }: { email: string }) {
           error={fieldError ?? undefined}
           disabled={busy}
           autoFocus
-          className="min-w-0 flex-1"
+          className="w-full sm:min-w-0 sm:flex-1"
           leftIcon={<Mail className="size-[15px]" />}
           classNames={FIELD_CLASS_NAMES}
         />
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
           <Button
             type="button"
             variant="ghost"
@@ -239,12 +242,12 @@ export function EmailChangeRow({ email }: { email: string }) {
   // ── Current ──
 
   return (
-    <div className="flex w-full items-end gap-3">
+    <div className="flex w-full flex-col items-start gap-3 sm:flex-row sm:items-end">
       <Input
         label="Email"
         value={email}
         readOnly
-        className="min-w-0 flex-1"
+        className="w-full sm:min-w-0 sm:flex-1"
         leftIcon={<Lock className="size-[15px]" />}
         classNames={FIELD_CLASS_NAMES}
       />

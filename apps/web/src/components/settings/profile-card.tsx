@@ -167,8 +167,10 @@ export function ProfileCard() {
         display name, photo, and email.
       </p>
 
-      {/* Avatar row — preview + actions + format hint. */}
-      <div className="flex w-full items-center gap-[18px]">
+      {/* Avatar row — preview + actions + format hint. Stacks below `sm`:
+          a 72px avatar plus two buttons cannot share a phone's width, and
+          squeezed buttons are worse than a second line. */}
+      <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:gap-[18px]">
         {profileQuery.isPending ? (
           <span
             aria-hidden
@@ -199,7 +201,7 @@ export function ProfileCard() {
           </span>
         )}
 
-        <div className="flex flex-col gap-2.5">
+        <div className="flex min-w-0 flex-col gap-2.5">
           {/* The picker is a real input kept out of the tab order; the button
               is the affordance, so there is never a hidden focus stop. */}
           <input
@@ -211,7 +213,7 @@ export function ProfileCard() {
             onChange={handlePick}
           />
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
             <StatefulButton
               variant="outline"
               disabled={photoBusy}

@@ -7,9 +7,10 @@
  *
  * Sections land here next:
  *   - Profile      — avatar preview + actions, display name, read-only email
- *   - Security     — password lives in Auth; this section is a deep link only
+ *   - Security     — password lives in Auth; this card validates locally only
  *   - Preferences  — theme (#3/#4) and default issue/project views (F4)
  */
+import { PasswordCard } from '@/components/settings/password-card';
 import { ProfileCard } from '@/components/settings/profile-card';
 
 export function AccountSettingsPage() {
@@ -26,6 +27,8 @@ export function AccountSettingsPage() {
       </div>
 
       <ProfileCard />
+
+      <PasswordCard />
     </div>
   );
 }

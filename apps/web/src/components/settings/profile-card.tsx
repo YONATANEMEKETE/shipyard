@@ -18,6 +18,7 @@ import {
   CONTROL_CLASS,
   FIELD_CLASS_NAMES,
 } from '@/components/settings/field-styles';
+import { SettingsCard } from '@/components/settings/settings-card';
 import { Form, FormField } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import {
@@ -34,7 +35,9 @@ import { cn } from '@/lib/utils';
  * Geometry mirrors `.pen` `Xwmto` → `M7sgdo` (Profile Card): 1128×422 at
  * 1440 wide, so every child sits 18px apart and the card itself is 24px
  * padded. Heights reconcile exactly against the frame:
- *   24 + 14 + 18 + 16 + 18 + 72 + 18 + 55 + 18 + 55 + 18 + 36 + 24 = 422.
+ *   24 + 14 + 18 + 18 + 18 + 16 + 18 + 72 + 18 + 55 + 18 + 55 + 18 + 36 + 24 = 422
+ * (pad, eyebrow, gap, heading, gap, copy, gap, avatar row, gap, name, gap,
+ * email row, gap, save row, pad).
  *
  * Card surface follows the frame, not its sibling page: the `.pen` draws
  * every card as fill #FFFFFF + stroke #B9B5AC (`bg-ds-surface` /
@@ -50,7 +53,6 @@ import { cn } from '@/lib/utils';
  * `useUpdateProfile`, and email through `EmailChangeRow` — which is a
  * confirmation flow (`authClient.changeEmail`), not a save.
  */
-
 const AVATAR_ACCEPT = avatarMimeAllowlist.join(',');
 const AVATAR_HINT = 'PNG, JPG, or WebP, up to 2MB.';
 
@@ -159,15 +161,7 @@ export function ProfileCard() {
   });
 
   return (
-    <section className="flex w-full flex-col gap-[18px] rounded-xl border border-ds-border-strong bg-ds-surface p-6">
-      <span className="font-mono text-[11px] font-bold uppercase tracking-[1px] text-muted-foreground">
-        Profile
-      </span>
-
-      <h2 className="text-[15px] font-semibold leading-none tracking-[-0.2px] text-foreground">
-        Profile
-      </h2>
-
+    <SettingsCard eyebrow="Profile" title="Profile">
       <p className="text-[13px] leading-[1.5] text-muted-foreground">
         Manage how your personal information appears across workspaces — your
         display name, photo, and email.
@@ -319,6 +313,6 @@ export function ProfileCard() {
           </div>
         </form>
       </Form>
-    </section>
+    </SettingsCard>
   );
 }

@@ -44,6 +44,14 @@ export interface ButtonLinkProps extends Omit<
 
 type Ripple = { id: number; x: number; y: number; size: number };
 
+/**
+ * The classes every button shares, exported so the `asChild` path in
+ * `ui/button` can compose a real button out of an anchor instead of dropping
+ * the whole visual contract on the floor.
+ */
+export const BUTTON_BASE_CLASS =
+  'inline-flex items-center justify-center font-medium select-none transition-colors disabled:pointer-events-none disabled:opacity-50';
+
 const VARIANT_CLASS: Record<ButtonVariant, string> = {
   primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
   // `hover:border-border` alone was a no-op (same colour the variant already
@@ -61,6 +69,13 @@ const SIZE_CLASS: Record<ButtonSize, string> = {
   lg: 'h-11 px-6 text-base gap-2 rounded-md',
   icon: 'size-9 rounded-md',
 };
+
+export function buttonClassNames(
+  variant: ButtonVariant,
+  size: ButtonSize,
+): string {
+  return cn(BUTTON_BASE_CLASS, VARIANT_CLASS[variant], SIZE_CLASS[size]);
+}
 
 /**
  * Interaction feedback model (DS 04 `Control States`): hover changes *colour*,
@@ -120,12 +135,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         transition={SPRING_PRESS}
         onPointerDown={handlePointerDown}
         className={cn(
-          'inline-flex items-center justify-center font-medium select-none',
-          'transition-colors',
-          'disabled:pointer-events-none disabled:opacity-50',
+          buttonClassNames(variant, size),
           ripple && 'relative overflow-hidden',
-          VARIANT_CLASS[variant],
-          SIZE_CLASS[size],
           className,
         )}
         {...rest}
@@ -182,13 +193,7 @@ export const ButtonLink = forwardRef<HTMLAnchorElement, ButtonLinkProps>(
         ref={ref}
         whileTap={reduce ? undefined : { scale: pressScale }}
         transition={SPRING_PRESS}
-        className={cn(
-          'inline-flex items-center justify-center font-medium select-none',
-          'transition-colors',
-          VARIANT_CLASS[variant],
-          SIZE_CLASS[size],
-          className,
-        )}
+        className={cn(buttonClassNames(variant, size), className)}
         {...rest}
       >
         {children}

@@ -6,6 +6,7 @@ import { Slot } from 'radix-ui';
 import { cn } from '@/lib/utils';
 import {
   Button as MotionButton,
+  buttonClassNames,
   type ButtonProps as MotionButtonProps,
   type ButtonVariant as MotionVariant,
   type ButtonSize as MotionSize,
@@ -106,6 +107,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           : undefined;
 
     if (asChild) {
+      // Compose the same button the motion path renders. Without the base and
+      // size/variant classes an `asChild` anchor kept only `className`, so it
+      // laid out as an inline link with stray height and padding and none of
+      // the button's alignment, colour or hover.
       const Comp = Slot.Root as unknown as React.ElementType;
       return (
         <Comp
@@ -113,7 +118,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           data-slot="button"
           data-variant={variant}
           data-size={size}
-          className={cn(legacyClass, className)}
+          className={cn(
+            buttonClassNames(motionVariant, motionSize),
+            legacyClass,
+            className,
+          )}
           {...props}
         />
       );

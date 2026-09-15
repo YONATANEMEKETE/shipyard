@@ -79,6 +79,20 @@ export type SendVerificationEmailRequest = z.infer<
   typeof sendVerificationEmailRequestSchema
 >;
 
+// ── POST /api/v1/auth/change-email ──
+//
+// Better Auth-owned, and deliberately absent from the settings API: the
+// profile schema is `.strict()`, so an `email` key is a 400 — identity writes
+// belong to Auth. Shared so the client validates the new address with the
+// same rule as sign-in.
+
+export const changeEmailRequestSchema = z.object({
+  newEmail: z.email('A valid email is required'),
+  callbackURL: z.string().optional(),
+});
+
+export type ChangeEmailRequest = z.infer<typeof changeEmailRequestSchema>;
+
 // ── POST /api/v1/auth/forget-password ──
 
 export const forgetPasswordRequestSchema = z.object({

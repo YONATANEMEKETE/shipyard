@@ -26,6 +26,12 @@ interface NavItem {
   href: string;
   icon: LucideIcon;
   badge?: number;
+  /**
+   * Match the path exactly instead of by prefix. Workspace Settings owns
+   * `/settings` only — its nested `/settings/account` is account-scoped and
+   * must not light this item up.
+   */
+  exact?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -35,7 +41,12 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Cycles', href: '/cycles', icon: Calendar },
   { label: 'Members', href: '/members', icon: Users },
   { label: 'Notifications', href: '/notifications', icon: Bell, badge: 3 },
-  { label: 'Workspace Settings', href: '/settings', icon: Settings },
+  {
+    label: 'Workspace Settings',
+    href: '/settings',
+    icon: Settings,
+    exact: true,
+  },
 ];
 
 function SidebarContent({ slug }: { slug: string }) {
@@ -45,9 +56,9 @@ function SidebarContent({ slug }: { slug: string }) {
     start: 'bottom-up',
   });
   const basePath = `/w/${slug}`;
-  const isActive = (href: string) =>
-    href === ''
-      ? pathname === basePath
+  const isActive = (href: string, exact = false) =>
+    href === '' || exact
+      ? pathname === `${basePath}${href}`
       : pathname.startsWith(`${basePath}${href}`);
 
   return (
@@ -77,7 +88,7 @@ function SidebarContent({ slug }: { slug: string }) {
       <nav className="flex flex-col items-start gap-1.25 border-t border-ds-border pt-3">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
-          const active = isActive(item.href);
+          const active = isActive(item.href, item.exact);
           return (
             <Link
               key={item.label}

@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Ellipsis, LogOut } from 'lucide-react';
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+import { Ellipsis, LogOut, Settings } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 
 import { useSession } from '@/hooks/use-session';
@@ -33,6 +34,8 @@ function UserSkeleton() {
 export function UserMenu() {
   const { data, isPending } = useSession();
   const router = useRouter();
+  const params = useParams<{ slug: string }>();
+  const slug = params?.slug ?? '';
   const reduce = useReducedMotion();
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -125,6 +128,15 @@ export function UserMenu() {
               </span>
             </div>
             <div className="mx-1 my-1 h-px bg-ds-border" />
+            <Link
+              href={`/w/${slug}/settings/account`}
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium text-foreground/80 transition-colors hover:bg-ds-sidebar hover:text-foreground"
+            >
+              <Settings className="h-4 w-4 shrink-0" />
+              Settings
+            </Link>
             <button
               type="button"
               role="menuitem"

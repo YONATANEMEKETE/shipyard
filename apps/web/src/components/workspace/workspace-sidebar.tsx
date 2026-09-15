@@ -17,6 +17,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { EASE_OUT } from '@/lib/ease';
 import { useThemeToggle } from '@/components/motion/theme-toggle';
+import { useSetAppearance } from '@/hooks/use-settings';
 import { Switch } from '@/components/ui/switch';
 import { UserMenu } from '@/components/workspace/user-menu';
 import { WorkspaceSwitcher } from '@/components/workspace/workspace-switcher';
@@ -55,6 +56,7 @@ function SidebarContent({ slug }: { slug: string }) {
     variant: 'rectangle',
     start: 'bottom-up',
   });
+  const setAppearance = useSetAppearance();
   const basePath = `/w/${slug}`;
   const isActive = (href: string, exact = false) =>
     href === '' || exact
@@ -120,7 +122,13 @@ function SidebarContent({ slug }: { slug: string }) {
         <Switch
           label="Dark mode"
           checked={isDark}
-          onToggle={toggle}
+          onToggle={() => {
+            // Persist alongside the toggle: the stored theme is the authority
+            // on load (ThemeSync), so a choice made only in localStorage would
+            // be overwritten by the next appearance read.
+            toggle();
+            setAppearance.mutate({ theme: isDark ? 'LIGHT' : 'DARK' });
+          }}
           className="rounded-lg bg-ds-sidebar transition-colors hover:bg-ds-border/60"
         />
         <div className="h-px w-full bg-ds-border" />

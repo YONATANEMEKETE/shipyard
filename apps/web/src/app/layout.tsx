@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Inter } from 'next/font/google';
 import { QueryProvider } from '@/components/providers/query-provider';
 import { ToastProvider } from '@/components/providers/toast-provider';
 import { ThemeProvider } from '@/components/theme-provider';
+import { ThemeSync } from '@/components/theme-sync';
 import './globals.css';
 
 const inter = Inter({
@@ -52,6 +53,8 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <QueryProvider>
+            {/* Inside the query provider: it reads the stored theme. */}
+            <ThemeSync />
             <ToastProvider>{children}</ToastProvider>
           </QueryProvider>
         </ThemeProvider>

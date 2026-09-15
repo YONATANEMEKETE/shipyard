@@ -185,6 +185,12 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // 1 day sliding
+    // Sensitive endpoints (change-password, set-password) reject a session
+    // older than freshAge. The default is 24h, which would fail the password
+    // card for anyone who signed in yesterday — and unlike a sign-in form there
+    // is no in-page way to recover. Matched to the session lifetime instead:
+    // the check stays wired and fires only when the session is expiring anyway.
+    freshAge: 60 * 60 * 24 * 7,
     cookieCache: {
       enabled: false,
     },

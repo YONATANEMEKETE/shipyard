@@ -2,6 +2,7 @@
 
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { ProjectStatus } from '@shipyard/shared';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -31,7 +32,15 @@ import {
  * query drives loading/error/empty states; projects are passed down to the
  * active view rather than fetched inside it.
  */
-export function ProjectsPage({ slug }: { slug: string }) {
+export function ProjectsPage({
+  slug,
+  initialProjectId,
+}: {
+  slug: string;
+  /** From `?project=<id>` — global search deep-links into the detail panel. */
+  initialProjectId?: string;
+}) {
+  const router = useRouter();
   const { data: workspace } = useWorkspace(slug);
   const { data: viewPref } = useViewPreference(slug, 'PROJECT');
   const view = viewPref?.view ?? 'LIST';
@@ -47,7 +56,7 @@ export function ProjectsPage({ slug }: { slug: string }) {
     setCreateOpen(true);
   };
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
-    null,
+    initialProjectId ?? null,
   );
   const [filters, setFilters] = useState<ProjectFilters>({
     search: '',
@@ -55,6 +64,24 @@ export function ProjectsPage({ slug }: { slug: string }) {
   });
   // Archived scope — read-only list of archived projects with Restore.
   const [archived, setArchived] = useState(false);
+
+  // `?project=` arrives from global search. Compare against the previous PROP
+  // value (never a persisted id) and adjust during render: the prop genuinely
+  // returns to `undefined` when the close handler strips the param, so a second
+  // search for the same project still re-opens the panel.
+  const [prevInitialProjectId, setPrevInitialProjectId] =
+    useState(initialProjectId);
+  if (initialProjectId !== prevInitialProjectId) {
+    setPrevInitialProjectId(initialProjectId);
+    if (initialProjectId) setSelectedProjectId(initialProjectId);
+  }
+
+  const closeProject = () => {
+    setSelectedProjectId(null);
+    if (initialProjectId) {
+      router.replace(`/w/${slug}/projects`, { scroll: false });
+    }
+  };
 
   // Fetch the workspace's projects here (parent) so the list and kanban views
   // share one query. Filter params are passed server-side where the endpoint
@@ -207,9 +234,9 @@ export function ProjectsPage({ slug }: { slug: string }) {
               loading={selectedProjectId !== null && projectQuery.isPending}
               error={selectedProjectId !== null && projectQuery.isError}
               onRetry={projectQuery.refetch}
-              onArchived={() => setSelectedProjectId(null)}
-              onDeleted={() => setSelectedProjectId(null)}
-              onClose={() => setSelectedProjectId(null)}
+              onArchived={closeProject}
+              onDeleted={closeProject}
+              onClose={closeProject}
             />
           </div>
         </div>
@@ -219,7 +246,7 @@ export function ProjectsPage({ slug }: { slug: string }) {
       {selectedProjectId !== null ? (
         <div
           aria-hidden
-          onClick={() => setSelectedProjectId(null)}
+          onClick={closeProject}
           className="fixed inset-0 z-30 bg-[#16151259] backdrop-blur-[1px] md:hidden"
         />
       ) : null}

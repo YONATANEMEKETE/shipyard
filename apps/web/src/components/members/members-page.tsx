@@ -1,7 +1,8 @@
 'use client';
 
 import { Filter, Search, SlidersHorizontal, UserPlus } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 import { InviteMembersDialog } from '@/components/members/invite-members-dialog';
 import { ChangeRoleDialog } from '@/components/members/change-role-dialog';
@@ -32,7 +33,15 @@ import { useWorkspace } from '@/hooks/use-workspaces';
  * Invite members primary button. The tabs/toolbar row and directory card
  * land below it in the same column.
  */
-export function MembersPage({ slug }: { slug: string }) {
+export function MembersPage({
+  slug,
+  initialMemberId,
+}: {
+  slug: string;
+  /** From `?member=<id>` — global search deep-links into the details dialog. */
+  initialMemberId?: string;
+}) {
+  const router = useRouter();
   const { data: workspace } = useWorkspace(slug);
   const workspaceName = workspace?.name ?? 'Acme Studio';
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -65,12 +74,45 @@ export function MembersPage({ slug }: { slug: string }) {
   const [transferOwnershipOpen, setTransferOwnershipOpen] = useState(false);
   const [removeMemberOpen, setRemoveMemberOpen] = useState(false);
 
-  const openMember = (member: WorkspaceMemberCard) => {
+  const openMember = useCallback((member: WorkspaceMemberCard) => {
     setSelectedMember(member);
     setDetailsOpen(true);
     setChangeRoleOpen(false);
     setTransferOwnershipOpen(false);
     setRemoveMemberOpen(false);
+  }, []);
+
+  // `?member=` arrives from global search. The directory is the source of the
+  // full card, so the request parks in `requestedMemberId` until the roster
+  // resolves, then opens that member's dialog. `lastMemberParam` tracks the
+  // previous PROP value (not a persisted id) so a second search for the same
+  // member re-opens after the close handler stripped the param.
+  const [lastMemberParam, setLastMemberParam] = useState(initialMemberId);
+  const [requestedMemberId, setRequestedMemberId] = useState<string | null>(
+    initialMemberId ?? null,
+  );
+  if (initialMemberId !== lastMemberParam) {
+    setLastMemberParam(initialMemberId);
+    setRequestedMemberId(initialMemberId ?? null);
+  }
+  if (requestedMemberId) {
+    const match = membersQuery.data?.members.find(
+      (member) => member.id === requestedMemberId,
+    );
+    if (match) {
+      setRequestedMemberId(null);
+      openMember(match);
+    } else if (membersQuery.isSuccess) {
+      // Id not in this workspace (stale link) — stop waiting, no error state.
+      setRequestedMemberId(null);
+    }
+  }
+
+  const closeMemberDetails = (next: boolean) => {
+    setDetailsOpen(next);
+    if (!next && initialMemberId) {
+      router.replace(`/w/${slug}/members`, { scroll: false });
+    }
   };
 
   // Client-side filtering — the members API returns the full roster.
@@ -310,18 +352,18 @@ export function MembersPage({ slug }: { slug: string }) {
             member={selectedMember}
             slug={slug}
             open={detailsOpen}
-            onOpenChange={setDetailsOpen}
+            onOpenChange={closeMemberDetails}
             onChangeRole={() => {
               setChangeRoleOpen(true);
-              setDetailsOpen(false);
+              closeMemberDetails(false);
             }}
             onTransferOwnership={() => {
               setTransferOwnershipOpen(true);
-              setDetailsOpen(false);
+              closeMemberDetails(false);
             }}
             onRemoveMember={() => {
               setRemoveMemberOpen(true);
-              setDetailsOpen(false);
+              closeMemberDetails(false);
             }}
             workspaceName={workspaceName}
             viewerRole={workspace?.role}

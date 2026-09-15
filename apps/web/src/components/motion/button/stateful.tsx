@@ -214,7 +214,6 @@ export const StatefulButton = forwardRef<
       ref={ref}
       disabled={disabled || isBusy}
       aria-busy={isBusy}
-      whileHover={undefined}
       {...rest}
     >
       <span

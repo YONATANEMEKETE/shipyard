@@ -285,6 +285,31 @@ describe('proxy routing', () => {
     expect(res.headers.get('location')).toBe('http://localhost:3000/w');
   });
 
+  // Token-driven auth pages: a signed-in visitor is exactly who uses these, so
+  // a bounce would discard the token before the page could consume it.
+  it.each([
+    ['/forgot-password', 'creating a first password'],
+    ['/reset-password', 'the reset link landing'],
+    ['/verify-email', 'a change-email confirmation'],
+  ])('lets an authenticated visitor reach %s (%s)', async (pathname) => {
+    getSessionMock.mockResolvedValue({ data: { session: { id: 's1' } } });
+    const req = makeRequest(`http://localhost:3000${pathname}`, {
+      'better-auth.session_token': 'tok',
+    });
+
+    const res = await proxy(req);
+    expect(res.headers.get('location')).toBeNull();
+    // No validation call either — the page is public, the session is
+    // irrelevant to it.
+    expect(getSessionMock).not.toHaveBeenCalled();
+  });
+
+  it('still lets an unauthenticated visitor reach the token-driven pages', async () => {
+    const req = makeRequest('http://localhost:3000/reset-password');
+    const res = await proxy(req);
+    expect(res.headers.get('location')).toBeNull();
+  });
+
   it('degrades to authenticated on API failure so cookie bearer stays on protected page', async () => {
     getSessionMock.mockRejectedValue(new Error('api down'));
     const req = makeRequest('http://localhost:3000/w/my-workspace', {

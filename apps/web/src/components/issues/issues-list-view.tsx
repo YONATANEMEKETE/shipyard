@@ -118,8 +118,11 @@ function statusIcon(status: IssueStatus) {
  *   - `sm` and up: the status icon — rows are grouped by status, so on a phone
  *     it only repeats the group header and the width is better spent on the
  *     title
+ *
+ * Exported for the dashboard's My Work panel, which renders the same row under
+ * its own (non-collapsible) groups — the row is the issue list's, not a copy.
  */
-function IssueRow({
+export function IssueRow({
   issue,
   onOpen,
 }: {

@@ -11,6 +11,7 @@
  *   - Preferences  — theme (#3/#4) and default issue/project views (F4)
  */
 import { PasswordCard } from '@/components/settings/password-card';
+import { PreferencesCard } from '@/components/settings/preferences-card';
 import { ProfileCard } from '@/components/settings/profile-card';
 
 export function AccountSettingsPage() {
@@ -29,6 +30,8 @@ export function AccountSettingsPage() {
       <ProfileCard />
 
       <PasswordCard />
+
+      <PreferencesCard />
     </div>
   );
 }

@@ -76,18 +76,29 @@ export function ActivityToolbar({
         onValueChange={(details) =>
           onAreaChange(details.value as ActivityAreaTab)
         }
+        // `min-w-0` overrides the flex item's default `min-width: auto`. Without
+        // it the root refuses to shrink below the strip's min-content width
+        // (seven chips that are `shrink-0` + `whitespace-nowrap`, ~509px), so
+        // the row overflows and the shell's `overflow-x-hidden` silently eats
+        // the trailing chips on narrow viewports.
+        className="min-w-0"
       >
-        <TabsList className="gap-0.5 rounded-lg border border-ds-border bg-ds-surface-subtle p-[3px]">
-          {AREA_TABS.map((tab) => (
-            <TabsTrigger
-              key={tab.value}
-              value={tab.value}
-              className="aria-selected:text-foreground"
-            >
-              {tab.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        {/* The strip owns the side-scroll once it can no longer fit — the same
+            posture as the kanban board, the app's other legitimate horizontal
+            scroller. Hidden scrollbar matches the shell's convention. */}
+        <div className="min-w-0 max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <TabsList className="w-fit gap-0.5 rounded-lg border border-ds-border bg-ds-surface-subtle p-[3px]">
+            {AREA_TABS.map((tab) => (
+              <TabsTrigger
+                key={tab.value}
+                value={tab.value}
+                className="aria-selected:text-foreground"
+              >
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
       </Tabs>
 
       <Select

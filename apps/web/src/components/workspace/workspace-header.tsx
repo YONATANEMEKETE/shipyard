@@ -44,6 +44,10 @@ const CONTEXT: Record<string, string> = {
   '/members': 'Members',
   '/notifications': 'Notifications',
   '/settings': 'Workspace Settings',
+  // Deepest match wins. `/settings/account` is a different surface from
+  // `/settings` — account-scoped, not workspace-scoped — so it gets its own
+  // label and does not inherit the workspace one.
+  '/settings/account': 'User Settings',
 };
 
 function usePageContext(slug: string) {

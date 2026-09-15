@@ -8,7 +8,9 @@ import { authClient } from '@/lib/auth-client';
  * Three tiers:
  *   1. Public — / and /(marketing)/* : always reachable, even authed stays.
  *   2. Auth pages — /(auth)/* : authed users redirect to /.
- *   3. Protected — /onboarding, /select-workspace, /w/* : unauth → /sign-in.
+ *   3. Protected — /onboarding, /select-workspace, /w/*, /settings/* :
+ *      unauth → /sign-in. Account Settings is session-scoped but
+ *      workspace-free, so it is protected without a workspace context.
  *
  * Authentication is validated against the Better Auth API (get-session)
  * with the request's own cookies forwarded. A missing session cookie skips
@@ -26,7 +28,12 @@ const AUTH_PAGES = [
   '/error',
 ] as const;
 
-const PROTECTED_PREFIXES = ['/onboarding', '/select-workspace', '/w'] as const;
+const PROTECTED_PREFIXES = [
+  '/onboarding',
+  '/select-workspace',
+  '/w',
+  '/settings',
+] as const;
 
 // Better Auth names the session cookie differently when useSecureCookies
 // is enabled (production), hence the __Secure-prefixed variant.

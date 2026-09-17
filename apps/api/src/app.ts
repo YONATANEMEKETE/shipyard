@@ -38,6 +38,7 @@ import { notificationsRouter } from './features/notifications/routes.js';
 import { workspaceActivityRouter } from './features/activity/routes.js';
 import { workspaceSearchRouter } from './features/search/routes.js';
 import { workspaceDashboardRouter } from './features/dashboard/routes.js';
+import { workspaceAgentTokensRouter } from './features/mcp/routes.js';
 import { settingsRouter } from './features/settings/routes.js';
 import { authExtensionRouter } from './features/auth/routes.js';
 import {
@@ -173,6 +174,13 @@ export function createApp(options: CreateAppOptions = {}): express.Express {
   // Dashboard module (F9) — single composed GET under the workspace,
   // readable-when-archived, any member (no role check).
   app.use('/api/v1/workspaces/:slug', workspaceDashboardRouter);
+
+  // MCP module (F13) — agent-access credentials. Browser-authenticated
+  // (cookie) management routes only; the token-authenticated `/mcp` protocol
+  // endpoint lands in M3/M4 with its own guard chain.
+  //  - /workspaces/:slug/agent-tokens            (create, list)
+  //  - /workspaces/:slug/agent-tokens/:id/revoke (revoke, idempotent)
+  app.use('/api/v1/workspaces/:slug/agent-tokens', workspaceAgentTokensRouter);
   if (env.NODE_ENV !== 'production') {
     app.use('/api/v1/test', testRouter);
   }

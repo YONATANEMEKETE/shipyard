@@ -36,6 +36,7 @@ model User {
   activityActions       ActivityEvent[]
   issueViews            IssueView[]
   preference            UserPreference?
+  mcpTokens             McpToken[]
 
   @@unique([email])
   @@map("user")
@@ -137,6 +138,7 @@ model Workspace {
   notifications   Notification[]
   activityEvents  ActivityEvent[]
   issueViews      IssueView[]
+  mcpTokens       McpToken[]
 
   @@map("workspace")
 }
@@ -677,4 +679,46 @@ model UserPreference {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_preference")
+}
+
+// ── MCP Server (F13) ────────────────────────────────────────────────────────
+// Prisma-owned (hand-modeled, like all prior features). See
+// shipyard-design/04-Engineering/features/mcp/data-model.md §2.
+//
+// D1: a dedicated table, not columns on `user` (Better Auth-owned — F11's
+// isolation principle). D2: only the SHA-256 hash of the token is stored; the
+// plaintext exists once, in the creation response. D3: a token is bound to
+// exactly one workspace; there is no workspace argument anywhere in the tool
+// surface. D5: revocation is a timestamp — rows are never deleted.
+
+enum McpTokenScope {
+  READ // all read tools
+  ISSUES_WRITE // create / update / status / assign / block
+  COMMENTS_WRITE // add a comment
+  ISSUES_DELETE // archive / restore / delete (phase 3)
+}
+
+model McpToken {
+  id          String         @id @default(cuid())
+  userId      String
+  workspaceId String
+  label       String         @db.VarChar(60)
+  tokenHash   String         @unique
+  // D8: the first characters of the token, kept for recognition in the UI
+  // ("shp_9f2c…") and for log redaction. Never the full token.
+  tokenPrefix String         @db.VarChar(12)
+  scopes      McpTokenScope[]
+  expiresAt   DateTime?
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([workspaceId])
+  @@index([workspaceId, revokedAt])
+  @@map("mcp_token")
 }

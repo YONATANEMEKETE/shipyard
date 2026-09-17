@@ -29,3 +29,4 @@ export * from './notifications/index.js';
 export * from './activity/index.js';
 export * from './settings/index.js';
 export * from './dashboard/index.js';
+export * from './mcp/index.js';

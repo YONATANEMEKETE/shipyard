@@ -1,0 +1,233 @@
+import {
+  MCP_DEFAULT_SCOPES,
+  type CreateMcpTokenRequest,
+  type CreateMcpTokenResponse,
+  type ListMcpTokensQuery,
+  type ListMcpTokensResponse,
+  type McpTokenCard,
+  type McpTokenScope,
+  type RevokeMcpTokenResponse,
+} from '@shipyard/shared';
+import { prisma } from '../../common/db/client.js';
+import { logger } from '../../common/logger/index.js';
+import type { WorkspaceRequestContext } from '../../common/guards/workspace-context.js';
+import {
+  McpScopeNotPermittedError,
+  McpTokenExpiryInvalidError,
+  McpTokenNotFoundError,
+} from './errors.js';
+import { mcpTokensRepository, type McpTokenRow } from './repository.js';
+import {
+  generateToken,
+  hashToken,
+  looksLikeToken,
+  scopesExceedingRole,
+} from './tokens.js';
+
+/**
+ * MCP token service — owns issuance, listing, revocation, and the read-side
+ * resolution the `/mcp` transport uses to turn a bearer token into an identity.
+ *
+ * Rules owned here (data-model D1–D9, api-design §3):
+ * - the issuance ceiling: a token can never carry a scope above the caller's
+ *   role, and `READ` is the default when none is asked for;
+ * - an expiry that has already passed is rejected rather than minted dead;
+ * - revocation is a timestamp (idempotent, never a delete);
+ * - visibility: a member sees and revokes their own credentials, Owner/Admin
+ *   may also see and revoke anyone's in the workspace;
+ * - every unusable credential resolves identically (`null`) — revoked,
+ *   expired, unknown and malformed are indistinguishable to the caller.
+ *
+ * Membership liveness is deliberately **not** checked here: that is per-request
+ * context resolution and belongs to the `/mcp` auth step (M4), not to token
+ * management.
+ */
+
+/** Mapping is single-sourced here so every surface renders the same card. */
+export function toMcpTokenCard(row: McpTokenRow): McpTokenCard {
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId,
+    label: row.label,
+    tokenPrefix: row.tokenPrefix,
+    scopes: row.scopes,
+    expiresAt: row.expiresAt ? row.expiresAt.toISOString() : null,
+    lastUsedAt: row.lastUsedAt ? row.lastUsedAt.toISOString() : null,
+    revokedAt: row.revokedAt ? row.revokedAt.toISOString() : null,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+/** The identity a presented credential resolves to (consumed by M4). */
+export interface ResolvedMcpToken {
+  tokenId: string;
+  userId: string;
+  workspaceId: string;
+  scopes: McpTokenScope[];
+}
+
+function isTokenManager(role: WorkspaceRequestContext['role']): boolean {
+  return role === 'OWNER' || role === 'ADMIN';
+}
+
+export const mcpTokensService = {
+  /**
+   * Issue a credential for the calling member inside this workspace. The
+   * plaintext leaves the building here and only here (data-model D2).
+   */
+  async create(
+    context: WorkspaceRequestContext,
+    userId: string,
+    body: CreateMcpTokenRequest,
+  ): Promise<CreateMcpTokenResponse> {
+    const scopes: McpTokenScope[] = body.scopes ?? [...MCP_DEFAULT_SCOPES];
+
+    const exceeding = scopesExceedingRole(context.role, scopes);
+    if (exceeding.length > 0) {
+      throw new McpScopeNotPermittedError(
+        `These permissions require an Owner or Admin in this workspace: ${exceeding.join(
+          ', ',
+        )}. Your role is ${context.role}. Create the token without them, or ask an admin.`,
+      );
+    }
+
+    let expiresAt: Date | null = null;
+    if (body.expiresAt != null) {
+      const parsed = new Date(body.expiresAt);
+      if (parsed.getTime() <= Date.now()) {
+        throw new McpTokenExpiryInvalidError();
+      }
+      expiresAt = parsed;
+    }
+
+    const generated = generateToken();
+
+    const row = await mcpTokensRepository.create(prisma, {
+      userId,
+      workspaceId: context.workspaceId,
+      label: body.label,
+      tokenHash: generated.tokenHash,
+      tokenPrefix: generated.tokenPrefix,
+      scopes,
+      expiresAt,
+    });
+
+    // Never log the token or its hash — the id is the join key for support.
+    logger.info(
+      {
+        tokenId: row.id,
+        workspaceId: context.workspaceId,
+        userId,
+        scopes,
+      },
+      'mcp.token.created',
+    );
+
+    return { ...toMcpTokenCard(row), token: generated.token };
+  },
+
+  /**
+   * List credentials. A member sees their own; Owner/Admin may pass
+   * `?all=true` to see every connection in the workspace (api-design §2 #3).
+   * A member passing `all=true` simply receives their own list — the flag is a
+   * view request, not a permission claim.
+   */
+  async list(
+    context: WorkspaceRequestContext,
+    userId: string,
+    query: ListMcpTokensQuery,
+  ): Promise<ListMcpTokensResponse> {
+    const wantsAll = query.all === 'true';
+    const rows =
+      wantsAll && isTokenManager(context.role)
+        ? await mcpTokensRepository.listForWorkspace(
+            prisma,
+            context.workspaceId,
+          )
+        : await mcpTokensRepository.listForUser(
+            prisma,
+            context.workspaceId,
+            userId,
+          );
+
+    return { tokens: rows.map(toMcpTokenCard) };
+  },
+
+  /**
+   * Revoke a credential. Idempotent by design — revocation is an emergency
+   * action and a retried request must not fail (api-design §2 #4). A token the
+   * caller may not see answers `404 TOKEN_NOT_FOUND`, identical to an unknown
+   * id, so revocation cannot be used to probe other members' credentials.
+   */
+  async revoke(
+    context: WorkspaceRequestContext,
+    userId: string,
+    tokenId: string,
+  ): Promise<RevokeMcpTokenResponse> {
+    const row = await mcpTokensRepository.findByIdScoped(
+      prisma,
+      tokenId,
+      context.workspaceId,
+    );
+
+    if (!row || (row.userId !== userId && !isTokenManager(context.role))) {
+      throw new McpTokenNotFoundError();
+    }
+
+    if (row.revokedAt) {
+      return toMcpTokenCard(row);
+    }
+
+    const revoked = await mcpTokensRepository.revoke(
+      prisma,
+      row.id,
+      new Date(),
+    );
+
+    logger.info(
+      {
+        tokenId: revoked.id,
+        workspaceId: context.workspaceId,
+        userId,
+        ownerUserId: row.userId,
+      },
+      'mcp.token.revoked',
+    );
+
+    return toMcpTokenCard(revoked);
+  },
+
+  /**
+   * Resolve a presented plaintext credential, or `null` when it is unusable.
+   *
+   * One predicate for every rejection — unknown, malformed, revoked, expired —
+   * on purpose: the holder of a stolen token learns nothing about why it
+   * stopped working, and there is a single code path to keep correct
+   * (api-design §3.1).
+   */
+  async verify(plaintext: string): Promise<ResolvedMcpToken | null> {
+    if (!looksLikeToken(plaintext)) {
+      return null;
+    }
+
+    const row = await mcpTokensRepository.findByHash(
+      prisma,
+      hashToken(plaintext),
+    );
+
+    if (!row || row.revokedAt !== null) {
+      return null;
+    }
+
+    if (row.expiresAt !== null && row.expiresAt.getTime() <= Date.now()) {
+      return null;
+    }
+
+    return {
+      tokenId: row.id,
+      userId: row.userId,
+      workspaceId: row.workspaceId,
+      scopes: row.scopes,
+    };
+  },
+};

@@ -8,15 +8,18 @@ import type { z } from 'zod';
 import { logger } from '../../common/logger/index.js';
 import type { McpToolContext } from './tools/context.js';
 import { addCommentTool } from './tools/add-comment.js';
+import { archiveIssueTool } from './tools/archive-issue.js';
 import { assignIssueTool } from './tools/assign-issue.js';
 import { blockIssueTool } from './tools/block-issue.js';
 import { createIssueTool } from './tools/create-issue.js';
+import { deleteIssueTool } from './tools/delete-issue.js';
 import { getIssueTool } from './tools/get-issue.js';
 import { listCyclesTool } from './tools/list-cycles.js';
 import { listIssuesTool } from './tools/list-issues.js';
 import { listMembersTool } from './tools/list-members.js';
 import { listProjectsTool } from './tools/list-projects.js';
 import { recentActivityTool } from './tools/recent-activity.js';
+import { restoreIssueTool } from './tools/restore-issue.js';
 import { searchTool } from './tools/search.js';
 import { setIssueStatusTool } from './tools/set-issue-status.js';
 import { updateIssueTool } from './tools/update-issue.js';
@@ -29,11 +32,12 @@ import { workspaceOverviewTool } from './tools/workspace-overview.js';
 // binary, there is no runtime registration and no database table for it. That is
 // what makes `tools/list` cacheable and its order deterministic.
 //
-// M5 ships the eight read tools; M7 adds the six additive writes. The gated
-// lifecycle tools (archive / restore / delete) arrive in M8. Each lands here as
-// one entry plus its handler, appended in the order below, because that order is
-// what clients see — reads first, so the vocabulary a write description is
-// written in is already in the caller's tool list.
+// M5 ships the eight read tools; M7 adds the six additive writes; M8 adds the
+// three gated lifecycle tools (archive / restore / delete), which is the whole
+// surface at seventeen. Each landed here as one entry plus its handler, appended
+// in the order below, because that order is what clients see — reads first, so
+// the vocabulary a write description is written in is already in the caller's
+// tool list, and the irreversible call last.
 //
 // A tool's argument contract is the Zod schema from `packages/shared` — the same
 // object the handler validates with. The JSON Schema advertised to the model is
@@ -62,7 +66,8 @@ export interface McpToolEntry {
  *
  * Reads first, in the order a reader needs them: browse, retrieve, discover,
  * then the orientation tools that answer a question with one call. The writes
- * follow, in the order the write table lists them (§6.2).
+ * follow, in the order the write table lists them (§6.2), and the gated
+ * lifecycle tools last (§6.3) — the irreversible one at the end of the list.
  */
 export const MCP_TOOL_REGISTRY: readonly McpToolEntry[] = [
   listIssuesTool,
@@ -79,6 +84,9 @@ export const MCP_TOOL_REGISTRY: readonly McpToolEntry[] = [
   assignIssueTool,
   blockIssueTool,
   addCommentTool,
+  archiveIssueTool,
+  restoreIssueTool,
+  deleteIssueTool,
 ];
 
 /**

@@ -664,9 +664,13 @@ describe('the write surface as a whole', () => {
 
     expect(readOnly).not.toContain('shipyard_create_issue');
     expect(readOnly).not.toContain('shipyard_add_comment');
+    expect(readOnly).not.toContain('shipyard_delete_issue');
     expect(writer).toContain('shipyard_create_issue');
     // COMMENTS_WRITE is its own permission: an issue writer still cannot speak.
     expect(writer).not.toContain('shipyard_add_comment');
+    // And ISSUES_WRITE cannot destroy: the lifecycle tools need ISSUES_DELETE.
+    expect(writer).not.toContain('shipyard_delete_issue');
+    expect(writer).not.toContain('shipyard_archive_issue');
   });
 
   it('cannot write into another workspace, and treats its identifiers as absent', async () => {

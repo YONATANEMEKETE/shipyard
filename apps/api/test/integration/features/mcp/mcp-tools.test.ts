@@ -348,6 +348,32 @@ describe('shipyard_workspace_overview', () => {
     expect(text).toContain('Cycle 7');
   });
 
+  it('lists an issue once even when it is both assigned to and opened by the owner', async () => {
+    // The first dogfooding session returned the same identifier in both buckets,
+    // which reads as two issues. One line, under the stronger statement.
+    const { context, user, tool } = await seedWorkspace();
+    const issue = await issuesService.create(context, user.id, {
+      title: 'Login redirect loops',
+    });
+    await prisma.issue.update({
+      where: { id: issue.id },
+      data: { assigneeId: user.id, status: 'IN_PROGRESS' },
+    });
+
+    const text = textOf(await workspaceOverviewTool.handler({}, tool));
+    // Scoped to the work section: the identifier legitimately appears again in
+    // "Recent activity" ("… created SHIP-1 …"), which is a different statement.
+    const workLines = text
+      .split('\n')
+      .filter(
+        (row) => row.startsWith('- mine:') || row.startsWith('- opened by me:'),
+      );
+
+    expect(workLines).toHaveLength(1);
+    expect(workLines[0]).toContain(issue.identifier);
+    expect(workLines[0]).toContain('mine:');
+  });
+
   it('takes no arguments and rejects any that are offered', async () => {
     const { tool } = await seedWorkspace();
 

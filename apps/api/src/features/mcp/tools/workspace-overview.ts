@@ -27,12 +27,24 @@ async function handler(raw: unknown, tool: McpToolContext) {
     credential.userId,
   );
 
+  // An issue can be both assigned to and created by the same person — usually is,
+  // in a small workspace. It is listed once, under the stronger statement ("mine"),
+  // because a reader who sees the same identifier twice cannot tell whether there
+  // are two issues. Measured, not hypothesised: the first dogfooding session
+  // returned SHIP-1 in both buckets.
+  const assignedIds = new Set(
+    dashboard.myWork.assigned.map((issue) => issue.id),
+  );
+  const openedByMe = dashboard.myWork.created.filter(
+    (issue) => !assignedIds.has(issue.id),
+  );
+
   const myWork = [
-    ...[...dashboard.myWork.assigned].map(
+    ...dashboard.myWork.assigned.map(
       (issue) =>
         `- mine: ${issue.identifier} ${issue.title} · ${issue.status.toLowerCase()}`,
     ),
-    ...[...dashboard.myWork.created].map(
+    ...openedByMe.map(
       (issue) =>
         `- opened by me: ${issue.identifier} ${issue.title} · ${issue.status.toLowerCase()}`,
     ),
@@ -73,7 +85,7 @@ async function handler(raw: unknown, tool: McpToolContext) {
 
   return listResult({
     heading: `Workspace ${context.slug}`,
-    note: `${dashboard.myWork.assigned.length} assigned to the credential's owner`,
+    note: `${dashboard.myWork.assigned.length} assigned to the credential's owner · ${openedByMe.length} more opened by them`,
     lines: [
       ...cycle,
       ...projects,

@@ -5,13 +5,16 @@ import {
   jsonRpcRequestSchema,
   MCP_ERROR_CODES,
   MCP_HEADERS,
+  MCP_LEGACY_METHODS,
+  MCP_LEGACY_PROTOCOL_VERSION,
   MCP_META_KEYS,
   MCP_METHODS,
-  MCP_PROTOCOL_VERSION,
   MCP_SUPPORTED_VERSIONS,
   mcpDiscoverResultSchema,
+  mcpLegacyInitializeParamsSchema,
   mcpListToolsResultSchema,
   mcpRequestMetaSchema,
+  type McpCallToolResult,
   type McpTokenScope,
 } from '@shipyard/shared';
 import { RateLimitError } from '../../common/errors/httpErrors.js';
@@ -31,25 +34,32 @@ import { mcpRequestEnvelopeSchema } from './schemas.js';
 import {
   MCP_CACHE_TTL_MS,
   MCP_ERA,
-  MCP_HANDSHAKE_METHOD,
   MCP_INSTRUCTIONS,
   MCP_SERVER_INFO,
+  detectRequestEra,
+  legacyInitializeResult,
   mirrorMatches,
+  toLegacyListToolsResult,
+  toLegacyToolResult,
 } from './transport.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// The `POST /mcp` pipeline (F13, M3)
+// The `POST /mcp` pipeline (F13)
 //
 // One POST /mcp for every JSON-RPC message, in the order the guard chain defines
 // (api-design §4):
 //
-//   content type → envelope shape → notification → method → params._meta →
-//   header mirrors → version support → credential → per-token budget → dispatch
+//   content type → envelope shape → notification → era → method → [modern era:
+//   params._meta → header mirrors → revision support] → credential → per-token
+//   budget → dispatch
 //
-// As of M4 that chain is complete except for the tools themselves: every request
-// that reaches dispatch has been authenticated (bearer token → live membership)
-// and counted against its token's budget. The scope filter is M5's, applied
-// through the registry to `tools/list` and `tools/call`.
+// The era branch (M6) is the shape change since M4. A request says which revision
+// it was written against, `detectRequestEra` decides what that means, and the
+// checks in brackets belong to the modern era — a legacy client sends no `_meta`
+// and no `Mcp-Name` to mirror, which is a fact about that revision rather than a
+// concession to it. Everything after the branch is era-blind: one credential, one
+// budget, one dispatch, and results are projected into the caller's envelope on
+// the way out.
 //
 // Returning a value instead of writing to the response keeps the pipeline a
 // function of the request: the router writes, the tests assert, and there is no
@@ -65,6 +75,18 @@ export interface McpHttpResponse {
   /** Set only where the status needs a companion header (`Retry-After`). */
   headers?: Record<string, string>;
 }
+
+/**
+ * Every method this server answers, both eras.
+ *
+ * One list, because the "no such method" answer has to name them all: a legacy
+ * client that asks for a modern method should learn that it exists, and a modern
+ * one asking for `initialize` should learn the same about the era before it.
+ */
+const KNOWN_METHODS: readonly string[] = [
+  ...Object.values(MCP_METHODS),
+  ...Object.values(MCP_LEGACY_METHODS),
+];
 
 function discoverResult(): unknown {
   // Parsed through the shared contract: if the advertised card drifts from what
@@ -100,24 +122,28 @@ function listToolsResult(scopes: readonly McpTokenScope[]): unknown {
 
 /**
  * The client's self-reported name, for the log line only — never trusted.
+ *
+ * It arrives in two places depending on the era, and both are read here so a log
+ * aggregator does not have to care which: modern clients put it in per-request
+ * `_meta`, and a legacy client announces it once, in the handshake's
+ * `params.clientInfo`.
  */
 function clientNameOf(raw: unknown): string | undefined {
   const params = (raw as { params?: unknown }).params;
   const meta = (params as { _meta?: unknown } | undefined)?._meta;
   const parsed = mcpRequestMetaSchema.safeParse(meta);
 
-  return parsed.success
-    ? parsed.data[MCP_META_KEYS.clientInfo]?.name
-    : undefined;
-}
+  if (parsed.success) {
+    return parsed.data[MCP_META_KEYS.clientInfo]?.name;
+  }
 
-/** The version a legacy handshake asked for, from `params.protocolVersion`. */
-function versionOf(
-  params: Record<string, unknown> | undefined,
-): string | undefined {
-  const value = params?.protocolVersion;
+  const legacy = mcpLegacyInitializeParamsSchema
+    .pick({ clientInfo: true })
+    .safeParse({
+      clientInfo: (params as { clientInfo?: unknown })?.clientInfo,
+    });
 
-  return typeof value === 'string' ? value : undefined;
+  return legacy.success ? legacy.data.clientInfo?.name : undefined;
 }
 
 /**
@@ -251,55 +277,60 @@ export async function handleMcpMessage(
   method = parsedRequest.data.method;
   id = parsedRequest.data.id;
 
-  // ── Legacy handshake ──
-  // Revisions 2025-11-25 and earlier open with `initialize`; this revision
-  // removed it, and no amount of goodwill lets a legacy client be served here —
-  // it would negotiate a session that does not exist and then fail somewhere
-  // confusing. So the answer is the diagnostic the spec asks for (§4, "the
-  // failure path"): the versions this server *does* speak, plus the one that was
-  // asked for. For a legacy-only client this message is frequently the only
-  // diagnostic its user will ever see.
-  //
-  // Handled before the mirror checks because a legacy client cannot mirror a
-  // method this server does not offer.
-  if (method === MCP_HANDSHAKE_METHOD) {
-    const requestedVersion = versionOf(parsedRequest.data.params);
+  // ── Era ──
+  // Which revision this request was written against, decided from the request
+  // itself (`transport.detectRequestEra`): the handshake names its era outright,
+  // `params._meta` means modern, and otherwise the version header decides. Both
+  // eras send that header on requests after the handshake — measured, not
+  // assumed (M6 probe).
+  const era = detectRequestEra({
+    method,
+    params: parsedRequest.data.params,
+    versionHeader: request.get(MCP_HEADERS.protocolVersion),
+  });
 
-    logger.info(
-      {
-        requestId,
-        era: MCP_ERA.legacy,
-        clientName: clientNameOf(raw),
-        requestedVersion,
-        supportedVersions: [...MCP_SUPPORTED_VERSIONS],
-      },
-      'mcp.handshake.refused',
-    );
+  const legacyEra = era.kind === 'detected' && era.era === MCP_ERA.legacy;
 
-    if (
-      requestedVersion !== undefined &&
-      (MCP_SUPPORTED_VERSIONS as readonly string[]).includes(requestedVersion)
-    ) {
-      // A client asking for a version we speak, over a handshake that no longer
-      // exists: the method is the problem, not the version. Say so — and still
-      // name what to use instead, because that is what the caller has to act on.
-      return fail(
-        404,
-        MCP_ERROR_CODES.methodNotFound,
-        `This server has no "${MCP_HANDSHAKE_METHOD}" handshake — revision ${MCP_PROTOCOL_VERSION} replaced it with server/discover.`,
-        { supported: [...MCP_SUPPORTED_VERSIONS] },
-      );
-    }
+  /**
+   * A tool result in the caller's era.
+   *
+   * Handlers and the error mappers write the modern shape; this is the single
+   * place it becomes what the client can actually read. The legacy envelope drops
+   * the modern frame (`resultType`) and keeps the content, `isError` and the
+   * `_meta` diagnostics (§6.4) — so no handler ever learns which era asked.
+   */
+  const toolResultForEra = (result: McpCallToolResult): unknown =>
+    legacyEra ? toLegacyToolResult(result) : result;
 
+  // The era rides in the log on every request: during dogfooding this line is
+  // how a wrong-era client gets identified, and `source` says which signal
+  // decided it — a question that otherwise costs a packet capture.
+  logger.info(
+    {
+      requestId,
+      method,
+      era: era.kind === 'detected' ? era.era : 'undetermined',
+      eraSource: era.kind === 'detected' ? era.source : era.reason,
+      claimedVersion: era.claimedVersion,
+      clientName: clientNameOf(raw),
+    },
+    'mcp.era.detected',
+  );
+
+  // A revision this server does not speak is answered with the ones it does,
+  // *before* the envelope rules: the envelope check is a modern-era rule, and a
+  // legacy request carries no `_meta` to fail it with a sentence it can act on.
+  // This is the one answer that helps a client of either era.
+  if (era.kind === 'undetermined' && era.reason === 'unsupported_version') {
     return fail(
       400,
       MCP_ERROR_CODES.unsupportedProtocolVersion,
-      `This server speaks ${MCP_SUPPORTED_VERSIONS.join(', ')} only. That revision replaced the "${MCP_HANDSHAKE_METHOD}" handshake with server/discover, so connect with a client that sends server/discover and a ${MCP_HEADERS.protocolVersion} header.`,
+      `This server speaks ${MCP_SUPPORTED_VERSIONS.join(', ')}, not ${era.claimedVersion ?? 'that revision'}.`,
       {
         supported: [...MCP_SUPPORTED_VERSIONS],
-        ...(requestedVersion !== undefined
-          ? { requested: requestedVersion }
-          : {}),
+        ...(era.claimedVersion === undefined
+          ? {}
+          : { requested: era.claimedVersion }),
       },
     );
   }
@@ -307,110 +338,137 @@ export async function handleMcpMessage(
   // ── Known method ──
   // 404, not 400: the request was understood — this server simply does not
   // implement that method (§5.2). Checked before the metadata contract so the
-  // answer names the real problem.
-  if (!(Object.values(MCP_METHODS) as readonly string[]).includes(method)) {
+  // answer names the real problem. Both eras' methods are in `KNOWN_METHODS`.
+  if (!KNOWN_METHODS.includes(method)) {
     return fail(
       404,
       MCP_ERROR_CODES.methodNotFound,
-      `"${method}" is not a method this server implements. It offers: ${Object.values(
-        MCP_METHODS,
-      ).join(', ')}.`,
+      `"${method}" is not a method this server implements. It offers: ${KNOWN_METHODS.join(', ')}.`,
     );
   }
 
   // ── Envelope metadata ──
-  // Now that the method is one of ours: a request must say which revision it was
-  // written against, and that is the only place the version travels (§5.1).
-  const envelope = mcpRequestEnvelopeSchema.safeParse(raw);
-  if (!envelope.success) {
-    return failEnvelope(envelope.error, false);
-  }
+  // Modern era only: there, the revision, identity and capabilities travel per
+  // request and `_meta` is where they live (§5.1). A legacy request carries its
+  // revision in the header and its identity in the handshake, so holding it to
+  // this rule would fail it over a field its era never had.
+  //
+  // A request with *no* version signal lands here too, deliberately: the envelope
+  // error names the field that is missing, which is the sentence a modern client
+  // needs, and a legacy client that omits the header did not read its own spec.
+  let params: Record<string, unknown>;
+  let metaVersion: string;
 
-  const params = envelope.data.params;
-  const meta = envelope.data.params._meta;
-  const metaVersion = meta[MCP_META_KEYS.protocolVersion];
-
-  // ── Header mirrors ──
-  // The confused-deputy rule (§5.1): a mirrored header that disagrees with the
-  // body is rejected, never reconciled — and a value that travelled wrapped in
-  // the base64 sentinel is decoded before the comparison.
-  const versionHeader = request.get(MCP_HEADERS.protocolVersion);
-  if (versionHeader === undefined) {
-    return fail(
-      400,
-      MCP_ERROR_CODES.headerMismatch,
-      `The ${MCP_HEADERS.protocolVersion} header is required and must match the version in params._meta.`,
-    );
-  }
-
-  if (!mirrorMatches(versionHeader, metaVersion)) {
-    return fail(
-      400,
-      MCP_ERROR_CODES.headerMismatch,
-      `The ${MCP_HEADERS.protocolVersion} header does not match the protocol version in params._meta.`,
-    );
-  }
-
-  const methodHeader = request.get(MCP_HEADERS.method);
-  if (methodHeader === undefined) {
-    return fail(
-      400,
-      MCP_ERROR_CODES.headerMismatch,
-      `The ${MCP_HEADERS.method} header is required and must name the method being called.`,
-    );
-  }
-
-  if (!mirrorMatches(methodHeader, method)) {
-    return fail(
-      400,
-      MCP_ERROR_CODES.headerMismatch,
-      `The ${MCP_HEADERS.method} header does not match the method in the body.`,
-    );
-  }
-
-  // `Mcp-Name` mirrors the tool name, so it only exists for `tools/call`.
-  if (method === MCP_METHODS.callTool) {
-    const toolName = typeof params.name === 'string' ? params.name : '';
-
-    if (toolName === '') {
-      return fail(
-        400,
-        MCP_ERROR_CODES.invalidRequest,
-        'tools/call requires params.name — the tool to call.',
-      );
+  if (legacyEra) {
+    params = parsedRequest.data.params ?? {};
+    // The revision this connection negotiated — ours, because the handshake
+    // answered with it. It is the era's revision for logging and for the frame of
+    // every answer that follows.
+    metaVersion = MCP_LEGACY_PROTOCOL_VERSION;
+  } else {
+    const envelope = mcpRequestEnvelopeSchema.safeParse(raw);
+    if (!envelope.success) {
+      return failEnvelope(envelope.error, false);
     }
 
-    const nameHeader = request.get(MCP_HEADERS.name);
-    if (nameHeader === undefined) {
+    params = envelope.data.params;
+    // Read back through the schema the envelope was parsed with, rather than
+    // indexed and asserted: the type and the runtime value then agree by
+    // construction instead of by promise.
+    metaVersion = mcpRequestMetaSchema.parse(envelope.data.params._meta)[
+      MCP_META_KEYS.protocolVersion
+    ];
+  }
+
+  // ── Modern-era transport checks: mirrored headers, then revision support ──
+  // Not applicable to a legacy request, and not by convention: `Mcp-Name` and the
+  // version/identity mirrors belong to `2026-07-28` and did not exist in the era
+  // before it, so a legacy client has no such fields to send — the shipped
+  // Inspector sends `MCP-Protocol-Version` and never `Mcp-Name` (M6 probe). The
+  // controls stay at full strength on the modern path, which the transport suite
+  // asserts.
+  if (!legacyEra) {
+    // The confused-deputy rule (§5.1): a mirrored header that disagrees with the
+    // body is rejected, never reconciled — and a value that travelled wrapped in
+    // the base64 sentinel is decoded before the comparison.
+    const versionHeader = request.get(MCP_HEADERS.protocolVersion);
+    if (versionHeader === undefined) {
       return fail(
         400,
         MCP_ERROR_CODES.headerMismatch,
-        `tools/call requires the ${MCP_HEADERS.name} header, and it must match params.name.`,
+        `The ${MCP_HEADERS.protocolVersion} header is required and must match the version in params._meta.`,
       );
     }
 
-    if (!mirrorMatches(nameHeader, toolName)) {
+    if (!mirrorMatches(versionHeader, metaVersion)) {
       return fail(
         400,
         MCP_ERROR_CODES.headerMismatch,
-        `The ${MCP_HEADERS.name} header does not match params.name.`,
+        `The ${MCP_HEADERS.protocolVersion} header does not match the protocol version in params._meta.`,
       );
     }
-  }
 
-  // ── Version support ──
-  // The last transport check, and the one about *this server* rather than about
-  // the request: the payload names what the server does speak, so a client
-  // written against another revision can correct itself in one round trip.
-  if (!(MCP_SUPPORTED_VERSIONS as readonly string[]).includes(metaVersion)) {
-    return fail(
-      400,
-      MCP_ERROR_CODES.unsupportedProtocolVersion,
-      `This server speaks ${MCP_SUPPORTED_VERSIONS.join(', ')}, not ${metaVersion}.`,
-      // `supported` plus `requested` is the shape the spec prescribes for this
-      // error: the client retries with one of the versions it is told about.
-      { supported: [...MCP_SUPPORTED_VERSIONS], requested: metaVersion },
-    );
+    const methodHeader = request.get(MCP_HEADERS.method);
+    if (methodHeader === undefined) {
+      return fail(
+        400,
+        MCP_ERROR_CODES.headerMismatch,
+        `The ${MCP_HEADERS.method} header is required and must name the method being called.`,
+      );
+    }
+
+    if (!mirrorMatches(methodHeader, method)) {
+      return fail(
+        400,
+        MCP_ERROR_CODES.headerMismatch,
+        `The ${MCP_HEADERS.method} header does not match the method in the body.`,
+      );
+    }
+
+    // `Mcp-Name` mirrors the tool name, so it only exists for `tools/call`.
+    if (method === MCP_METHODS.callTool) {
+      const toolName = typeof params.name === 'string' ? params.name : '';
+
+      if (toolName === '') {
+        return fail(
+          400,
+          MCP_ERROR_CODES.invalidRequest,
+          'tools/call requires params.name — the tool to call.',
+        );
+      }
+
+      const nameHeader = request.get(MCP_HEADERS.name);
+      if (nameHeader === undefined) {
+        return fail(
+          400,
+          MCP_ERROR_CODES.headerMismatch,
+          `tools/call requires the ${MCP_HEADERS.name} header, and it must match params.name.`,
+        );
+      }
+
+      if (!mirrorMatches(nameHeader, toolName)) {
+        return fail(
+          400,
+          MCP_ERROR_CODES.headerMismatch,
+          `The ${MCP_HEADERS.name} header does not match params.name.`,
+        );
+      }
+    }
+
+    // ── Version support ──
+    // The last transport check, and the one about *this server* rather than about
+    // the request: the payload names what the server does speak, so a client
+    // written against another revision can correct itself in one round trip.
+    if (!(MCP_SUPPORTED_VERSIONS as readonly string[]).includes(metaVersion)) {
+      return fail(
+        400,
+        MCP_ERROR_CODES.unsupportedProtocolVersion,
+        `This server speaks ${MCP_SUPPORTED_VERSIONS.join(', ')}, not ${metaVersion}.`,
+        // `supported` plus `requested` is the shape the spec prescribes for this
+        // error: the client retries with one of the versions it is told about.
+        { supported: [...MCP_SUPPORTED_VERSIONS], requested: metaVersion },
+      );
+    }
   }
 
   // ── Notification ──
@@ -457,7 +515,7 @@ export async function handleMcpMessage(
     if (method === MCP_METHODS.callTool) {
       return {
         status: 200,
-        body: jsonRpcResult(id, rateLimitToolResult(budget)),
+        body: jsonRpcResult(id, toolResultForEra(rateLimitToolResult(budget))),
       };
     }
 
@@ -492,6 +550,26 @@ export async function handleMcpMessage(
 
   // ── Dispatch ──
   switch (method) {
+    // The legacy handshake, answered for the clients that open with it. The one
+    // method whose entire answer is era-specific, so it is built by the transport
+    // rather than projected from a modern result — and it carries **no session
+    // id**: that revision permits a session-less server, and the shipped client
+    // was measured accepting exactly that (M6 probe).
+    case MCP_LEGACY_METHODS.initialize: {
+      logger.info(
+        {
+          requestId,
+          protocolVersion: MCP_LEGACY_PROTOCOL_VERSION,
+          clientName: clientNameOf(raw),
+          tokenId: auth.credential.tokenId,
+          workspaceId: auth.context.workspaceId,
+        },
+        'mcp.handshake.answered',
+      );
+
+      return { status: 200, body: jsonRpcResult(id, legacyInitializeResult()) };
+    }
+
     case MCP_METHODS.discover:
     case MCP_METHODS.listTools: {
       const result =
@@ -504,14 +582,24 @@ export async function handleMcpMessage(
           requestId,
           method,
           protocolVersion: metaVersion,
-          clientName: meta[MCP_META_KEYS.clientInfo]?.name,
+          clientName: clientNameOf(raw),
           tokenId: auth.credential.tokenId,
           workspaceId: auth.context.workspaceId,
         },
         'mcp.dispatched',
       );
 
-      return { status: 200, body: jsonRpcResult(id, result) };
+      return {
+        status: 200,
+        body: jsonRpcResult(
+          id,
+          // `server/discover` has no legacy form — that era never knew the method
+          // — so only `tools/list` is projected.
+          method === MCP_METHODS.listTools && legacyEra
+            ? toLegacyListToolsResult(result)
+            : result,
+        ),
+      };
     }
 
     case MCP_METHODS.callTool: {
@@ -543,7 +631,10 @@ export async function handleMcpMessage(
 
         return {
           status: 200,
-          body: jsonRpcResult(id, missingScopeResult(entry.scope)),
+          body: jsonRpcResult(
+            id,
+            toolResultForEra(missingScopeResult(entry.scope)),
+          ),
         };
       }
 
@@ -576,7 +667,10 @@ export async function handleMcpMessage(
 
         return {
           status: 200,
-          body: jsonRpcResult(id, invalidArgumentsResult(parsed.error)),
+          body: jsonRpcResult(
+            id,
+            toolResultForEra(invalidArgumentsResult(parsed.error)),
+          ),
         };
       }
 
@@ -604,7 +698,10 @@ export async function handleMcpMessage(
           'mcp.tool.called',
         );
 
-        return { status: 200, body: jsonRpcResult(id, result) };
+        return {
+          status: 200,
+          body: jsonRpcResult(id, toolResultForEra(result)),
+        };
       } catch (error) {
         logger.error(
           {
@@ -623,7 +720,10 @@ export async function handleMcpMessage(
         // own words (§8.2).
         return {
           status: 200,
-          body: jsonRpcResult(id, toToolResultFromError(error, requestId)),
+          body: jsonRpcResult(
+            id,
+            toolResultForEra(toToolResultFromError(error, requestId)),
+          ),
         };
       }
     }

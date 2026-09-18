@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { MCP_META_KEYS } from '@shipyard/shared';
+import {
+  MCP_ERA,
+  MCP_LEGACY_METHODS,
+  MCP_LEGACY_PROTOCOL_VERSION,
+  MCP_META_KEYS,
+  MCP_METHODS,
+  MCP_PARAMS_META_KEY,
+  MCP_PROTOCOL_VERSION,
+  MCP_SUPPORTED_VERSIONS,
+  eraOfVersion,
+  mcpLegacyCallToolResultSchema,
+  mcpLegacyInitializeParamsSchema,
+  mcpLegacyInitializeResultSchema,
+  mcpLegacyListToolsResultSchema,
+} from '@shipyard/shared';
 
 import { AppError } from '../../../src/common/errors/AppError.js';
 import { env } from '../../../src/common/config/env.js';
@@ -14,9 +28,12 @@ import {
   findTool,
 } from '../../../src/features/mcp/registry.js';
 import {
+  MCP_HANDSHAKE_METHOD,
   decodeMirrorValue,
+  detectRequestEra,
   isTrustedOrigin,
   mirrorMatches,
+  type McpEraSignal,
 } from '../../../src/features/mcp/transport.js';
 
 /**
@@ -231,5 +248,242 @@ describe('missingScopeResult', () => {
     expect(text).toContain('Create another connection');
     expect(result._meta?.[MCP_META_KEYS.errorCode]).toBe('SCOPE_MISSING');
     expect(result._meta?.requiredScope).toBe('ISSUES_WRITE');
+  });
+});
+
+describe('protocol eras', () => {
+  it('lists both revisions it speaks, most-preferred first', () => {
+    expect([...MCP_SUPPORTED_VERSIONS]).toEqual([
+      MCP_PROTOCOL_VERSION,
+      MCP_LEGACY_PROTOCOL_VERSION,
+    ]);
+    expect(MCP_PROTOCOL_VERSION).toBe('2026-07-28');
+    // The newest revision the shipped SDK negotiates — which is why this era is
+    // the one that lets a real client connect.
+    expect(MCP_LEGACY_PROTOCOL_VERSION).toBe('2025-11-25');
+  });
+
+  it('maps each spoken revision to its era, and refuses to guess at the rest', () => {
+    expect(eraOfVersion(MCP_PROTOCOL_VERSION)).toBe(MCP_ERA.modern);
+    expect(eraOfVersion(MCP_LEGACY_PROTOCOL_VERSION)).toBe(MCP_ERA.legacy);
+
+    // `null` is what makes a caller answer with the revisions it does speak
+    // instead of picking the nearest one and serving a client it cannot serve.
+    expect(eraOfVersion('2025-06-18')).toBeNull();
+    expect(eraOfVersion('')).toBeNull();
+  });
+
+  it('recognizes the legacy handshake, and dispatches on the contract’s name', () => {
+    expect(MCP_LEGACY_METHODS.initialize).toBe('initialize');
+    expect(MCP_LEGACY_METHODS.initialized).toBe('notifications/initialized');
+    expect(MCP_HANDSHAKE_METHOD).toBe(MCP_LEGACY_METHODS.initialize);
+  });
+
+  it('accepts a legacy initialize with or without the fields its era added later', () => {
+    const full = mcpLegacyInitializeParamsSchema.parse({
+      protocolVersion: MCP_LEGACY_PROTOCOL_VERSION,
+      capabilities: {},
+      clientInfo: { name: 'inspector-cli', version: '2.7.0' },
+    });
+    expect(full.clientInfo?.name).toBe('inspector-cli');
+
+    // The bare form: `protocolVersion` is the only field that era always sent.
+    expect(
+      mcpLegacyInitializeParamsSchema.parse({ protocolVersion: '2025-06-18' }),
+    ).toEqual({ protocolVersion: '2025-06-18' });
+
+    expect(() => mcpLegacyInitializeParamsSchema.parse({})).toThrow();
+  });
+
+  it('answers the handshake with serverInfo top-level and no session identity', () => {
+    const result = mcpLegacyInitializeResultSchema.parse({
+      protocolVersion: MCP_LEGACY_PROTOCOL_VERSION,
+      capabilities: { tools: { listChanged: false } },
+      serverInfo: { name: 'shipyard', version: '0.1.0' },
+      instructions: 'Shipyard is a project-management workspace.',
+    });
+
+    // That era carried identity in the handshake, not in per-request `_meta`.
+    expect(result.serverInfo.name).toBe('shipyard');
+    // Statelessness is the ADR-005 property: nothing in the answer identifies a
+    // session, because there is no session.
+    expect(result).not.toHaveProperty('sessionId');
+    expect(result).not.toHaveProperty('Mcp-Session-Id');
+  });
+
+  it('projects a modern result into the legacy envelope by dropping the modern frame', () => {
+    const modern = {
+      resultType: 'complete' as const,
+      tools: [
+        {
+          name: 'shipyard_list_issues',
+          description: 'Browse the issues in this workspace.',
+          inputSchema: { type: 'object' as const },
+        },
+      ],
+      ttlMs: 600_000,
+      cacheScope: 'private' as const,
+    };
+
+    const legacy = mcpLegacyListToolsResultSchema.parse(modern);
+
+    expect(legacy.tools.map((tool) => tool.name)).toEqual([
+      'shipyard_list_issues',
+    ]);
+    // The frame is era-specific; the content is not. That is what makes the
+    // projection safe to apply once, at the transport, instead of in handlers.
+    expect(legacy).not.toHaveProperty('resultType');
+    expect(legacy).not.toHaveProperty('ttlMs');
+    expect(legacy).not.toHaveProperty('cacheScope');
+  });
+
+  it('keeps the diagnostics that ride in _meta across the era change', () => {
+    const modern = {
+      resultType: 'complete' as const,
+      content: [{ type: 'text' as const, text: 'No issue matches SHIP-9999.' }],
+      isError: true,
+      _meta: {
+        [MCP_META_KEYS.errorCode]: 'ISSUE_NOT_FOUND',
+        [MCP_META_KEYS.requestId]: 'req-1',
+      },
+    };
+
+    const legacy = mcpLegacyCallToolResultSchema.parse(modern);
+
+    expect(legacy.isError).toBe(true);
+    expect(legacy.content[0]?.text).toBe('No issue matches SHIP-9999.');
+    expect(legacy._meta?.[MCP_META_KEYS.errorCode]).toBe('ISSUE_NOT_FOUND');
+    expect(legacy).not.toHaveProperty('resultType');
+  });
+});
+
+describe('era detection', () => {
+  /** The modern per-request metadata, which is the whole modern signal. */
+  const meta = (version: string) => ({
+    [MCP_PARAMS_META_KEY]: { [MCP_META_KEYS.protocolVersion]: version },
+  });
+
+  const detect = (overrides: Partial<McpEraSignal> = {}) =>
+    detectRequestEra({
+      method: MCP_METHODS.listTools,
+      params: undefined,
+      versionHeader: undefined,
+      ...overrides,
+    });
+
+  it('treats the handshake as legacy whatever revision it proposes', () => {
+    // The method is the era signal: `initialize` does not exist in 2026-07-28, so
+    // a client sending it is a legacy-era client even when it names a modern
+    // revision — that revision is settled by negotiation, not by classification.
+    expect(
+      detect({
+        method: MCP_LEGACY_METHODS.initialize,
+        params: { protocolVersion: MCP_PROTOCOL_VERSION },
+      }),
+    ).toEqual({
+      kind: 'detected',
+      era: MCP_ERA.legacy,
+      source: 'handshake',
+      claimedVersion: MCP_PROTOCOL_VERSION,
+    });
+
+    expect(detect({ method: MCP_LEGACY_METHODS.initialized })).toEqual({
+      kind: 'detected',
+      era: MCP_ERA.legacy,
+      source: 'handshake',
+    });
+  });
+
+  it('reads modern metadata as modern, mirror disagreement or not', () => {
+    expect(detect({ params: meta(MCP_PROTOCOL_VERSION) })).toEqual({
+      kind: 'detected',
+      era: MCP_ERA.modern,
+      source: 'meta',
+      claimedVersion: MCP_PROTOCOL_VERSION,
+    });
+
+    // A header that contradicts `_meta` is the mirrored-header rule's business
+    // (-32020), which runs after classification — so the era is still modern here
+    // and the request cannot talk its way out of the mirror.
+    expect(
+      detect({
+        params: meta(MCP_PROTOCOL_VERSION),
+        versionHeader: MCP_LEGACY_PROTOCOL_VERSION,
+      }),
+    ).toEqual({
+      kind: 'detected',
+      era: MCP_ERA.modern,
+      source: 'meta',
+      claimedVersion: MCP_PROTOCOL_VERSION,
+    });
+  });
+
+  it('refuses metadata that claims the legacy era', () => {
+    // `_meta` is the modern era's field. A legacy revision inside it is a request
+    // claiming two eras at once — and serving it as legacy is exactly how a
+    // caller would opt out of the mirrored headers.
+    expect(detect({ params: meta(MCP_LEGACY_PROTOCOL_VERSION) })).toEqual({
+      kind: 'undetermined',
+      reason: 'era_conflict',
+      claimedVersion: MCP_LEGACY_PROTOCOL_VERSION,
+    });
+  });
+
+  it('reads the version header as the era when metadata is absent', () => {
+    expect(detect({ versionHeader: MCP_LEGACY_PROTOCOL_VERSION })).toEqual({
+      kind: 'detected',
+      era: MCP_ERA.legacy,
+      source: 'version_header',
+      claimedVersion: MCP_LEGACY_PROTOCOL_VERSION,
+    });
+
+    // A modern revision in the header alone is still classified — the pipeline's
+    // existing `_meta` requirement is what answers a request missing its envelope.
+    expect(detect({ versionHeader: MCP_PROTOCOL_VERSION })).toEqual({
+      kind: 'detected',
+      era: MCP_ERA.modern,
+      source: 'version_header',
+      claimedVersion: MCP_PROTOCOL_VERSION,
+    });
+  });
+
+  it('decodes a base64-wrapped header before reading it', () => {
+    const wrapped = `=?base64?${Buffer.from(MCP_LEGACY_PROTOCOL_VERSION, 'utf8').toString('base64')}?=`;
+
+    expect(detect({ versionHeader: wrapped })).toEqual({
+      kind: 'detected',
+      era: MCP_ERA.legacy,
+      source: 'version_header',
+      claimedVersion: MCP_LEGACY_PROTOCOL_VERSION,
+    });
+  });
+
+  it('refuses to guess when nothing says which revision was used', () => {
+    expect(detect()).toEqual({
+      kind: 'undetermined',
+      reason: 'no_version_signal',
+    });
+    expect(detect({ params: {} })).toEqual({
+      kind: 'undetermined',
+      reason: 'no_version_signal',
+    });
+    // Method names are case-sensitive: `Initialize` is not the handshake.
+    expect(detect({ method: 'Initialize' })).toEqual({
+      kind: 'undetermined',
+      reason: 'no_version_signal',
+    });
+  });
+
+  it('reports an unspoken revision instead of picking the nearest era', () => {
+    expect(detect({ versionHeader: '2025-06-18' })).toEqual({
+      kind: 'undetermined',
+      reason: 'unsupported_version',
+      claimedVersion: '2025-06-18',
+    });
+    expect(detect({ params: meta('2027-01-01') })).toEqual({
+      kind: 'undetermined',
+      reason: 'unsupported_version',
+      claimedVersion: '2027-01-01',
+    });
   });
 });

@@ -2,10 +2,12 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   MCP_ERROR_CODES,
   MCP_HEADERS,
+  MCP_LEGACY_PROTOCOL_VERSION,
   MCP_METHODS,
   MCP_PROTOCOL_VERSION,
   MCP_SUPPORTED_VERSIONS,
   mcpDiscoverResultSchema,
+  mcpLegacyInitializeResultSchema,
   mcpListToolsResultSchema,
 } from '@shipyard/shared';
 
@@ -242,38 +244,11 @@ describe('POST /mcp — discovery', () => {
     expect(res.text).toBe('');
   });
 
-  it('refuses a legacy handshake with the versions it speaks', async () => {
-    // A legacy-era client (2025-11-25) opens with `initialize`, verbatim from
-    // inspector-cli 2.7.0. This revision removed the handshake, so the answer is
-    // the diagnostic the spec prescribes: -32022 naming what this server speaks
-    // and what was asked for. For a legacy-only client that message is often the
-    // only thing its user will ever see, so it must be actionable — never a
-    // success that lets the client fail somewhere confusing instead.
-    const res = await post(createTestApp(), {
-      jsonrpc: '2.0',
-      id: 0,
-      method: 'initialize',
-      params: {
-        protocolVersion: '2025-11-25',
-        capabilities: {},
-        clientInfo: { name: 'inspector-cli', version: '2.7.0' },
-      },
-    });
-
-    expect(res.status).toBe(400);
-    expect(bodyOf(res).error?.code).toBe(
-      MCP_ERROR_CODES.unsupportedProtocolVersion,
-    );
-    expect(bodyOf(res).error?.data?.supported).toEqual([
-      ...MCP_SUPPORTED_VERSIONS,
-    ]);
-    expect(bodyOf(res).error?.data?.requested).toBe('2025-11-25');
-    expect(bodyOf(res).error?.message).toContain('server/discover');
-  });
-
-  it('answers initialize with unknown-method when the version is one it speaks', async () => {
-    // Modern client, legacy shape: the version is fine, the method does not
-    // exist — so the error says that, instead of blaming the version.
+  it('answers initialize with the legacy handshake even when the client names a modern revision', async () => {
+    // The method is the era signal, not the revision it proposes: `initialize`
+    // does not exist in `2026-07-28`, so a client sending it belongs to the era
+    // that has it. The handshake both eras' clients get is the legacy one, and
+    // the full conversation is covered in mcp-legacy-era.
     const res = await post(createTestApp(), {
       jsonrpc: '2.0',
       id: 'modern-but-initializing',
@@ -281,11 +256,10 @@ describe('POST /mcp — discovery', () => {
       params: { protocolVersion: MCP_PROTOCOL_VERSION },
     });
 
-    expect(res.status).toBe(404);
-    expect(bodyOf(res).error?.code).toBe(MCP_ERROR_CODES.methodNotFound);
-    expect(bodyOf(res).error?.data?.supported).toEqual([
-      ...MCP_SUPPORTED_VERSIONS,
-    ]);
+    expect(res.status).toBe(200);
+    expect(
+      mcpLegacyInitializeResultSchema.parse(bodyOf(res).result).protocolVersion,
+    ).toBe(MCP_LEGACY_PROTOCOL_VERSION);
   });
 
   it('names an unknown method before complaining about a missing _meta', async () => {

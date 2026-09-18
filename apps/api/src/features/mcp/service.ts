@@ -1,4 +1,5 @@
 import {
+  MCP_ALWAYS_GRANTED_SCOPES,
   MCP_DEFAULT_SCOPES,
   type CreateMcpTokenRequest,
   type CreateMcpTokenResponse,
@@ -83,7 +84,17 @@ export const mcpTokensService = {
     userId: string,
     body: CreateMcpTokenRequest,
   ): Promise<CreateMcpTokenResponse> {
-    const scopes: McpTokenScope[] = body.scopes ?? [...MCP_DEFAULT_SCOPES];
+    // `READ` always travels with the credential (spec §3.1): asking for it is
+    // optional, keeping it is not. Union rather than validate, because the
+    // caller's intent — "this connection may edit issues" — is separate from
+    // this rule, and a 400 over a scope the member wanted anyway would be a
+    // worse surface. `Set` keeps the order stable for the card and the tests.
+    const scopes: McpTokenScope[] = [
+      ...new Set<McpTokenScope>([
+        ...MCP_ALWAYS_GRANTED_SCOPES,
+        ...(body.scopes ?? MCP_DEFAULT_SCOPES),
+      ]),
+    ];
 
     const exceeding = scopesExceedingRole(context.role, scopes);
     if (exceeding.length > 0) {

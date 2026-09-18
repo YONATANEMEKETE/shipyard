@@ -18,6 +18,7 @@ import { z } from 'zod';
 import {
   mcpTokenLabelSchema,
   mcpTokenScopeSchema,
+  MCP_ALWAYS_GRANTED_SCOPES,
   type CreateMcpTokenRequest,
   type CreateMcpTokenResponse,
   type McpTokenScope,
@@ -93,6 +94,12 @@ import { cn } from '@/lib/utils';
  * - A permission the caller's role cannot grant is **omitted**, not disabled
  *   (F11 rule 6), with one line explaining why. The API enforces the same
  *   ceiling, so this is the surface explaining itself — not a second gate.
+ * - `Read` is **granted with every connection** and cannot be turned off
+ *   (spec §3.1: a credential that cannot read cannot usefully write). It is
+ *   rendered as a fixed, selected row carrying an "Always included" tag rather
+ *   than a disabled checkbox — the same "omit, never disable" discipline: a
+ *   greyed-out control is a refusal the member cannot act on, and this is not a
+ *   refusal at all.
  */
 
 const SCOPE_COPY: Record<
@@ -161,9 +168,15 @@ function canAdminister(role: WorkspaceRole | null): boolean {
   return role === 'OWNER' || role === 'ADMIN';
 }
 
+// Scopes that cannot be turned off, so they are not offered as choices.
+const ALWAYS_GRANTED = new Set<McpTokenScope>(MCP_ALWAYS_GRANTED_SCOPES);
+
+/** The scopes the member may actually choose between. */
 function allowedScopes(role: WorkspaceRole | null): McpTokenScope[] {
   return SCOPE_ORDER.filter(
-    (scope) => scope !== 'ISSUES_DELETE' || canAdminister(role),
+    (scope) =>
+      !ALWAYS_GRANTED.has(scope) &&
+      (scope !== 'ISSUES_DELETE' || canAdminister(role)),
   );
 }
 
@@ -482,10 +495,38 @@ function CreateAgentTokenDialogContent({
                           Permissions
                         </span>
                         <span className="font-mono text-[10px] uppercase tracking-[0.6px] text-muted-foreground">
-                          {field.value?.length ?? 0} of {options.length}{' '}
+                          {field.value?.length ?? 0} of{' '}
+                          {options.length + MCP_ALWAYS_GRANTED_SCOPES.length}{' '}
                           selected
                         </span>
                       </legend>
+
+                      {/* Read is granted with every connection and cannot be
+                          turned off (spec §3.1), so it is a fixed row rather
+                          than a disabled checkbox: a dead control would say
+                          "you may not have this", and the truth is "you always
+                          have this". */}
+                      <div className="flex w-full items-start gap-3 rounded-lg border border-ds-brand/40 bg-ds-brand-soft px-3 py-2.5">
+                        <span
+                          aria-hidden
+                          className="mt-0.5 grid size-4 shrink-0 place-items-center rounded border border-ds-brand bg-ds-brand text-white"
+                        >
+                          <Check className="size-3" strokeWidth={3} />
+                        </span>
+                        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <span className="flex flex-wrap items-center gap-2">
+                            <span className="text-[13px] font-semibold leading-none text-foreground">
+                              {SCOPE_COPY.READ.label}
+                            </span>
+                            <span className="inline-flex h-[16px] items-center rounded-full border border-ds-brand/30 bg-ds-surface px-1.5 font-mono text-[9px] font-bold uppercase leading-none tracking-[0.6px] text-ds-brand">
+                              Always included
+                            </span>
+                          </span>
+                          <span className="text-[11px] leading-[1.5] text-muted-foreground">
+                            {SCOPE_COPY.READ.description}
+                          </span>
+                        </span>
+                      </div>
 
                       <div className="flex flex-col gap-1.5">
                         {options.map((scope) => {

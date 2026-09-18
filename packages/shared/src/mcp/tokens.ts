@@ -48,6 +48,14 @@ export const MCP_SCOPE_MIN_ROLE: Record<McpTokenScope, 'MEMBER' | 'ADMIN'> = {
 // on the member's behalf.
 export const MCP_DEFAULT_SCOPES: readonly McpTokenScope[] = ['READ'];
 
+// The scopes every credential carries, whatever was asked for (spec §3.1). A
+// connection that cannot read cannot usefully write: it cannot find the thing it
+// was asked to change, and every tool description that says "read it first"
+// would be describing something it cannot do. So `READ` is granted — not
+// "implied" — on issuance, and the surfaces render it as a fixed choice rather
+// than one that can be turned off.
+export const MCP_ALWAYS_GRANTED_SCOPES: readonly McpTokenScope[] = ['READ'];
+
 // ── Canonical token shape ──
 
 // A recognisable, greppable prefix: log redaction, secret scanners, and

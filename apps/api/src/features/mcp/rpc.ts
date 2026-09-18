@@ -18,8 +18,11 @@ import { RateLimitError } from '../../common/errors/httpErrors.js';
 import { logger } from '../../common/logger/index.js';
 import { resolveMcpAuth } from './auth.js';
 import {
+  invalidArgumentsResult,
   jsonRpcErrorResponse,
   jsonRpcResult,
+  missingScopeResult,
+  toToolResultFromError,
   type JsonRpcId,
 } from './errors.js';
 import { checkTokenRateLimit, rateLimitToolResult } from './rateLimit.js';
@@ -515,10 +518,7 @@ export async function handleMcpMessage(
       const name = typeof params.name === 'string' ? params.name : '';
       const entry = findTool(name);
 
-      if (!entry) {
-        // Until M5 registers the read tools this is *every* call — and the
-        // protocol's own answer for an unknown name is invalid params, naming
-        // what the caller can do instead.
+      if (entry === undefined) {
         return fail(
           400,
           MCP_ERROR_CODES.invalidParams,
@@ -526,21 +526,106 @@ export async function handleMcpMessage(
         );
       }
 
-      // A registered tool whose handler has not shipped (or whose definition
-      // arrived ahead of its wiring): it must never be advertised and then
-      // silently dropped, so this is a loud server fault. M5 fills the handlers
-      // in and calls them with `auth.credential` and `auth.context` — the same
-      // pair every service expects from the cookie path.
-      logger.error(
-        { requestId, tool: name, id, tokenId: auth.credential.tokenId },
-        'mcp.tool.unimplemented',
-      );
+      // Discovery is scope-filtered, and so is dispatch (§5.4). A tool that is
+      // not advertised must not be callable — otherwise the scope list would be
+      // advice rather than a gate, and a credential could reach further than the
+      // surface it was shown.
+      if (!auth.credential.scopes.includes(entry.scope)) {
+        logger.warn(
+          {
+            requestId,
+            tool: name,
+            tokenId: auth.credential.tokenId,
+            requiredScope: entry.scope,
+          },
+          'mcp.tool.scope_denied',
+        );
 
-      return fail(
-        500,
-        MCP_ERROR_CODES.internalError,
-        'That tool is not available yet.',
-      );
+        return {
+          status: 200,
+          body: jsonRpcResult(id, missingScopeResult(entry.scope)),
+        };
+      }
+
+      // The tool's own contract, checked before anything is read. Argument keys
+      // are what the log line gets — never values, which can be a description or
+      // an address (§10).
+      const rawArguments = (params as { arguments?: unknown }).arguments;
+      const argumentKeys =
+        typeof rawArguments === 'object' && rawArguments !== null
+          ? Object.keys(rawArguments)
+          : [];
+      const parsed = entry.argumentsSchema.safeParse(rawArguments ?? {});
+
+      // A tool result, not a protocol error: the call was understood, and its
+      // arguments are the caller's to get right (§6.3, §8.2).
+      if (!parsed.success) {
+        logger.info(
+          {
+            requestId,
+            method,
+            tool: name,
+            tokenId: auth.credential.tokenId,
+            argumentKeys,
+            invalidArguments: parsed.error.issues.map((issue) =>
+              issue.path.join('.'),
+            ),
+          },
+          'mcp.tool.invalid_arguments',
+        );
+
+        return {
+          status: 200,
+          body: jsonRpcResult(id, invalidArgumentsResult(parsed.error)),
+        };
+      }
+
+      const startedAt = Date.now();
+
+      try {
+        const result = await entry.handler(parsed.data, {
+          context: auth.context,
+          credential: auth.credential,
+          ...(requestId !== undefined ? { requestId } : {}),
+        });
+
+        logger.info(
+          {
+            requestId,
+            method,
+            tool: name,
+            tokenId: auth.credential.tokenId,
+            workspaceId: auth.context.workspaceId,
+            argumentKeys,
+            durationMs: Date.now() - startedAt,
+            isError: result.isError === true,
+            resultBytes: JSON.stringify(result).length,
+          },
+          'mcp.tool.called',
+        );
+
+        return { status: 200, body: jsonRpcResult(id, result) };
+      } catch (error) {
+        logger.error(
+          {
+            requestId,
+            method,
+            tool: name,
+            tokenId: auth.credential.tokenId,
+            durationMs: Date.now() - startedAt,
+            err: error,
+          },
+          'mcp.tool.failed',
+        );
+
+        // A domain failure becomes text the caller can act on; anything else
+        // becomes the generic sentence plus the request id — never the driver's
+        // own words (§8.2).
+        return {
+          status: 200,
+          body: jsonRpcResult(id, toToolResultFromError(error, requestId)),
+        };
+      }
     }
 
     default:

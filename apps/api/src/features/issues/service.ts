@@ -286,6 +286,55 @@ async function assertLabelsInWorkspace(
 }
 
 export const issuesService = {
+  // ── Identifier resolution (MCP read tools) ─────────────────────────────
+
+  /**
+   * Turn what a caller says — `SHIP-42`, or an internal id — into the issue, in
+   * whatever state that issue is in.
+   *
+   * The list endpoint hides archived work unless it is asked for; this
+   * deliberately does not, because reading *one* thing you already hold an
+   * identifier for is not a browse — and an identifier is exactly what a person
+   * quotes when they mean "this one". Archived hits are still marked as archived
+   * on the card, which is the part the reader needs.
+   *
+   * `SHIP-42` resolves through the same `q` filter the UI's search box uses (the
+   * list service maps it to `seqNumber`), so there is one definition of what an
+   * identifier means. That filter ignores queries shorter than two characters —
+   * a one-character identifier therefore resolves to nothing rather than to an
+   * arbitrary issue.
+   */
+  async resolveRef(
+    context: WorkspaceRequestContext,
+    actorUserId: string,
+    identifier: string,
+  ): Promise<IssueCard | null> {
+    const trimmed = identifier.trim();
+
+    const byId = await issuesRepository.findByIdScoped(
+      prisma,
+      trimmed,
+      context.workspaceId,
+    );
+    if (byId !== null) return toCard(byId);
+
+    if (trimmed.length < 2) return null;
+
+    const archived = await issuesService.list(context, actorUserId, {
+      q: trimmed,
+      archived: 'true',
+    });
+    const archivedHit = archived.issues[0];
+    if (archivedHit !== undefined) return archivedHit;
+
+    const active = await issuesService.list(context, actorUserId, {
+      q: trimmed,
+      archived: 'false',
+    });
+
+    return active.issues[0] ?? null;
+  },
+
   // ── List (#1) ──────────────────────────────────────────────────────────
 
   async list(

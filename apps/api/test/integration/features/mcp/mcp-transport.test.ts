@@ -181,14 +181,34 @@ describe('POST /mcp — discovery', () => {
     );
   });
 
-  it('answers tools/list with an empty, deterministic, private list', async () => {
+  it('answers tools/list with the eight read tools, deterministically and privately', async () => {
     const first = await post(createTestApp(), rpcBody(MCP_METHODS.listTools));
     expect(first.status).toBe(200);
 
     const result = mcpListToolsResultSchema.parse(bodyOf(first).result);
-    // The M3 gate: a client connects and gets a *valid* tool list, which is
-    // empty until M5 registers the read tools.
-    expect(result.tools).toEqual([]);
+
+    // M5 registers the read tools, in the order the registry declares them —
+    // that order is what a client caches against, so it is asserted by name.
+    expect(result.tools.map((tool) => tool.name)).toEqual([
+      'shipyard_list_issues',
+      'shipyard_get_issue',
+      'shipyard_search',
+      'shipyard_list_projects',
+      'shipyard_list_cycles',
+      'shipyard_workspace_overview',
+      'shipyard_recent_activity',
+      'shipyard_list_members',
+    ]);
+
+    for (const tool of result.tools) {
+      // `destructiveHint` defaults to *true* in the spec, so silence would
+      // label all eight read tools as destructive.
+      expect(tool.annotations?.readOnlyHint).toBe(true);
+      expect(tool.annotations?.destructiveHint).toBe(false);
+      expect(tool.inputSchema.type).toBe('object');
+      expect(tool.description?.length ?? 0).toBeGreaterThan(40);
+    }
+
     expect(result.ttlMs).toBeGreaterThan(0);
     // Credential-dependent, so an intermediary must not share it.
     expect(result.cacheScope).toBe('private');
@@ -496,14 +516,54 @@ describe('POST /mcp — mirrored headers', () => {
     expect(mismatch.status).toBe(400);
     expect(bodyOf(mismatch).error?.code).toBe(MCP_ERROR_CODES.headerMismatch);
 
-    // Agreeing headers get past the mirrors — and then meet the registry, which
-    // is empty until M5.
+    // Agreeing headers get past the mirrors — and then reach the registry. The
+    // tool exists as of M5, so a mirrored call with no arguments is executed;
+    // this test is about the mirrors, and a matching pair is meant to get through.
     const agreed = await post(request, call, {
       [MCP_HEADERS.name]: 'shipyard_list_issues',
     });
-    expect(agreed.status).toBe(400);
-    expect(bodyOf(agreed).error?.code).toBe(MCP_ERROR_CODES.invalidParams);
-    expect(bodyOf(agreed).error?.message).toContain('tools/list');
+    expect(agreed.status).toBe(200);
+    expect(bodyOf(agreed).result).toBeDefined();
+
+    // A name that is not in the registry is invalid params, naming the way out.
+    const unknown = await post(
+      request,
+      rpcBody(MCP_METHODS.callTool, { name: 'shipyard_delete_issue' }),
+      { [MCP_HEADERS.name]: 'shipyard_delete_issue' },
+    );
+    expect(unknown.status).toBe(400);
+    expect(bodyOf(unknown).error?.code).toBe(MCP_ERROR_CODES.invalidParams);
+    expect(bodyOf(unknown).error?.message).toContain('tools/list');
+  });
+
+  it('answers invalid tool arguments with a tool result, not a protocol error', async () => {
+    const request = createTestApp();
+
+    const res = await post(
+      request,
+      rpcBody(MCP_METHODS.callTool, {
+        name: 'shipyard_list_issues',
+        arguments: { limit: 999 },
+      }),
+      { [MCP_HEADERS.name]: 'shipyard_list_issues' },
+    );
+
+    // 200: the message was understood, and the arguments are the caller's to fix
+    // (§6.3, §8.2). A 4xx here would tell a model to give up on a tool it can use.
+    expect(res.status).toBe(200);
+    expect(bodyOf(res).error).toBeUndefined();
+
+    const result = bodyOf(res).result as {
+      isError?: boolean;
+      content: { type: string; text?: string }[];
+    };
+    const text = result.content
+      .map((block) => (block.type === 'text' ? (block.text ?? '') : ''))
+      .join('\n');
+
+    expect(result.isError).toBe(true);
+    expect(text).toContain('limit');
+    expect(text).toContain('Call the tool again');
   });
 
   it('accepts mirrored values that arrive base64-wrapped', async () => {

@@ -60,11 +60,17 @@ export const MCP_ERROR_CODES = {
   unsupportedProtocolVersion: -32022,
 } as const;
 
-// Namespaced `_meta` keys for server-side diagnostics that must NOT become
-// model-visible prose: the domain error code and the request id ride here, so
-// logs can be joined to a report without spending tokens or inviting the model
-// to pattern-match on a code the sentence already explained.
+// Namespaced `_meta` keys, both directions of the conversation:
+//   - the client's half — the protocol version and client identity it declares
+//     per request (nothing here is ever trusted for authorization);
+//   - the server's half — diagnostics that must NOT become model-visible prose:
+//     the domain error code and the request id ride here, so logs can be joined
+//     to a report without spending tokens or inviting the model to
+//     pattern-match on a code the sentence already explained.
 export const MCP_META_KEYS = {
+  protocolVersion: 'io.modelcontextprotocol/protocolVersion',
+  clientInfo: 'io.modelcontextprotocol/clientInfo',
+  clientCapabilities: 'io.modelcontextprotocol/clientCapabilities',
   serverInfo: 'io.modelcontextprotocol/serverInfo',
   errorCode: 'io.shipyard/errorCode',
   requestId: 'io.shipyard/requestId',
@@ -96,11 +102,11 @@ export type JsonRpcNotification = z.infer<typeof jsonRpcNotificationSchema>;
 // `MCP-Protocol-Version` header; clientInfo/clientCapabilities are recorded
 // for diagnostics and never trusted for authorization.
 export const mcpRequestMetaSchema = z.object({
-  'io.modelcontextprotocol/protocolVersion': z.string().min(1),
-  'io.modelcontextprotocol/clientInfo': z
+  [MCP_META_KEYS.protocolVersion]: z.string().min(1),
+  [MCP_META_KEYS.clientInfo]: z
     .object({ name: z.string(), version: z.string() })
     .optional(),
-  'io.modelcontextprotocol/clientCapabilities': z
+  [MCP_META_KEYS.clientCapabilities]: z
     .record(z.string(), z.unknown())
     .optional(),
 });

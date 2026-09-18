@@ -82,3 +82,11 @@ export function scopesExceedingRole(
     (scope) => MCP_SCOPE_MIN_ROLE[scope] === 'ADMIN' && !canAdminister,
   );
 }
+
+/**
+ * `lastUsedAt` is best-effort and written at most once per window (data-model
+ * D6). A busy agent would otherwise turn every tool call into a write, and the
+ * field exists to answer "is this credential still in use?" — a question a
+ * minute of resolution answers just as well as a millisecond.
+ */
+export const MCP_LAST_USED_THROTTLE_MS = 60 * 1000;

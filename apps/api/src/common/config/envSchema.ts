@@ -26,6 +26,16 @@ export const envSchema = z.object({
     .max(86400000)
     .default(300000),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().min(1).max(100000).default(30),
+  // MCP per-token limits (F13 §10). Counted per credential, not per IP, because
+  // agents share an IP; the ceiling is high enough for a real working session and
+  // low enough that a runaway loop is stopped before it floods the database.
+  MCP_RATE_LIMIT_WINDOW_MS: z.coerce
+    .number()
+    .int()
+    .min(1000)
+    .max(86400000)
+    .default(60000),
+  MCP_RATE_LIMIT_MAX: z.coerce.number().int().min(1).max(100000).default(120),
   API_URL: z.string().url().default('http://localhost:4000'),
   WEB_URL: z.string().url().default('http://localhost:3000'),
   LOG_LEVEL: z

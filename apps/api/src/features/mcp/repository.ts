@@ -122,4 +122,30 @@ export const mcpTokensRepository = {
       select: tokenCardSelect,
     });
   },
+
+  /**
+   * Stamp `lastUsedAt`, but only outside the throttle window (data-model D6).
+   *
+   * The condition lives in the `WHERE`, so this is one atomic statement: two
+   * requests arriving together cannot both write, nothing has to be read first,
+   * and the caller learns from `count` whether it was the request that did the
+   * stamping. A row still inside its window matches nothing and costs nothing.
+   */
+  touchLastUsed(
+    client: DbClient,
+    id: string,
+    seenAt: Date,
+    throttleMs: number,
+  ) {
+    return client.mcpToken.updateMany({
+      where: {
+        id,
+        OR: [
+          { lastUsedAt: null },
+          { lastUsedAt: { lt: new Date(seenAt.getTime() - throttleMs) } },
+        ],
+      },
+      data: { lastUsedAt: seenAt },
+    });
+  },
 };

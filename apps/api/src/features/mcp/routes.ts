@@ -100,9 +100,10 @@ workspaceAgentTokensRouter.delete(
 // browser only through the Next rewrite (ADR-005): the API port stays
 // unpublished, so the public path is `https://<web-host>/mcp`.
 //
-// M3 (this milestone) is transport + discovery. Credential resolution is M4 —
-// until it lands, this endpoint answers `server/discover` and `tools/list` for
-// anyone who can reach it, which is why local-only exposure matters right now.
+// M3 built the transport and discovery; M4 added the second door — credential
+// resolution (bearer token → live membership) and the per-token request budget —
+// so from M4 on, every request that reaches dispatch has been authenticated. The
+// tools themselves arrive in M5.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const mcpRouter = Router();
@@ -142,17 +143,35 @@ function mcpMethodNotAllowed(request: Request, response: Response): void {
 mcpRouter.get('/', mcpMethodNotAllowed);
 mcpRouter.delete('/', mcpMethodNotAllowed);
 
-mcpRouter.post('/', (request: Request, response: Response) => {
-  const outcome = handleMcpMessage(request);
+mcpRouter.post(
+  '/',
+  (request: Request, response: Response, next: NextFunction) => {
+    void (async () => {
+      try {
+        const outcome = await handleMcpMessage(request);
 
-  // A notification is acknowledged with an empty 202 — no body to send.
-  if (outcome.body === undefined) {
-    response.status(outcome.status).end();
-    return;
-  }
+        if (outcome.headers !== undefined) {
+          for (const [name, value] of Object.entries(outcome.headers)) {
+            response.setHeader(name, value);
+          }
+        }
 
-  response.status(outcome.status).json(outcome.body);
-});
+        // A notification is acknowledged with an empty 202 — no body to send.
+        if (outcome.body === undefined) {
+          response.status(outcome.status).end();
+          return;
+        }
+
+        response.status(outcome.status).json(outcome.body);
+      } catch (error) {
+        // The pipeline throws for caller-level failures (401, 429) so the
+        // platform's error handler renders them, exactly as it does for the
+        // cookie-authenticated routes.
+        next(error);
+      }
+    })();
+  },
+);
 
 /**
  * Turns an unparseable JSON body into the JSON-RPC error this surface promises,

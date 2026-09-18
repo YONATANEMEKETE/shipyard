@@ -4,9 +4,10 @@ import { z } from 'zod';
 // MCP protocol contracts
 //
 // Owned by the mcp module. Consumed by the API (`/mcp`'s envelope, version and
-// result handling) and by tests. Mirrors the MCP specification revision
-// 2026-07-28 — see shipyard-design/04-Engineering/features/mcp/api-design.md §5
-// and ADR-005.
+// result handling) and by tests. Mirrors the MCP specification revisions this
+// server speaks — `2026-07-28`, and the legacy era's `2025-11-25` for clients
+// that predate it — see shipyard-design/04-Engineering/features/mcp/api-design.md
+// §5 and ADR-005.
 //
 // Scope discipline: this file describes the *wire* — JSON-RPC envelopes, the
 // protocol revision, error codes, and the shape of a tool result. It does not
@@ -15,14 +16,54 @@ import { z } from 'zod';
 // (M5 reads, M7 writes) so a contract never ships ahead of its handler.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ── Protocol revision ──
+// ── Protocol revisions and eras ──
 
-// The single revision this server speaks. Modern revisions carry version,
-// identity and capabilities as per-request metadata — no `initialize`
-// handshake, no protocol-level sessions, no standalone GET stream (ADR-005).
+// The revision this server prefers. Modern revisions carry version, identity and
+// capabilities as per-request metadata — no `initialize` handshake, no
+// protocol-level sessions, no standalone GET stream (ADR-005).
 export const MCP_PROTOCOL_VERSION = '2026-07-28';
 
-export const MCP_SUPPORTED_VERSIONS = [MCP_PROTOCOL_VERSION] as const;
+// The newest revision of the previous era. This server answers its handshake
+// **statelessly** — no `Mcp-Session-Id`, no GET stream — which that revision
+// permits, and which is the only way serving two eras is compatible with
+// ADR-005's "no sessions" decision.
+//
+// It is also the revision real clients speak today: `@modelcontextprotocol/sdk`
+// 1.30.0 (shipped with `@modelcontextprotocol/inspector` 2.7.0) negotiates up to
+// `2025-11-25` and knows nothing newer. Accepting this era is what lets a real
+// agent connect directly, instead of through a bridge we would have to build —
+// and a bridge would dogfood a path nobody deploys.
+export const MCP_LEGACY_PROTOCOL_VERSION = '2025-11-25';
+
+// Both revisions this server speaks, most-preferred first. This list is
+// advertised verbatim in `server/discover` and in version diagnostics.
+export const MCP_SUPPORTED_VERSIONS = [
+  MCP_PROTOCOL_VERSION,
+  MCP_LEGACY_PROTOCOL_VERSION,
+] as const;
+
+// The two eras a request can belong to. A request's era decides which envelope
+// rules apply, and the rules genuinely differ: `_meta` and the mirrored headers
+// are the modern revision's confused-deputy controls, and a legacy client has no
+// such fields to send.
+export const MCP_ERA = {
+  modern: 'modern',
+  legacy: 'legacy',
+} as const;
+
+export type McpEra = (typeof MCP_ERA)[keyof typeof MCP_ERA];
+
+/**
+ * The era a revision belongs to, or `null` for a revision this server does not
+ * speak. Callers must treat `null` as unsupported rather than guessing: a
+ * request whose version is unrecognized is answered with the versions that are.
+ */
+export function eraOfVersion(version: string): McpEra | null {
+  if (version === MCP_PROTOCOL_VERSION) return MCP_ERA.modern;
+  if (version === MCP_LEGACY_PROTOCOL_VERSION) return MCP_ERA.legacy;
+
+  return null;
+}
 
 // ── Transport header names ──
 
@@ -44,6 +85,21 @@ export const MCP_METHODS = {
 
 export type McpMethod = (typeof MCP_METHODS)[keyof typeof MCP_METHODS];
 
+// The previous era's conversation openers. `initialize` is the handshake that
+// `server/discover` replaced; `notifications/initialized` is the client's
+// follow-up, which that era requires and which does nothing here — there is no
+// session to confirm, so it is acknowledged and forgotten.
+//
+// Both are **recognized so the server can answer them**, not merely diagnose
+// them: answering is the whole point of accepting the legacy era.
+export const MCP_LEGACY_METHODS = {
+  initialize: 'initialize',
+  initialized: 'notifications/initialized',
+} as const;
+
+export type McpLegacyMethod =
+  (typeof MCP_LEGACY_METHODS)[keyof typeof MCP_LEGACY_METHODS];
+
 // ── Error codes ──
 
 // Standard JSON-RPC codes plus the two this revision reserves for itself
@@ -59,6 +115,11 @@ export const MCP_ERROR_CODES = {
   headerMismatch: -32020,
   unsupportedProtocolVersion: -32022,
 } as const;
+
+// The `params` member that carries per-request metadata. Named here because the
+// envelope requires it (modern only) and the era classifier reads its presence
+// as the signal that a request is modern — one spelling, two uses.
+export const MCP_PARAMS_META_KEY = '_meta';
 
 // Namespaced `_meta` keys, both directions of the conversation:
 //   - the client's half — the protocol version and client identity it declares
@@ -210,6 +271,69 @@ export const mcpListToolsResultSchema = z.object({
 });
 
 export type McpListToolsResult = z.infer<typeof mcpListToolsResultSchema>;
+
+// ── Legacy-era envelopes (revision 2025-11-25) ──
+//
+// The same logical results in that era's shape. Three differences matter:
+//   - `serverInfo` is **top-level** in an `initialize` result, not in `_meta` —
+//     per-request `_meta` did not exist yet, and the handshake was the only
+//     place identity travelled;
+//   - `resultType`, `ttlMs` and `cacheScope` are modern fields. The schemas
+//     below omit them, and parsing a modern result through one *strips* them —
+//     which is precisely the projection the transport applies per era;
+//   - `_meta` is legal in both eras (it is an open field in that revision too),
+//     so the diagnostics that ride there survive the era change.
+//
+// The tool layer stays era-agnostic: handlers return the modern shape and the
+// transport projects it. Nothing below the transport knows which era asked.
+export const mcpLegacyInitializeParamsSchema = z.object({
+  protocolVersion: z.string().min(1),
+  // Required from 2025-06-18 onward; optional here so a client from just before
+  // that is answered rather than rejected over a field it did not know to send.
+  capabilities: z.record(z.string(), z.unknown()).optional(),
+  clientInfo: z.object({ name: z.string(), version: z.string() }).optional(),
+});
+
+export type McpLegacyInitializeParams = z.infer<
+  typeof mcpLegacyInitializeParamsSchema
+>;
+
+// What the server answers the handshake with. `protocolVersion` is **ours**, not
+// the client's: that revision's negotiation rule is that a server which cannot
+// speak the requested version answers with one it does, and the client decides
+// whether to continue. No `Mcp-Session-Id` accompanies it — this server is
+// stateless, which that revision permits and ADR-005 requires.
+export const mcpLegacyInitializeResultSchema = z.object({
+  protocolVersion: z.string().min(1),
+  capabilities: z.object({
+    tools: z.object({ listChanged: z.boolean().optional() }).optional(),
+  }),
+  serverInfo: mcpServerInfoSchema,
+  instructions: z.string().optional(),
+});
+
+export type McpLegacyInitializeResult = z.infer<
+  typeof mcpLegacyInitializeResultSchema
+>;
+
+export const mcpLegacyListToolsResultSchema = z.object({
+  tools: z.array(mcpToolSchema),
+});
+
+export type McpLegacyListToolsResult = z.infer<
+  typeof mcpLegacyListToolsResultSchema
+>;
+
+export const mcpLegacyCallToolResultSchema = z.object({
+  content: z.array(mcpTextContentSchema),
+  structuredContent: z.unknown().optional(),
+  isError: z.boolean().optional(),
+  _meta: z.record(z.string(), z.unknown()).optional(),
+});
+
+export type McpLegacyCallToolResult = z.infer<
+  typeof mcpLegacyCallToolResultSchema
+>;
 
 // JSON-RPC error response body (protocol-level failures only).
 export const jsonRpcErrorSchema = z.object({

@@ -1,9 +1,20 @@
 import {
   mcpToolSchema,
+  type McpCallToolResult,
   type McpTokenScope,
   type McpTool,
 } from '@shipyard/shared';
+import type { z } from 'zod';
 import { logger } from '../../common/logger/index.js';
+import type { McpToolContext } from './tools/context.js';
+import { getIssueTool } from './tools/get-issue.js';
+import { listCyclesTool } from './tools/list-cycles.js';
+import { listIssuesTool } from './tools/list-issues.js';
+import { listMembersTool } from './tools/list-members.js';
+import { listProjectsTool } from './tools/list-projects.js';
+import { recentActivityTool } from './tools/recent-activity.js';
+import { searchTool } from './tools/search.js';
+import { workspaceOverviewTool } from './tools/workspace-overview.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // The tool registry (F13)
@@ -12,12 +23,14 @@ import { logger } from '../../common/logger/index.js';
 // binary, there is no runtime registration and no database table for it. That is
 // what makes `tools/list` cacheable and its order deterministic.
 //
-// M3 (this milestone) ships the registry **empty** — the transport, discovery
-// and the tools/list contract are what it establishes, and the gate is an MCP
-// client connecting and receiving a valid, empty tool list. The eight read tools
-// arrive in M5, the writes in M7, the gated lifecycle tools in M8; each lands
-// here as one entry plus its handler, in the order below, because that order is
-// what clients see.
+// M5 ships the eight read tools. The writes arrive in M7, the gated lifecycle
+// tools in M8; each lands here as one entry plus its handler, appended in the
+// order below, because that order is what clients see.
+//
+// A tool's argument contract is the Zod schema from `packages/shared` — the same
+// object the handler validates with. The JSON Schema advertised to the model is
+// **generated** from it here, so the advertised contract and the enforced one
+// cannot drift; there is no second, hand-written copy to forget.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface McpToolEntry {
@@ -25,14 +38,33 @@ export interface McpToolEntry {
   readonly scope: McpTokenScope;
   /** The definition as advertised — names, descriptions, JSON Schema, hints. */
   readonly definition: McpTool;
+  /** The same contract the handler runs, kept for dispatch-time validation. */
+  readonly argumentsSchema: z.ZodType;
+  /** Validated arguments plus the resolved caller → a tool result. */
+  readonly handler: (
+    args: unknown,
+    tool: McpToolContext,
+  ) => Promise<McpCallToolResult>;
 }
 
 /**
  * Fixed order = the order `tools/list` returns, always. Stable prefixes improve
  * client-side caching and prompt-cache hits (§5.4); a `Map` or a sort over a
  * dynamic source would trade that away for nothing.
+ *
+ * Reads first, in the order a reader needs them: browse, retrieve, discover,
+ * then the orientation tools that answer a question with one call.
  */
-export const MCP_TOOL_REGISTRY: readonly McpToolEntry[] = [];
+export const MCP_TOOL_REGISTRY: readonly McpToolEntry[] = [
+  listIssuesTool,
+  getIssueTool,
+  searchTool,
+  listProjectsTool,
+  listCyclesTool,
+  workspaceOverviewTool,
+  recentActivityTool,
+  listMembersTool,
+];
 
 /**
  * The tools a caller may discover.

@@ -131,9 +131,26 @@ describe('origin trust', () => {
 });
 
 describe('the registry', () => {
-  it('advertises nothing while no tool has shipped (M3)', () => {
-    expect(advertisedTools()).toEqual([]);
-    expect(findTool('shipyard_list_issues')).toBeUndefined();
+  it('advertises the eight read tools, in a fixed order (M5)', () => {
+    expect(advertisedTools().map((tool) => tool.name)).toEqual([
+      'shipyard_list_issues',
+      'shipyard_get_issue',
+      'shipyard_search',
+      'shipyard_list_projects',
+      'shipyard_list_cycles',
+      'shipyard_workspace_overview',
+      'shipyard_recent_activity',
+      'shipyard_list_members',
+    ]);
+
+    // Every tool shipped so far is a read tool, so a credential that carries no
+    // READ scope discovers nothing at all — the pruning is asserted by name
+    // because a refactor must not be able to leak a write tool into a list.
+    expect(advertisedTools([])).toEqual([]);
+    expect(advertisedTools(['ISSUES_WRITE'])).toEqual([]);
+
+    expect(findTool('shipyard_list_issues')).toBeDefined();
+    expect(findTool('shipyard_delete_issue')).toBeUndefined();
   });
 });
 

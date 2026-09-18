@@ -5,6 +5,7 @@ import {
 } from '@shipyard/shared';
 import { AppError } from '../../common/errors/AppError.js';
 import { ErrorCodes } from '../../common/errors/codes.js';
+import type { ZodError } from 'zod';
 
 /**
  * MCP domain errors (api-design.md §7). Each extends {@link AppError} so the
@@ -34,6 +35,8 @@ export const McpErrorCodes = {
   /** Use-time: this credential lacks the permission the action needs. */
   SCOPE_MISSING: 'SCOPE_MISSING',
   RATE_LIMITED: 'RATE_LIMITED',
+  /** The tool was called with arguments its own contract rejects (§6.3). */
+  INVALID_ARGUMENTS: 'INVALID_ARGUMENTS',
 } as const;
 
 export type McpErrorCode = (typeof McpErrorCodes)[keyof typeof McpErrorCodes];
@@ -214,6 +217,38 @@ export function missingScopeResult(required: McpTokenScope): McpCallToolResult {
     _meta: {
       [MCP_META_KEYS.errorCode]: McpErrorCodes.SCOPE_MISSING,
       requiredScope: required,
+    },
+  };
+}
+
+/**
+ * The arguments a tool was called with do not satisfy its own contract
+ * (api-design §6.3, §8.2).
+ *
+ * A **tool result**, never a JSON-RPC error: the message was understood
+ * perfectly, and the model is the one that can fix it — retrying the same call
+ * is only useful if it is told which argument was wrong and what was expected.
+ * Every failing issue is listed, not just the first, because a model that fixes
+ * them one per round trip costs a workspace four requests to learn one schema.
+ */
+export function invalidArgumentsResult(error: ZodError): McpCallToolResult {
+  const details = error.issues.map((issue) => {
+    const path = issue.path.join('.');
+    return path === '' ? issue.message : `${path}: ${issue.message}`;
+  });
+
+  return {
+    resultType: 'complete',
+    content: [
+      {
+        type: 'text',
+        text: `These arguments are not valid, so nothing was read: ${details.join('; ')}. Call the tool again with the corrected arguments.`,
+      },
+    ],
+    isError: true,
+    _meta: {
+      [MCP_META_KEYS.errorCode]: McpErrorCodes.INVALID_ARGUMENTS,
+      invalidArguments: error.issues.map((issue) => issue.path.join('.')),
     },
   };
 }

@@ -109,4 +109,17 @@ export const mcpTokensRepository = {
       select: tokenCardSelect,
     });
   },
+
+  /**
+   * Hard delete — the row and its hash are gone, so the credential can never
+   * resolve again and it finally leaves the member's list. Scoping is the
+   * caller's job: the service resolves the row through `findByIdScoped` first,
+   * so a foreign id never reaches this query.
+   */
+  remove(client: DbClient, id: string) {
+    return client.mcpToken.delete({
+      where: { id },
+      select: tokenCardSelect,
+    });
+  },
 };

@@ -565,6 +565,194 @@ describe('agent access tokens (integration)', () => {
     expect(foreignRow?.revokedAt).toBeNull();
   });
 
+  // ── Deletion ───────────────────────────────────────────────────────────
+
+  it('deletes a revoked token, removing the row and the list entry', async () => {
+    const { card } = await createToken(owner.cookies, { label: 'spent' });
+    await request
+      .post(`${tokensUrl(ws.slug)}/${card.id}/revoke`)
+      .set('Cookie', owner.cookies);
+
+    const deleted = await request
+      .delete(`${tokensUrl(ws.slug)}/${card.id}`)
+      .set('Cookie', owner.cookies)
+      .send({ confirm: true });
+
+    expect(deleted.status).toBe(200);
+    expect(dataOf<{ deletedTokenId: string }>(deleted).deletedTokenId).toBe(
+      card.id,
+    );
+
+    // This is the whole point of the route: the row is gone, unlike revocation
+    // which keeps it as history.
+    expect(
+      await prisma.mcpToken.findUnique({ where: { id: card.id } }),
+    ).toBeNull();
+
+    const list = await request
+      .get(tokensUrl(ws.slug))
+      .set('Cookie', owner.cookies);
+    expect(dataOf<{ tokens: TokenCard[] }>(list).tokens).toHaveLength(0);
+  });
+
+  it('deletes a live token without revoking first, and it stops resolving', async () => {
+    const { card } = await createToken(owner.cookies, { label: 'leaked' });
+
+    expect((await mcpTokensService.verify(card.token))?.tokenId).toBe(card.id);
+
+    const deleted = await request
+      .delete(`${tokensUrl(ws.slug)}/${card.id}`)
+      .set('Cookie', owner.cookies)
+      .send({ confirm: true });
+    expect(deleted.status).toBe(200);
+
+    // The hash row is gone, so the credential rejects under the same
+    // one-predicate rule as a revoked or expired one (api-design §3.1).
+    expect(await mcpTokensService.verify(card.token)).toBeNull();
+  });
+
+  it('requires the confirmation body (400 VALIDATION_ERROR)', async () => {
+    const { card } = await createToken(owner.cookies, {
+      label: 'needs confirm',
+    });
+
+    // The route boundary rejects it, exactly like the comment-delete route —
+    // CONFIRMATION_REQUIRED belongs to the services that check the flag
+    // themselves (workspace archive, avatar clear).
+    const withoutBody = await request
+      .delete(`${tokensUrl(ws.slug)}/${card.id}`)
+      .set('Cookie', owner.cookies);
+    expect(withoutBody.status).toBe(400);
+    expect(errorCodeOf(withoutBody)).toBe('VALIDATION_ERROR');
+
+    expect(
+      await prisma.mcpToken.findUnique({ where: { id: card.id } }),
+    ).not.toBeNull();
+  });
+
+  it('lets a member delete their own token but not another member’s', async () => {
+    const member = await addMember(uniqueEmail('member-deleter'));
+    const other = await addMember(uniqueEmail('other-deleter'));
+
+    const mine = await createToken(member.cookies, { label: 'mine' });
+    const theirs = await createToken(other.cookies, { label: 'theirs' });
+
+    const own = await request
+      .delete(`${tokensUrl(ws.slug)}/${mine.card.id}`)
+      .set('Cookie', member.cookies)
+      .send({ confirm: true });
+    expect(own.status).toBe(200);
+
+    const foreign = await request
+      .delete(`${tokensUrl(ws.slug)}/${theirs.card.id}`)
+      .set('Cookie', member.cookies)
+      .send({ confirm: true });
+    // Identical to an unknown id — deletion cannot probe either.
+    expect(foreign.status).toBe(404);
+    expect(errorCodeOf(foreign)).toBe('TOKEN_NOT_FOUND');
+
+    expect(
+      await prisma.mcpToken.findUnique({ where: { id: theirs.card.id } }),
+    ).not.toBeNull();
+  });
+
+  it('lets an admin delete a member’s token', async () => {
+    const admin = await addMember(uniqueEmail('admin-deleter'), 'ADMIN');
+    const member = await addMember(uniqueEmail('deletion-target'));
+    const { card } = await createToken(member.cookies, { label: 'member bot' });
+
+    const deleted = await request
+      .delete(`${tokensUrl(ws.slug)}/${card.id}`)
+      .set('Cookie', admin.cookies)
+      .send({ confirm: true });
+
+    expect(deleted.status).toBe(200);
+    expect(
+      await prisma.mcpToken.findUnique({ where: { id: card.id } }),
+    ).toBeNull();
+  });
+
+  it('answers a second delete, unknown, malformed and foreign ids alike (404)', async () => {
+    const foreign = await createForeignWorkspace();
+    const { card } = await createToken(owner.cookies, { label: 'once' });
+
+    await request
+      .delete(`${tokensUrl(ws.slug)}/${card.id}`)
+      .set('Cookie', owner.cookies)
+      .send({ confirm: true });
+
+    // Not idempotent like revoke: the row is gone, so there is nothing to
+    // report on. The web layer treats this as success (see the hook).
+    const again = await request
+      .delete(`${tokensUrl(ws.slug)}/${card.id}`)
+      .set('Cookie', owner.cookies)
+      .send({ confirm: true });
+    expect(again.status).toBe(404);
+    expect(errorCodeOf(again)).toBe('TOKEN_NOT_FOUND');
+
+    const unknown = await request
+      .delete(`${tokensUrl(ws.slug)}/clx0000000000000000000000`)
+      .set('Cookie', owner.cookies)
+      .send({ confirm: true });
+    expect(unknown.status).toBe(404);
+    expect(errorCodeOf(unknown)).toBe('TOKEN_NOT_FOUND');
+
+    const malformed = await request
+      .delete(`${tokensUrl(ws.slug)}/not-a-cuid`)
+      .set('Cookie', owner.cookies)
+      .send({ confirm: true });
+    expect(malformed.status).toBe(400);
+    expect(errorCodeOf(malformed)).toBe('VALIDATION_ERROR');
+
+    const crossWorkspace = await request
+      .delete(`${tokensUrl(ws.slug)}/${foreign.tokenId}`)
+      .set('Cookie', owner.cookies)
+      .send({ confirm: true });
+    expect(crossWorkspace.status).toBe(404);
+    expect(errorCodeOf(crossWorkspace)).toBe('TOKEN_NOT_FOUND');
+
+    expect(
+      await prisma.mcpToken.findUnique({ where: { id: foreign.tokenId } }),
+    ).not.toBeNull();
+  });
+
+  it('deletes while the workspace is archived', async () => {
+    const { card } = await createToken(owner.cookies, {
+      label: 'archived cleanup',
+    });
+
+    const archived = await request
+      .post(`/api/v1/workspaces/${ws.slug}/archive`)
+      .set('Cookie', owner.cookies)
+      .send({ confirm: true });
+    expect(archived.status).toBe(200);
+
+    // Housekeeping is a security action: a frozen workspace must still let a
+    // member clear a dead credential out of their list.
+    const deleted = await request
+      .delete(`${tokensUrl(ws.slug)}/${card.id}`)
+      .set('Cookie', owner.cookies)
+      .send({ confirm: true });
+
+    expect(deleted.status).toBe(200);
+    expect(
+      await prisma.mcpToken.findUnique({ where: { id: card.id } }),
+    ).toBeNull();
+  });
+
+  it('requires a session to delete (401)', async () => {
+    const { card } = await createToken(owner.cookies, { label: 'no session' });
+
+    const res = await request
+      .delete(`${tokensUrl(ws.slug)}/${card.id}`)
+      .send({ confirm: true });
+
+    expect(res.status).toBe(401);
+    expect(
+      await prisma.mcpToken.findUnique({ where: { id: card.id } }),
+    ).not.toBeNull();
+  });
+
   // ── Resolution (the read side M4 builds on) ────────────────────────────
 
   it('resolves a live token and refuses every unusable credential identically', async () => {

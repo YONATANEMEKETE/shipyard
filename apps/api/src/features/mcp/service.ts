@@ -2,6 +2,7 @@ import {
   MCP_DEFAULT_SCOPES,
   type CreateMcpTokenRequest,
   type CreateMcpTokenResponse,
+  type DeleteMcpTokenResponse,
   type ListMcpTokensQuery,
   type ListMcpTokensResponse,
   type McpTokenCard,
@@ -32,7 +33,8 @@ import {
  * - the issuance ceiling: a token can never carry a scope above the caller's
  *   role, and `READ` is the default when none is asked for;
  * - an expiry that has already passed is rejected rather than minted dead;
- * - revocation is a timestamp (idempotent, never a delete);
+ * - revocation is a timestamp (idempotent); deletion is the explicit, final
+ *   removal of a row the member no longer wants to see;
  * - visibility: a member sees and revokes their own credentials, Owner/Admin
  *   may also see and revoke anyone's in the workspace;
  * - every unusable credential resolves identically (`null`) — revoked,
@@ -195,6 +197,57 @@ export const mcpTokensService = {
     );
 
     return toMcpTokenCard(revoked);
+  },
+
+  /**
+   * Delete a credential for good — the row and its hash leave the database, so
+   * it disappears from the list and can never resolve again.
+   *
+   * Visibility is revoke's rule exactly: the token's owner, or an Owner/Admin.
+   * Anyone else gets the identical `404 TOKEN_NOT_FOUND`, so deletion cannot be
+   * used to probe for other members' credentials either.
+   *
+   * Deleting a *live* token is allowed on purpose and behaves as
+   * revoke-and-forget: the hash row is gone, so `verify` rejects it under the
+   * same one-predicate rule as a revoked or expired one (api-design §3.1). The
+   * member does not have to revoke first to clean up.
+   *
+   * Not idempotent, unlike revoke: a second delete finds no row and answers
+   * `404`. The surface treats that as done (the row the caller wanted gone is
+   * gone) — see `useDeleteAgentToken` in the web app.
+   */
+  async remove(
+    context: WorkspaceRequestContext,
+    userId: string,
+    tokenId: string,
+  ): Promise<DeleteMcpTokenResponse> {
+    const row = await mcpTokensRepository.findByIdScoped(
+      prisma,
+      tokenId,
+      context.workspaceId,
+    );
+
+    if (!row || (row.userId !== userId && !isTokenManager(context.role))) {
+      throw new McpTokenNotFoundError();
+    }
+
+    await mcpTokensRepository.remove(prisma, row.id);
+
+    // The row is gone, so this is the only record left that it existed — which
+    // is why the log carries what the row said, and never the token or hash.
+    logger.info(
+      {
+        tokenId: row.id,
+        workspaceId: context.workspaceId,
+        userId,
+        ownerUserId: row.userId,
+        wasRevoked: row.revokedAt !== null,
+        label: row.label,
+      },
+      'mcp.token.deleted',
+    );
+
+    return { deletedTokenId: row.id };
   },
 
   /**

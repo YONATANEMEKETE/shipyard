@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   createMcpTokenSchema,
+  deleteMcpTokenSchema,
   listMcpTokensQuerySchema,
 } from '@shipyard/shared';
 import { requireSession } from '../../common/middlewares/requireSession.js';
@@ -9,6 +10,7 @@ import { resolveWorkspaceContext } from '../../common/guards/workspace-context.j
 import { slugParamsSchema, tokenIdParamsSchema } from './schemas.js';
 import {
   createMcpTokenController,
+  deleteMcpTokenController,
   listMcpTokensController,
   revokeMcpTokenController,
 } from './controller.js';
@@ -30,7 +32,10 @@ import {
  * - **list** works while archived — a member must always be able to see what
  *   they have issued;
  * - **revoke** works while archived — killing a leaked credential is a
- *   security action and must never be blocked by lifecycle state.
+ *   security action and must never be blocked by lifecycle state;
+ * - **delete** works while archived too — clearing a dead credential out of a
+ *   frozen workspace is the same security housekeeping, and it carries the
+ *   product's destructive-action confirmation body.
  *
  * `:slug` resolution is deliberately scoped to the router: `/mcp` itself is a
  * separate, token-authenticated surface (M3/M4) and shares no guard chain with
@@ -64,4 +69,15 @@ workspaceAgentTokensRouter.post(
   validate.params(tokenIdParamsSchema),
   resolveWorkspaceContext(),
   revokeMcpTokenController,
+);
+
+// Delete — the token's owner, or OWNER|ADMIN; removes the row for good, which
+// is how a revoked connection leaves the member's list. The literal
+// `{ confirm: true }` body is the product's destructive-endpoint contract.
+workspaceAgentTokensRouter.delete(
+  '/:tokenId',
+  requireSession,
+  validate.all({ params: tokenIdParamsSchema, body: deleteMcpTokenSchema }),
+  resolveWorkspaceContext(),
+  deleteMcpTokenController,
 );

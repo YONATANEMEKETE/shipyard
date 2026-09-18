@@ -298,6 +298,27 @@ export const addCommentArgumentsSchema = z
   })
   .strict();
 
+// ── The three gated lifecycle tools (api-design §6.3, M8) ──
+//
+// Archive and restore are reversible and are ordinary gated actions (spec
+// §3.4); permanent deletion is the one call that also needs a live Owner/Admin
+// role, re-asserted inside the owning service rather than trusted from issuance.
+//
+// All three take the same argument because all three act on the same thing — one
+// issue, named the way a person writes it. None of them asks the caller to **type
+// a confirmation**: that revision's rule is that a model-typed confirmation is
+// never consent (spec §3.4), so consent is the *host's* approval of a call
+// annotated `destructiveHint: true`, and the product's identifier-confirmation
+// contract is satisfied with the identifier this tool resolved itself.
+
+const lifecycleArgumentsSchema = z
+  .object({ issue: issueReferenceSchema })
+  .strict();
+
+export const archiveIssueArgumentsSchema = lifecycleArgumentsSchema;
+export const restoreIssueArgumentsSchema = lifecycleArgumentsSchema;
+export const deleteIssueArgumentsSchema = lifecycleArgumentsSchema;
+
 // ── Names ──
 
 // Prefixed and unique within this server (§5.4). Exported so the registry, the
@@ -317,6 +338,9 @@ export const MCP_TOOL_NAMES = {
   assignIssue: 'shipyard_assign_issue',
   blockIssue: 'shipyard_block_issue',
   addComment: 'shipyard_add_comment',
+  archiveIssue: 'shipyard_archive_issue',
+  restoreIssue: 'shipyard_restore_issue',
+  deleteIssue: 'shipyard_delete_issue',
 } as const;
 
 export type McpToolName = (typeof MCP_TOOL_NAMES)[keyof typeof MCP_TOOL_NAMES];
@@ -337,6 +361,9 @@ export const MCP_TOOL_ARGUMENTS = {
   [MCP_TOOL_NAMES.assignIssue]: assignIssueArgumentsSchema,
   [MCP_TOOL_NAMES.blockIssue]: blockIssueArgumentsSchema,
   [MCP_TOOL_NAMES.addComment]: addCommentArgumentsSchema,
+  [MCP_TOOL_NAMES.archiveIssue]: archiveIssueArgumentsSchema,
+  [MCP_TOOL_NAMES.restoreIssue]: restoreIssueArgumentsSchema,
+  [MCP_TOOL_NAMES.deleteIssue]: deleteIssueArgumentsSchema,
 } as const;
 
 // ── Result shaping (§7) ──

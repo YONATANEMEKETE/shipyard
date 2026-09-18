@@ -502,10 +502,12 @@ describe('POST /mcp — mirrored headers', () => {
     expect(bodyOf(agreed).result).toBeDefined();
 
     // A name that is not in the registry is invalid params, naming the way out.
+    // `shipyard_delete_project` is deliberately never offered (§6, "deliberately
+    // absent" — project/cycle/label deletion is not on this surface at all).
     const unknown = await post(
       request,
-      rpcBody(MCP_METHODS.callTool, { name: 'shipyard_delete_issue' }),
-      { [MCP_HEADERS.name]: 'shipyard_delete_issue' },
+      rpcBody(MCP_METHODS.callTool, { name: 'shipyard_delete_project' }),
+      { [MCP_HEADERS.name]: 'shipyard_delete_project' },
     );
     expect(unknown.status).toBe(400);
     expect(bodyOf(unknown).error?.code).toBe(MCP_ERROR_CODES.invalidParams);

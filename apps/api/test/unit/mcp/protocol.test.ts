@@ -164,6 +164,9 @@ describe('the registry', () => {
       'shipyard_assign_issue',
       'shipyard_block_issue',
       'shipyard_add_comment',
+      'shipyard_archive_issue',
+      'shipyard_restore_issue',
+      'shipyard_delete_issue',
     ]);
   });
 
@@ -184,11 +187,18 @@ describe('the registry', () => {
     expect(
       advertisedTools(['COMMENTS_WRITE']).map((tool) => tool.name),
     ).toEqual(['shipyard_add_comment']);
-    // The gated lifecycle tools arrive in M8, and are not reachable early.
-    expect(advertisedTools(['ISSUES_DELETE'])).toEqual([]);
+    // The gated lifecycle tools need their own scope, which is what makes them
+    // reachable only by a connection that was deliberately given it (M8).
+    expect(advertisedTools(['ISSUES_DELETE']).map((tool) => tool.name)).toEqual(
+      [
+        'shipyard_archive_issue',
+        'shipyard_restore_issue',
+        'shipyard_delete_issue',
+      ],
+    );
 
     expect(findTool('shipyard_list_issues')).toBeDefined();
-    expect(findTool('shipyard_delete_issue')).toBeUndefined();
+    expect(findTool('shipyard_delete_issue')).toBeDefined();
   });
 });
 

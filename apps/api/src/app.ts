@@ -38,7 +38,11 @@ import { notificationsRouter } from './features/notifications/routes.js';
 import { workspaceActivityRouter } from './features/activity/routes.js';
 import { workspaceSearchRouter } from './features/search/routes.js';
 import { workspaceDashboardRouter } from './features/dashboard/routes.js';
-import { workspaceAgentTokensRouter } from './features/mcp/routes.js';
+import {
+  mcpBodyParseErrorHandler,
+  mcpRouter,
+  workspaceAgentTokensRouter,
+} from './features/mcp/routes.js';
 import { settingsRouter } from './features/settings/routes.js';
 import { authExtensionRouter } from './features/auth/routes.js';
 import {
@@ -184,6 +188,22 @@ export function createApp(options: CreateAppOptions = {}): express.Express {
   if (env.NODE_ENV !== 'production') {
     app.use('/api/v1/test', testRouter);
   }
+
+  // MCP protocol endpoint (F13, M3) — one route, mounted at the API root
+  // because a credential is bound to a workspace and the workspace is never a
+  // path segment on this surface (ADR-005). It sits outside `/api/v1` on
+  // purpose: no session cookie, no shared envelope, no workspace guard chain —
+  // the transport speaks JSON-RPC, so its failures are JSON-RPC too.
+  //
+  // Publicly reachable only through the Next rewrite (`https://<web>/mcp` →
+  // `http://api:4000/mcp`); the API port stays unpublished.
+  app.use('/mcp', mcpRouter);
+
+  // The global `express.json()` above is earlier in the stack than that mount,
+  // so a body it rejects never reaches `mcpRouter`'s own error path — this is
+  // what keeps a malformed `/mcp` body from being answered in the HTTP envelope
+  // a JSON-RPC client cannot read. It passes every other error through.
+  app.use(mcpBodyParseErrorHandler);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

@@ -21,6 +21,16 @@ const nextConfig: NextConfig = {
         source: '/api/v1/:path*',
         destination: `${apiUrl}/api/v1/:path*`,
       },
+      {
+        // The MCP protocol endpoint (F13). Its own rule rather than a path
+        // under `/api/v1` because it is not a REST surface: one POST carrying
+        // JSON-RPC, its own transport headers (`MCP-Protocol-Version`,
+        // `Mcp-Method`, `Mcp-Name`) and its own JSON-RPC error shape. Next
+        // forwards the request — method, headers and body — untouched, so the
+        // API sees exactly what the client sent (ADR-005).
+        source: '/mcp',
+        destination: `${apiUrl}/mcp`,
+      },
     ];
   },
 };

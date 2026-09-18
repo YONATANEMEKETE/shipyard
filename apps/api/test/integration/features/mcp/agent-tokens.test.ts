@@ -364,6 +364,40 @@ describe('agent access tokens (integration)', () => {
     expect(card.scopes).toEqual(['READ', 'ISSUES_DELETE']);
   });
 
+  it('always grants READ, whatever the request asks for', async () => {
+    // A connection that cannot read cannot usefully write — it cannot find the
+    // thing it was told to change — so READ is granted rather than implied, and
+    // asking for a write scope without it is not an error (spec §3.1).
+    const { status, card } = await createToken(owner.cookies, {
+      label: 'writer only',
+      scopes: ['ISSUES_WRITE'],
+    });
+
+    expect(status).toBe(201);
+    expect(card.scopes).toEqual(['READ', 'ISSUES_WRITE']);
+  });
+
+  it('does not grant a scope above the caller’s role for being asked twice', async () => {
+    // The union must not become a way round the ceiling: READ is added, nothing
+    // else is, and the ceiling still applies to the result.
+    const member = await addMember(uniqueEmail('member-union'));
+
+    const { status, res } = await createToken(member.cookies, {
+      label: 'delete attempt',
+      scopes: ['ISSUES_DELETE'],
+    });
+
+    expect(status).toBe(403);
+    expect(errorCodeOf(res)).toBe('SCOPE_NOT_PERMITTED');
+
+    const write = await createToken(member.cookies, {
+      label: 'write only',
+      scopes: ['COMMENTS_WRITE'],
+    });
+    expect(write.status).toBe(201);
+    expect(write.card.scopes).toEqual(['READ', 'COMMENTS_WRITE']);
+  });
+
   // ── Guards ─────────────────────────────────────────────────────────────
 
   it('requires a session (401)', async () => {

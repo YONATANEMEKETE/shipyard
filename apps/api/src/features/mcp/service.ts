@@ -22,6 +22,7 @@ import {
   generateToken,
   hashToken,
   looksLikeToken,
+  MCP_LAST_USED_THROTTLE_MS,
   scopesExceedingRole,
 } from './tokens.js';
 
@@ -282,5 +283,42 @@ export const mcpTokensService = {
       workspaceId: row.workspaceId,
       scopes: row.scopes,
     };
+  },
+
+  /**
+   * Record that a credential was used (data-model D6): best-effort, throttled to
+   * one write per window, and never able to fail the request it belongs to.
+   *
+   * Everything about it is deliberate:
+   * - **best-effort** — `lastUsedAt` is a diagnostic, not a permission. A failed
+   *   stamp must not turn a working agent call into an error, so the failure is
+   *   logged and swallowed here, where no caller can accidentally propagate it;
+   * - **throttled** — the condition lives in the `WHERE` of one statement
+   *   (`repository.touchLastUsed`), so a busy agent costs at most one write a
+   *   minute and concurrent calls cannot both write;
+   * - **outside any transaction** — it is not part of the action the caller is
+   *   performing, and it must not hold a lock or commit with it.
+   *
+   * Returns whether *this* call did the stamping, which is what the tests assert
+   * on rather than on the timestamp alone.
+   */
+  async touchLastUsed(
+    tokenId: string,
+    seenAt: Date = new Date(),
+  ): Promise<boolean> {
+    try {
+      const { count } = await mcpTokensRepository.touchLastUsed(
+        prisma,
+        tokenId,
+        seenAt,
+        MCP_LAST_USED_THROTTLE_MS,
+      );
+
+      return count > 0;
+    } catch (error) {
+      logger.warn({ err: error, tokenId }, 'mcp.token.last_used_failed');
+
+      return false;
+    }
   },
 };

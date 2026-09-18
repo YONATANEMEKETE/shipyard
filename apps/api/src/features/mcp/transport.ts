@@ -1,8 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import { env } from '../../common/config/env.js';
+import { ForbiddenError } from '../../common/errors/httpErrors.js';
 import { logger } from '../../common/logger/index.js';
-import { jsonRpcErrorResponse } from './errors.js';
-import { MCP_ERROR_CODES } from '@shipyard/shared';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MCP transport layer (F13, M3)
@@ -109,7 +108,7 @@ export function isTrustedOrigin(origin: string | undefined): boolean {
 
 export function requireTrustedOrigin(
   request: Request,
-  response: Response,
+  _response: Response,
   next: NextFunction,
 ): void {
   const origin = request.get('origin') ?? undefined;
@@ -119,25 +118,23 @@ export function requireTrustedOrigin(
     return;
   }
 
-  const requestId = typeof request.id === 'string' ? request.id : undefined;
-
   logger.warn(
-    { requestId, origin, path: request.originalUrl },
+    {
+      requestId: typeof request.id === 'string' ? request.id : undefined,
+      origin,
+      path: request.originalUrl,
+    },
     'mcp.origin.rejected',
   );
 
-  // Answered in the JSON-RPC shape like every other response on this surface —
-  // a client that speaks JSON-RPC should never have to parse a second envelope
-  // to learn why it was turned away.
-  response
-    .status(403)
-    .json(
-      jsonRpcErrorResponse(
-        null,
-        MCP_ERROR_CODES.invalidRequest,
-        'This origin is not allowed to call the MCP endpoint',
-      ),
-    );
+  // The platform's own 403, like every other caller-level rejection on this
+  // surface (no credential → 401, over budget → 429): the transport answers in
+  // JSON-RPC for problems with the *message*, and in the platform envelope for
+  // problems with the *caller*. A client can tell the classes apart by status,
+  // and a support conversation gets the same shape it gets everywhere else.
+  next(
+    new ForbiddenError('This origin is not allowed to call the MCP endpoint'),
+  );
 }
 
 // ── Header mirroring ──

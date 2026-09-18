@@ -12,13 +12,17 @@ import {
   mcpDiscoverResultSchema,
   mcpListToolsResultSchema,
   mcpRequestMetaSchema,
+  type McpTokenScope,
 } from '@shipyard/shared';
+import { RateLimitError } from '../../common/errors/httpErrors.js';
 import { logger } from '../../common/logger/index.js';
+import { resolveMcpAuth } from './auth.js';
 import {
   jsonRpcErrorResponse,
   jsonRpcResult,
   type JsonRpcId,
 } from './errors.js';
+import { checkTokenRateLimit, rateLimitToolResult } from './rateLimit.js';
 import { advertisedTools, findTool } from './registry.js';
 import { mcpRequestEnvelopeSchema } from './schemas.js';
 import {
@@ -33,25 +37,30 @@ import {
 // ─────────────────────────────────────────────────────────────────────────────
 // The `POST /mcp` pipeline (F13, M3)
 //
-// One function that turns an Express request into the HTTP status + body this
-// surface must answer with, in the order the guard chain defines (api-design §4):
+// One POST /mcp for every JSON-RPC message, in the order the guard chain defines
+// (api-design §4):
 //
-//   content type → envelope → header mirrors → version support → dispatch
+//   content type → envelope shape → notification → method → params._meta →
+//   header mirrors → version support → credential → per-token budget → dispatch
 //
-// Credential resolution (§3.1) slots in between version support and dispatch in
-// M4; the scope filter is M5's, applied through the registry. Until then this
-// endpoint answers discovery for anyone who can reach it, which is exactly why
-// it must not be exposed beyond localhost yet.
+// As of M4 that chain is complete except for the tools themselves: every request
+// that reaches dispatch has been authenticated (bearer token → live membership)
+// and counted against its token's budget. The scope filter is M5's, applied
+// through the registry to `tools/list` and `tools/call`.
 //
 // Returning a value instead of writing to the response keeps the pipeline a
 // function of the request: the router writes, the tests assert, and there is no
-// path that answers twice.
+// path that answers twice. Credential failures are the deliberate exception —
+// they are *thrown*, so the platform's 401/429 envelopes come from the one
+// place that renders errors for both doors.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface McpHttpResponse {
   status: number;
   /** Absent for `202` — a notification is acknowledged with an empty body. */
   body?: unknown;
+  /** Set only where the status needs a companion header (`Retry-After`). */
+  headers?: Record<string, string>;
 }
 
 function discoverResult(): unknown {
@@ -72,12 +81,13 @@ function discoverResult(): unknown {
   });
 }
 
-function listToolsResult(): unknown {
+function listToolsResult(scopes: readonly McpTokenScope[]): unknown {
   return mcpListToolsResultSchema.parse({
     resultType: 'complete',
-    // No credential filter yet (M3): the registry is asked for everything it
-    // has. M4 resolves the token; M5 passes its scopes here.
-    tools: advertisedTools(),
+    // The credential's scopes prune the list: a read-only token does not even
+    // discover the write tools (§5.4, §9). The registry ships empty until M5, so
+    // this is the wiring for that filter rather than its effect.
+    tools: advertisedTools(scopes),
     ttlMs: MCP_CACHE_TTL_MS.tools,
     // Private: the list depends on the credential, so an intermediary must not
     // serve one caller's tool list to another (§5.4).
@@ -111,8 +121,13 @@ function versionOf(
  * Handles one message. `request.body` must be the `express.json()` output — a
  * body that could not be parsed never reaches here and is answered by
  * `mcpBodyParseErrorHandler`.
+ *
+ * Async since M4: the pipeline now reads a credential and a membership before it
+ * can dispatch anything.
  */
-export function handleMcpMessage(request: Request): McpHttpResponse {
+export async function handleMcpMessage(
+  request: Request,
+): Promise<McpHttpResponse> {
   const requestId = typeof request.id === 'string' ? request.id : undefined;
 
   // Null until the envelope parses: a request rejected before that has no id to
@@ -407,12 +422,79 @@ export function handleMcpMessage(request: Request): McpHttpResponse {
     return { status: 202 };
   }
 
+  // ── Credential ──
+  // The second door (api-design §3.1): who is calling, and where may they act.
+  //
+  // Thrown, not returned, so the platform's own 401 envelope — the same status,
+  // code and body the cookie path produces — is rendered by the global error
+  // handler. One rendering path for 401 is deliberate: two credential paths that
+  // answer differently are two credential paths that can be told apart, and being
+  // unable to tell them apart is the property the design asks for.
+  const auth = await resolveMcpAuth(request);
+
+  // ── Per-token budget ──
+  // After resolution (there is no key before it) and before any work is done.
+  // The breach is answered in whatever channel the method has: a tool result for
+  // `tools/call`, so the model is told to pace itself (§8.2), and the platform's
+  // 429 for everything else (§5.2).
+  const budget = checkTokenRateLimit(auth.credential.tokenId);
+
+  if (!budget.allowed) {
+    logger.warn(
+      {
+        requestId,
+        tokenId: auth.credential.tokenId,
+        workspaceId: auth.context.workspaceId,
+        method,
+        retryAfterMs: budget.retryAfterMs,
+      },
+      'mcp.rate_limit.exceeded',
+    );
+
+    if (method === MCP_METHODS.callTool) {
+      return {
+        status: 200,
+        body: jsonRpcResult(id, rateLimitToolResult(budget)),
+      };
+    }
+
+    // Re-stated rather than thrown, because this pipeline returns values instead
+    // of writing to the response — and because the `Retry-After` that makes a 429
+    // actionable has to travel with it. Code and message still come from the
+    // platform's error, so the wording cannot drift from the other limiters'.
+    const limited = new RateLimitError(
+      'Too many requests for this agent access token, please try again later',
+      { retryAfterMs: budget.retryAfterMs },
+      undefined,
+      'mcp-token',
+    );
+
+    return {
+      status: limited.statusCode,
+      headers: {
+        'Retry-After': String(
+          Math.max(1, Math.ceil(budget.retryAfterMs / 1000)),
+        ),
+      },
+      body: {
+        error: {
+          code: limited.code,
+          message: limited.message,
+          details: limited.publicDetails,
+          ...(requestId !== undefined ? { requestId } : {}),
+        },
+      },
+    };
+  }
+
   // ── Dispatch ──
   switch (method) {
     case MCP_METHODS.discover:
     case MCP_METHODS.listTools: {
       const result =
-        method === MCP_METHODS.discover ? discoverResult() : listToolsResult();
+        method === MCP_METHODS.discover
+          ? discoverResult()
+          : listToolsResult(auth.credential.scopes);
 
       logger.info(
         {
@@ -420,6 +502,8 @@ export function handleMcpMessage(request: Request): McpHttpResponse {
           method,
           protocolVersion: metaVersion,
           clientName: meta[MCP_META_KEYS.clientInfo]?.name,
+          tokenId: auth.credential.tokenId,
+          workspaceId: auth.context.workspaceId,
         },
         'mcp.dispatched',
       );
@@ -442,9 +526,15 @@ export function handleMcpMessage(request: Request): McpHttpResponse {
         );
       }
 
-      // Unreachable while the registry holds definitions but no handlers: it
-      // exists so a tool can never be advertised and then silently dropped.
-      logger.error({ requestId, tool: name, id }, 'mcp.tool.unimplemented');
+      // A registered tool whose handler has not shipped (or whose definition
+      // arrived ahead of its wiring): it must never be advertised and then
+      // silently dropped, so this is a loud server fault. M5 fills the handlers
+      // in and calls them with `auth.credential` and `auth.context` — the same
+      // pair every service expects from the cookie path.
+      logger.error(
+        { requestId, tool: name, id, tokenId: auth.credential.tokenId },
+        'mcp.tool.unimplemented',
+      );
 
       return fail(
         500,

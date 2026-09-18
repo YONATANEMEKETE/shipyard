@@ -1,5 +1,10 @@
-import { MCP_META_KEYS, type McpCallToolResult } from '@shipyard/shared';
+import {
+  MCP_META_KEYS,
+  type McpCallToolResult,
+  type McpTokenScope,
+} from '@shipyard/shared';
 import { AppError } from '../../common/errors/AppError.js';
+import { ErrorCodes } from '../../common/errors/codes.js';
 
 /**
  * MCP domain errors (api-design.md §7). Each extends {@link AppError} so the
@@ -20,9 +25,15 @@ import { AppError } from '../../common/errors/AppError.js';
  */
 
 export const McpErrorCodes = {
+  // ── HTTP-envelope codes (management routes, §3.3, §7) ──
   TOKEN_NOT_FOUND: 'TOKEN_NOT_FOUND',
+  /** Issuance-time ceiling: the caller's role may not grant what was asked. */
   SCOPE_NOT_PERMITTED: 'SCOPE_NOT_PERMITTED',
   TOKEN_EXPIRY_INVALID: 'TOKEN_EXPIRY_INVALID',
+  // ── Tool-result codes (§8.2) — these ride in `_meta`, never as a status ──
+  /** Use-time: this credential lacks the permission the action needs. */
+  SCOPE_MISSING: 'SCOPE_MISSING',
+  RATE_LIMITED: 'RATE_LIMITED',
 } as const;
 
 export type McpErrorCode = (typeof McpErrorCodes)[keyof typeof McpErrorCodes];
@@ -58,6 +69,24 @@ export class McpScopeNotPermittedError extends AppError {
 export class McpTokenExpiryInvalidError extends AppError {
   constructor(message = 'The expiry must be in the future') {
     super(400, McpErrorCodes.TOKEN_EXPIRY_INVALID, message);
+  }
+}
+
+/**
+ * 401 — the `/mcp` surface has no usable credential for this request.
+ *
+ * **One error for every rejection**: header missing, scheme wrong, value not a
+ * token, hash unknown, revoked, expired, deleted, or the owner's membership
+ * gone. The holder of a stale or stolen credential learns nothing about which of
+ * those happened, there is a single code path to keep correct, and the code
+ * matches the cookie path's 401 (`UNAUTHORIZED`) so a client cannot tell the two
+ * doors apart (api-design §3.1).
+ */
+export class McpUnauthorizedError extends AppError {
+  constructor(
+    message = 'A valid agent access token is required for this request',
+  ) {
+    super(401, ErrorCodes.UNAUTHORIZED, message);
   }
 }
 
@@ -157,5 +186,34 @@ export function toToolResultFromError(
     content: [{ type: 'text', text: INTERNAL_FAILURE_TEXT }],
     isError: true,
     _meta: meta,
+  };
+}
+
+/**
+ * A credential that lacks the permission an action needs — the second gate
+ * (api-design §3.2, §8.2).
+ *
+ * Answered as a tool result rather than a status: the call was understood and
+ * the caller can fix it, so the model gets a sentence naming the missing
+ * permission and the two ways out. The `403` in the design's table is
+ * "conceptually" — with a personal access token there is no step-up flow to
+ * drive, because the scopes are fixed at issuance; a new token or the UI is the
+ * remedy, and that is what the text says. (The HTTP-level `403` +
+ * `insufficient_scope` of the OAuth flow arrives with OAuth, §12.)
+ */
+export function missingScopeResult(required: McpTokenScope): McpCallToolResult {
+  return {
+    resultType: 'complete',
+    content: [
+      {
+        type: 'text',
+        text: `This connection does not have the "${required}" permission, so it cannot do that. Create another connection in Shipyard with that permission, or do it in the app.`,
+      },
+    ],
+    isError: true,
+    _meta: {
+      [MCP_META_KEYS.errorCode]: McpErrorCodes.SCOPE_MISSING,
+      requiredScope: required,
+    },
   };
 }

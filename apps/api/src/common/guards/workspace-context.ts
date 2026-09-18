@@ -1,10 +1,14 @@
 import type { NextFunction, Request, Response } from 'express';
 import { prisma } from '../db/client.js';
+import type { Prisma } from '../../generated/client.js';
 import {
   WorkspaceArchivedError,
   WorkspaceNotFoundError,
 } from '../../features/workspace/errors.js';
 import type { WorkspaceRole, WorkspaceStatus } from '@shipyard/shared';
+
+/** A transaction client or the shared client — the repository convention. */
+type DbClient = Prisma.TransactionClient | typeof prisma;
 
 /**
  * Authenticated workspace context attached to the request by
@@ -33,6 +37,74 @@ export interface ResolveWorkspaceContextOptions {
    * exits that operate on archived workspaces (GET, restore, delete).
    */
   rejectArchived?: boolean;
+}
+
+/** The two rows every context is built from, whatever path found them. */
+interface WorkspaceContextParts {
+  workspace: { id: string; slug: string; status: WorkspaceStatus };
+  membership: { id: string; role: WorkspaceRole };
+}
+
+/**
+ * The **single** place a {@link WorkspaceRequestContext} is constructed.
+ *
+ * Two resolvers feed it — the cookie path (`:slug` + session user) and the MCP
+ * token path (`mcp_token.workspaceId` + token owner) — and they must be
+ * indistinguishable downstream: a service cannot tell which door a request came
+ * through, because there is only one shape and one mapping to drift from.
+ */
+function toWorkspaceContext(
+  parts: WorkspaceContextParts,
+): WorkspaceRequestContext {
+  return {
+    workspaceId: parts.workspace.id,
+    memberId: parts.membership.id,
+    slug: parts.workspace.slug,
+    status: parts.workspace.status,
+    role: parts.membership.role,
+  };
+}
+
+/**
+ * Resolves a context for a caller we have **already identified** — the MCP
+ * token path, where the workspace comes from the credential rather than from the
+ * URL (F13, api-design §3.1: "load membership → build the *same*
+ * WorkspaceRequestContext your existing guards produce").
+ *
+ * Returns `null` when the membership is gone, which the caller answers exactly
+ * like an unknown token: a removed member's credentials must stop working, and
+ * whether they were removed must not be inferable from the response.
+ *
+ * Archived workspaces are *not* rejected here: reads are allowed in an archived
+ * workspace (api-design §9), so the status travels in the context and the
+ * surface decides.
+ */
+export async function resolveMemberWorkspaceContext(
+  lookup: { userId: string; workspaceId: string },
+  client: DbClient = prisma,
+): Promise<WorkspaceRequestContext | null> {
+  const membership = await client.workspaceMember.findUnique({
+    where: {
+      workspaceId_userId: {
+        workspaceId: lookup.workspaceId,
+        userId: lookup.userId,
+      },
+    },
+    select: {
+      id: true,
+      role: true,
+      workspace: { select: { id: true, slug: true, status: true } },
+    },
+  });
+
+  if (!membership) {
+    return null;
+  }
+
+  return toWorkspaceContext({
+    workspace: membership.workspace,
+    membership,
+  });
 }
 
 /**
@@ -87,13 +159,10 @@ export function resolveWorkspaceContext(
         return;
       }
 
-      request.workspaceContext = {
-        workspaceId: result.id,
-        memberId: membership.id,
-        slug: result.slug,
-        status: result.status,
-        role: membership.role,
-      };
+      request.workspaceContext = toWorkspaceContext({
+        workspace: result,
+        membership,
+      });
 
       next();
     } catch (error) {

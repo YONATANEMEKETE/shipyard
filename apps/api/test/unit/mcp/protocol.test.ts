@@ -4,6 +4,11 @@ import { MCP_META_KEYS } from '@shipyard/shared';
 import { AppError } from '../../../src/common/errors/AppError.js';
 import { env } from '../../../src/common/config/env.js';
 import { toToolResultFromError } from '../../../src/features/mcp/errors.js';
+import { missingScopeResult } from '../../../src/features/mcp/errors.js';
+import {
+  checkTokenRateLimit,
+  rateLimitToolResult,
+} from '../../../src/features/mcp/rateLimit.js';
 import {
   advertisedTools,
   findTool,
@@ -129,5 +134,85 @@ describe('the registry', () => {
   it('advertises nothing while no tool has shipped (M3)', () => {
     expect(advertisedTools()).toEqual([]);
     expect(findTool('shipyard_list_issues')).toBeUndefined();
+  });
+});
+
+describe('per-token budget', () => {
+  const config = { windowMs: 60_000, max: 3 };
+  const t0 = 1_700_000_000_000;
+
+  it('allows up to the max inside a window, then refuses', () => {
+    expect(checkTokenRateLimit('t1', t0, config)).toEqual({
+      allowed: true,
+      retryAfterMs: 0,
+      remaining: 2,
+    });
+    expect(checkTokenRateLimit('t1', t0 + 1, config)).toEqual({
+      allowed: true,
+      retryAfterMs: 59_999,
+      remaining: 1,
+    });
+    expect(checkTokenRateLimit('t1', t0 + 2, config).allowed).toBe(true);
+
+    const refused = checkTokenRateLimit('t1', t0 + 3, config);
+
+    expect(refused.allowed).toBe(false);
+    expect(refused.remaining).toBe(0);
+    // The hint is time until the window resets, not a fixed backoff.
+    expect(refused.retryAfterMs).toBe(60_000 - 3);
+  });
+
+  it('starts a fresh window when the old one expires', () => {
+    checkTokenRateLimit('t2', t0, { windowMs: 1_000, max: 1 });
+    expect(
+      checkTokenRateLimit('t2', t0 + 500, { windowMs: 1_000, max: 1 }).allowed,
+    ).toBe(false);
+
+    const afterWindow = checkTokenRateLimit('t2', t0 + 1_001, {
+      windowMs: 1_000,
+      max: 1,
+    });
+
+    expect(afterWindow.allowed).toBe(true);
+    expect(afterWindow.remaining).toBe(0);
+  });
+
+  it('keeps one budget per token', () => {
+    checkTokenRateLimit('t3', t0, { windowMs: 60_000, max: 1 });
+    expect(
+      checkTokenRateLimit('t3', t0 + 1, { windowMs: 60_000, max: 1 }).allowed,
+    ).toBe(false);
+
+    expect(
+      checkTokenRateLimit('t4', t0 + 1, { windowMs: 60_000, max: 1 }).allowed,
+    ).toBe(true);
+  });
+
+  it('carries a pacing hint in the tool result', () => {
+    const result = rateLimitToolResult({
+      allowed: false,
+      retryAfterMs: 30_000,
+      remaining: 0,
+    });
+
+    // A tool result, not a status: the model has to read it to pace itself
+    // (§8.2 / §10).
+    expect(result.isError).toBe(true);
+    expect(result._meta?.[MCP_META_KEYS.errorCode]).toBe('RATE_LIMITED');
+    expect(result._meta?.retryAfterMs).toBe(30_000);
+    expect(result.content[0]?.text).toContain('30s');
+  });
+});
+
+describe('missingScopeResult', () => {
+  it('names the permission and both ways out', () => {
+    const result = missingScopeResult('ISSUES_WRITE');
+    const text = result.content[0]?.text ?? '';
+
+    expect(result.isError).toBe(true);
+    expect(text).toContain('ISSUES_WRITE');
+    expect(text).toContain('Create another connection');
+    expect(result._meta?.[MCP_META_KEYS.errorCode]).toBe('SCOPE_MISSING');
+    expect(result._meta?.requiredScope).toBe('ISSUES_WRITE');
   });
 });

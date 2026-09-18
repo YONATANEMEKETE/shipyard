@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import {
   MCP_ERROR_CODES,
   MCP_HEADERS,
@@ -10,20 +10,33 @@ import {
 } from '@shipyard/shared';
 
 import { createTestApp } from '../../../helpers/app.js';
+import { resetDatabase } from '../../../helpers/db.js';
 import { env } from '../../../../src/common/config/env.js';
+import { prisma } from '../../../../src/common/db/client.js';
+import type { WorkspaceRequestContext } from '../../../../src/common/guards/workspace-context.js';
+import {
+  mcpRateLimitConfig,
+  resetTokenRateLimits,
+} from '../../../../src/features/mcp/rateLimit.js';
+import { mcpTokensService } from '../../../../src/features/mcp/service.js';
 
 /**
  * `POST /mcp` — the transport (api-design §11, "Transport" row).
  *
- * The whole point of this file is the *envelope*: what the endpoint does before
- * any tool exists and before any credential is read (M4). Rows in the database
- * are irrelevant here — the harness still boots its container, but nothing in
- * these assertions depends on it.
+ * What this file proves is the **envelope and the guard chain**: the order the
+ * checks run in, the status and code each failure gets, and that a well-formed
+ * modern request is dispatched while an unauthenticated one never reaches
+ * dispatch (M4).
  *
- * The gate this proves: an MCP client connects and receives a valid, empty tool
- * list; every malformed request gets the exact status and JSON-RPC code the
- * design promises, so a client can always tell "your request is wrong" (4xx +
- * JSON-RPC error) from "understood and it failed" (200 + `isError`).
+ * Two answer classes, and a client can tell them apart by status:
+ * - **message** problems → JSON-RPC `error` (`-32020`, `-32022`, `-32600`,
+ *   `-32601`, `-32602`, `-32700`);
+ * - **caller** problems → the platform envelope (`403 FORBIDDEN`,
+ *   `401 UNAUTHORIZED`, `429 RATE_LIMITED`), the same shape every other route in
+ *   the API answers with.
+ *
+ * Rows are seeded directly: this layer reads a token and a membership, and how
+ * those rows came to exist is the token-management tests' business.
  */
 
 const ENDPOINT = '/mcp';
@@ -37,11 +50,57 @@ interface JsonRpcBody {
   id?: unknown;
   result?: unknown;
   error?: {
-    code?: number;
+    code?: number | string;
     message?: string;
     data?: { supported?: string[]; requested?: string };
+    details?: { retryAfterMs?: number };
+    requestId?: string;
   };
 }
+
+/** The credential every request in this file carries, seeded per test. */
+let agentToken = '';
+let agentUserId = '';
+let agentContext: WorkspaceRequestContext;
+
+beforeEach(async () => {
+  await resetDatabase();
+  // A fresh budget per test: the limiter is keyed per token in process memory,
+  // and a test that exhausts it must not fail its neighbour.
+  resetTokenRateLimits();
+
+  const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const user = await prisma.user.create({
+    data: {
+      id: `user_${suffix}`,
+      name: 'Agent Owner',
+      email: `agent-${suffix}@example.com`,
+      emailVerified: true,
+    },
+  });
+  const workspace = await prisma.workspace.create({
+    data: { name: 'Harbor', slug: `harbor-${suffix}` },
+  });
+  const member = await prisma.workspaceMember.create({
+    data: { workspaceId: workspace.id, userId: user.id, role: 'MEMBER' },
+  });
+
+  agentContext = {
+    workspaceId: workspace.id,
+    memberId: member.id,
+    slug: workspace.slug,
+    status: 'ACTIVE',
+    role: 'MEMBER',
+  };
+
+  const created = await mcpTokensService.create(agentContext, user.id, {
+    label: 'test agent',
+    scopes: ['READ'],
+  });
+
+  agentToken = created.token;
+  agentUserId = user.id;
+});
 
 function rpcBody(
   method: string,
@@ -58,22 +117,29 @@ function rpcBody(
 
 function headersFor(
   method: string,
-  overrides: Record<string, string> = {},
+  overrides: Record<string, string | undefined> = {},
 ): Record<string, string> {
-  return {
+  const headers: Record<string, string | undefined> = {
     Origin: WEB_ORIGIN,
     'Content-Type': 'application/json',
     [MCP_HEADERS.protocolVersion]: MCP_PROTOCOL_VERSION,
     [MCP_HEADERS.method]: method,
+    Authorization: `Bearer ${agentToken}`,
     ...overrides,
   };
+
+  // `undefined` removes a header — the way a test says "a client that does not
+  // send this one".
+  return Object.fromEntries(
+    Object.entries(headers).filter(([, value]) => value !== undefined),
+  ) as Record<string, string>;
 }
 
-/** One `POST /mcp` with the headers a well-formed client would send. */
+/** One `POST /mcp` with the headers a well-formed, authenticated client sends. */
 async function post(
   request: Request,
   body: unknown,
-  overrides: Record<string, string> = {},
+  overrides: Record<string, string | undefined> = {},
 ) {
   const method =
     typeof body === 'object' && body !== null && 'method' in body
@@ -216,15 +282,36 @@ describe('POST /mcp — discovery', () => {
     expect(bodyOf(res).error?.code).toBe(MCP_ERROR_CODES.methodNotFound);
   });
 
-  it('dispatches without a credential — M3 only; M4 inserts the 401', async () => {
-    // Deliberately asserting today's boundary: credential resolution is M4, so
-    // discovery is open here. When M4 lands this test flips to `401`, which is
-    // the signal that the endpoint may no longer be exposed.
+  it('refuses a request with no credential at all (401)', async () => {
+    // M4: credential resolution sits between version support and dispatch, so an
+    // unauthenticated request never reaches discovery. The answer is the
+    // platform's 401 — the same envelope, status and code the cookie path gives —
+    // so the two doors cannot be told apart.
     const res = await post(createTestApp(), rpcBody(MCP_METHODS.discover), {
-      Authorization: '',
+      Authorization: undefined,
     });
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(401);
+    expect(bodyOf(res).error?.code).toBe('UNAUTHORIZED');
+    expect(bodyOf(res).error?.requestId).toBeTruthy();
+  });
+
+  it('refuses a live-then-revoked token before dispatch (401)', async () => {
+    const request = createTestApp();
+
+    expect((await post(request, rpcBody(MCP_METHODS.discover))).status).toBe(
+      200,
+    );
+
+    const token = await prisma.mcpToken.findFirstOrThrow({
+      where: { workspaceId: agentContext.workspaceId },
+    });
+    await mcpTokensService.revoke(agentContext, token.userId, token.id);
+
+    const revoked = await post(request, rpcBody(MCP_METHODS.discover));
+
+    expect(revoked.status).toBe(401);
+    expect(bodyOf(revoked).error?.code).toBe('UNAUTHORIZED');
   });
 });
 
@@ -235,7 +322,8 @@ describe('POST /mcp — origin guard', () => {
     });
 
     expect(res.status).toBe(403);
-    expect(bodyOf(res).error?.code).toBe(MCP_ERROR_CODES.invalidRequest);
+    // The platform envelope: a *caller* problem, not a message problem.
+    expect(bodyOf(res).error?.code).toBe('FORBIDDEN');
   });
 
   it('rejects an opaque Origin', async () => {
@@ -455,5 +543,68 @@ describe('POST /mcp — protocol version', () => {
       ...MCP_SUPPORTED_VERSIONS,
     ]);
     expect(bodyOf(res).error?.data?.requested).toBe(unsupported);
+  });
+});
+
+describe('POST /mcp — per-token budget', () => {
+  it('answers 429 with Retry-After once a token exceeds its budget', async () => {
+    const request = createTestApp();
+    const { max } = mcpRateLimitConfig;
+
+    for (let index = 0; index < max; index += 1) {
+      const allowed = await post(request, rpcBody(MCP_METHODS.discover));
+      expect(allowed.status).toBe(200);
+    }
+
+    const limited = await post(request, rpcBody(MCP_METHODS.discover));
+
+    expect(limited.status).toBe(429);
+    expect(limited.headers['retry-after']).toBeDefined();
+    // The platform's rate-limit answer, with the pacing hint in both the header
+    // and the body: discovery has no tool-result channel to carry it.
+    expect(bodyOf(limited).error?.code).toBe('RATE_LIMITED');
+    expect(bodyOf(limited).error?.details?.retryAfterMs).toBeGreaterThan(0);
+  });
+
+  it('counts per token, not per client', async () => {
+    const request = createTestApp();
+    const { max } = mcpRateLimitConfig;
+
+    for (let index = 0; index < max; index += 1) {
+      const allowed = await post(request, rpcBody(MCP_METHODS.discover));
+      expect(allowed.status).toBe(200);
+    }
+
+    expect((await post(request, rpcBody(MCP_METHODS.discover))).status).toBe(
+      429,
+    );
+
+    // A second connection from the same client — same IP, same app — is
+    // untouched: the budget belongs to the credential, which is the only
+    // identity this surface has (agents share an IP by definition).
+    const second = await mcpTokensService.create(agentContext, agentUserId, {
+      label: 'second agent',
+      scopes: ['READ'],
+    });
+
+    const res = await post(request, rpcBody(MCP_METHODS.discover), {
+      Authorization: `Bearer ${second.token}`,
+    });
+
+    expect(res.status).toBe(200);
+  });
+
+  it('does not charge a refused request to a budget', async () => {
+    // Nothing is counted before the credential is resolved, so a caller with no
+    // credential cannot exhaust anything — including someone else's.
+    const request = createTestApp();
+
+    const refused = await post(request, rpcBody(MCP_METHODS.discover), {
+      Authorization: undefined,
+    });
+    expect(refused.status).toBe(401);
+
+    const allowed = await post(request, rpcBody(MCP_METHODS.discover));
+    expect(allowed.status).toBe(200);
   });
 });

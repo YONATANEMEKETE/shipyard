@@ -301,6 +301,8 @@ describe('POST /mcp — the legacy era after the handshake', () => {
       cacheScope?: unknown;
     };
 
+    // A READ credential sees the eight read tools and none of the writes, in
+    // that era's envelope: the same list, projected.
     expect(result.tools.map((tool) => tool.name)).toEqual([
       'shipyard_list_issues',
       'shipyard_get_issue',

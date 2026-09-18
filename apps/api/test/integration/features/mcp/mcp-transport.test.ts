@@ -183,14 +183,16 @@ describe('POST /mcp — discovery', () => {
     );
   });
 
-  it('answers tools/list with the eight read tools, deterministically and privately', async () => {
+  it('answers tools/list with the registry in its fixed order, deterministically and privately', async () => {
     const first = await post(createTestApp(), rpcBody(MCP_METHODS.listTools));
     expect(first.status).toBe(200);
 
     const result = mcpListToolsResultSchema.parse(bodyOf(first).result);
 
-    // M5 registers the read tools, in the order the registry declares them —
-    // that order is what a client caches against, so it is asserted by name.
+    // This fixture's credential carries READ, so the list is the eight read
+    // tools in the order the registry declares them — that order is what a
+    // client caches against, so it is asserted by name. The write tools are
+    // pruned here rather than merely absent, which is its own assertion.
     expect(result.tools.map((tool) => tool.name)).toEqual([
       'shipyard_list_issues',
       'shipyard_get_issue',

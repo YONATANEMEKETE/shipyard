@@ -3,13 +3,18 @@
  *
  * Heading block per `.pen` `Xwmto` → `Settings Heading Block`: title (28px,
  * weight 650, −0.8 tracking) and subcopy (13px, muted) 8px apart, sitting in
- * a 24px-gapped page column that the cards will stack into.
+ * a 24px-gapped page column that the cards stack into.
  *
  * Sections land here next:
  *   - Profile      — avatar preview + actions, display name, read-only email
  *   - Security     — password lives in Auth; this card validates locally only
+ *   - Agent access — AI agent connections (F13): the member's own tokens in
+ *                    this workspace, created once and revocable here. The
+ *                    workspace-wide view is an Owner/Admin surface and lives
+ *                    in Workspace Settings, not on this page.
  *   - Preferences  — theme (#3/#4) and default issue/project views (F4)
  */
+import { AgentAccessCard } from '@/components/settings/agent-access-card';
 import { PasswordCard } from '@/components/settings/password-card';
 import { PreferencesCard } from '@/components/settings/preferences-card';
 import { ProfileCard } from '@/components/settings/profile-card';
@@ -30,6 +35,8 @@ export function AccountSettingsPage() {
       <ProfileCard />
 
       <PasswordCard />
+
+      <AgentAccessCard />
 
       <PreferencesCard />
     </div>

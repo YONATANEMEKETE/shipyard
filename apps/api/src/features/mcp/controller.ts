@@ -72,6 +72,26 @@ export function listMcpTokensController(
   })();
 }
 
+export function deleteMcpTokenController(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+): void {
+  void (async () => {
+    try {
+      const context = contextOf(request);
+      const deleted = await mcpTokensService.remove(
+        context,
+        userIdOf(request),
+        String(request.params.tokenId),
+      );
+      sendSuccess(response, deleted);
+    } catch (error) {
+      next(error);
+    }
+  })();
+}
+
 export function revokeMcpTokenController(
   request: Request,
   response: Response,

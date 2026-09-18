@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { confirmActionSchema } from '../workspace/index.js';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // MCP token contracts (agent credentials)
 //
@@ -145,4 +147,22 @@ export const revokeMcpTokenResponseSchema = mcpTokenCardSchema;
 
 export type RevokeMcpTokenResponse = z.infer<
   typeof revokeMcpTokenResponseSchema
+>;
+
+// Deletion. Revocation keeps the row (it is a timestamp, and it is the audit
+// trail); deletion removes it for good — which is the only way a revoked
+// connection leaves the list (api-design §2 #5).
+//
+// The body is the product's standard destructive-action confirmation, the same
+// literal `{ confirm: true }` that comment/project/workspace deletion require:
+// the surface asks, and the request repeats the answer, so a stray DELETE from
+// a script cannot destroy a credential by accident.
+export const deleteMcpTokenSchema = confirmActionSchema;
+
+export const deleteMcpTokenResponseSchema = z.object({
+  deletedTokenId: z.string(),
+});
+
+export type DeleteMcpTokenResponse = z.infer<
+  typeof deleteMcpTokenResponseSchema
 >;

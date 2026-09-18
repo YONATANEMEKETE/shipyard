@@ -1,7 +1,14 @@
 import { z } from 'zod';
 
 import { activityAreaSchema } from '../activity/index.js';
-import { issuePrioritySchema, issueStatusSchema } from '../issues/index.js';
+import {
+  issueDateSchema,
+  issueDescriptionSchema,
+  issuePrioritySchema,
+  issueStatusSchema,
+  issueTitleSchema,
+} from '../issues/index.js';
+import { commentContentSchema } from '../comments/index.js';
 import { cycleStatusSchema } from '../cycles/index.js';
 import { projectStatusSchema } from '../projects/index.js';
 import { searchTypeSchema } from '../search/index.js';
@@ -166,6 +173,131 @@ export const listMembersArgumentsSchema = z
   })
   .strict();
 
+// ── The six additive write tools (api-design §6.2, M7) ──
+//
+// Bounds are **borrowed** from the modules that own them (`issueTitleSchema`,
+// `issueDescriptionSchema`, `issueDateSchema`, `commentContentSchema`) rather
+// than re-typed here: a re-stated 255 is how the model ends up reading one
+// contract while the service enforces another.
+//
+// Optional means "leave as it is" and `null` means "unset" — the service's own
+// semantics (`updateIssueSchema`), kept verbatim on this surface so the model
+// learns one rule rather than two. Every write names names: projects, cycles,
+// labels and people are matched by the words a person says.
+
+export const createIssueArgumentsSchema = z
+  .object({
+    title: issueTitleSchema.describe('What the work is, in one line.'),
+    description: issueDescriptionSchema.describe(
+      'Longer detail. Omit for none.',
+    ),
+    priority: issuePrioritySchema
+      .optional()
+      .describe('Defaults to NO_PRIORITY.'),
+    status: issueStatusSchema
+      .optional()
+      .describe('Defaults to BACKLOG. Omit unless you were asked for a state.'),
+    assignee: personReferenceSchema
+      .optional()
+      .describe(
+        'Who owns it: a member name, email or user id, or "me". Omit for unassigned.',
+      ),
+    project: z
+      .string()
+      .trim()
+      .min(1)
+      .optional()
+      .describe('A project name or id. Omit for no project.'),
+    labels: z
+      .array(z.string().trim().min(1))
+      .max(20)
+      .optional()
+      .describe('Label names that already exist in this workspace.'),
+    dueDate: issueDateSchema
+      .optional()
+      .describe('An ISO date — YYYY-MM-DD. Omit for no due date.'),
+  })
+  .strict();
+
+export const updateIssueArgumentsSchema = z
+  .object({
+    issue: issueReferenceSchema,
+    title: issueTitleSchema.optional(),
+    description: issueDescriptionSchema.describe(
+      'Replaces the description. Send null to clear it.',
+    ),
+    priority: issuePrioritySchema.optional(),
+    dueDate: issueDateSchema
+      .nullable()
+      .optional()
+      .describe('An ISO date — YYYY-MM-DD. Send null to clear it.'),
+    project: z
+      .string()
+      .trim()
+      .min(1)
+      .nullable()
+      .optional()
+      .describe(
+        'A project name or id to move it to. Send null to detach it from its project.',
+      ),
+    cycle: z
+      .string()
+      .trim()
+      .min(1)
+      .nullable()
+      .optional()
+      .describe(
+        'A cycle name or id to put it in. Send null to take it out of its cycle.',
+      ),
+  })
+  .strict();
+
+export const setIssueStatusArgumentsSchema = z
+  .object({
+    issue: issueReferenceSchema,
+    status: issueStatusSchema.describe(
+      'The state to move it to: BACKLOG, TODO, IN_PROGRESS or DONE.',
+    ),
+  })
+  .strict();
+
+export const assignIssueArgumentsSchema = z
+  .object({
+    issue: issueReferenceSchema,
+    assignee: personReferenceSchema
+      .nullable()
+      .describe(
+        'A member name, email or user id, or "me" for the person this connection belongs to. Send null to unassign.',
+      ),
+  })
+  .strict();
+
+export const blockIssueArgumentsSchema = z
+  .object({
+    issue: issueReferenceSchema,
+    blocked: z
+      .boolean()
+      .describe(
+        'true marks it blocked, false clears the blocked state and its reason.',
+      ),
+    reason: z
+      .string()
+      .trim()
+      .max(500, 'Keep the blocked reason under 500 characters')
+      .optional()
+      .describe('Why it is blocked. Only meaningful with blocked: true.'),
+  })
+  .strict();
+
+export const addCommentArgumentsSchema = z
+  .object({
+    issue: issueReferenceSchema,
+    body: commentContentSchema.describe(
+      'The comment text. Mention a teammate with @Name — mentions notify them.',
+    ),
+  })
+  .strict();
+
 // ── Names ──
 
 // Prefixed and unique within this server (§5.4). Exported so the registry, the
@@ -179,6 +311,12 @@ export const MCP_TOOL_NAMES = {
   workspaceOverview: 'shipyard_workspace_overview',
   recentActivity: 'shipyard_recent_activity',
   listMembers: 'shipyard_list_members',
+  createIssue: 'shipyard_create_issue',
+  updateIssue: 'shipyard_update_issue',
+  setIssueStatus: 'shipyard_set_issue_status',
+  assignIssue: 'shipyard_assign_issue',
+  blockIssue: 'shipyard_block_issue',
+  addComment: 'shipyard_add_comment',
 } as const;
 
 export type McpToolName = (typeof MCP_TOOL_NAMES)[keyof typeof MCP_TOOL_NAMES];
@@ -193,6 +331,12 @@ export const MCP_TOOL_ARGUMENTS = {
   [MCP_TOOL_NAMES.workspaceOverview]: workspaceOverviewArgumentsSchema,
   [MCP_TOOL_NAMES.recentActivity]: recentActivityArgumentsSchema,
   [MCP_TOOL_NAMES.listMembers]: listMembersArgumentsSchema,
+  [MCP_TOOL_NAMES.createIssue]: createIssueArgumentsSchema,
+  [MCP_TOOL_NAMES.updateIssue]: updateIssueArgumentsSchema,
+  [MCP_TOOL_NAMES.setIssueStatus]: setIssueStatusArgumentsSchema,
+  [MCP_TOOL_NAMES.assignIssue]: assignIssueArgumentsSchema,
+  [MCP_TOOL_NAMES.blockIssue]: blockIssueArgumentsSchema,
+  [MCP_TOOL_NAMES.addComment]: addCommentArgumentsSchema,
 } as const;
 
 // ── Result shaping (§7) ──

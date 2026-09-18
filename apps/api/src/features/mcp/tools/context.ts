@@ -1,4 +1,5 @@
 import type {
+  IssueCard,
   McpCallToolResult,
   McpListSummary,
   McpTool,
@@ -6,7 +7,10 @@ import type {
 import { jsonSchemaObjectSchema } from '@shipyard/shared';
 import { z } from 'zod';
 import type { WorkspaceRequestContext } from '../../../common/guards/workspace-context.js';
+import { cyclesService } from '../../cycles/service.js';
+import { issuesService } from '../../issues/service.js';
 import { membersService } from '../../members/service.js';
+import { projectsService } from '../../projects/service.js';
 import type { McpCredential } from '../auth.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -186,4 +190,233 @@ export function toIdByNameOrId(
   return rows.find(
     (row) => row.id === reference || row.name.toLowerCase() === needle,
   )?.id;
+}
+
+// ── Writing: resolutions shared by the six write tools (F13, M7) ──
+//
+// A write has to turn the same words a read does into identifiers, and it has
+// one extra duty: when a reference matches nothing it must *say so* and change
+// nothing. `Resolved<T>` makes that a type rather than a convention — a
+// `{ ok: false }` carries the tool result the caller must return, so a handler
+// cannot accidentally fall through and write against an unresolved id.
+//
+// Nothing here decides anything: the services still own archived state, role
+// and state rules, and a failure they raise travels on to the error mapper.
+
+export type Resolved<T> =
+  { ok: true; value: T } | { ok: false; result: McpCallToolResult };
+
+/**
+ * The issue a caller named, by `SHIP-42` or internal id. Archived issues
+ * resolve too — the services are the ones that refuse a write to an archived
+ * issue, with a message that says to restore it first.
+ */
+export async function resolveIssueRef(
+  reference: string,
+  tool: McpToolContext,
+): Promise<Resolved<IssueCard>> {
+  const card = await issuesService.resolveRef(
+    tool.context,
+    tool.credential.userId,
+    reference,
+  );
+
+  if (card === null) {
+    return {
+      ok: false,
+      result: toolFailure(
+        `No issue in this workspace matches "${reference}". Issue identifiers look like SHIP-42 — use shipyard_list_issues or shipyard_search to find the right one, then call this again.`,
+        'ISSUE_NOT_FOUND',
+      ),
+    };
+  }
+
+  return { ok: true, value: card };
+}
+
+/**
+ * The person a caller named, as the user id a write needs. `me` is the
+ * credential's owner — on this surface the caller *is* the token, so `me` is
+ * the only self-reference that needs no lookup.
+ *
+ * **Exact match only**, and that is a safety rule rather than strictness: two
+ * members may share a first name, and a mutation that picked one of them would
+ * hand somebody else's work over silently. The failure therefore names what to
+ * send instead — a full name, an email address, a user id, or `me` — because a
+ * model that guessed once needs to be told the shape that works.
+ *
+ * `null` (and an omitted reference) mean "nobody": the caller unassigns by
+ * sending null, and the tools pass that through as the service's own unset.
+ */
+export async function resolveAssigneeUserId(
+  reference: string | null,
+  tool: McpToolContext,
+): Promise<Resolved<string | null>> {
+  if (reference === null) return { ok: true, value: null };
+  if (reference.trim().toLowerCase() === 'me') {
+    return { ok: true, value: tool.credential.userId };
+  }
+
+  const person = await resolvePerson(tool.context.workspaceId, reference);
+
+  if (person === null) {
+    return {
+      ok: false,
+      result: toolFailure(
+        `No member of this workspace matches "${reference}" exactly. Send the member's full name, their email address, a user id, or "me" — shipyard_list_members shows the full names. Nothing was changed.`,
+        'ASSIGNEE_NOT_FOUND',
+      ),
+    };
+  }
+
+  return { ok: true, value: person.userId };
+}
+
+/** A project by name or id; `null` and omitted both stay unset. */
+export async function resolveProjectRef(
+  reference: string | null | undefined,
+  tool: McpToolContext,
+): Promise<Resolved<string | null | undefined>> {
+  if (reference === undefined || reference === null) {
+    return { ok: true, value: reference };
+  }
+
+  const projects = await projectsService.list(tool.context, {});
+  const id = toIdByNameOrId(reference, projects);
+
+  if (id === undefined) {
+    return {
+      ok: false,
+      result: toolFailure(
+        `No project in this workspace matches "${reference}". Known projects: ${projects.map((project) => project.name).join(', ') || 'none yet'}.`,
+        'PROJECT_NOT_FOUND',
+      ),
+    };
+  }
+
+  return { ok: true, value: id };
+}
+
+/** A cycle by name or id; `null` and omitted both stay unset. */
+export async function resolveCycleRef(
+  reference: string | null | undefined,
+  tool: McpToolContext,
+): Promise<Resolved<string | null | undefined>> {
+  if (reference === undefined || reference === null) {
+    return { ok: true, value: reference };
+  }
+
+  const page = await cyclesService.list(tool.context, {});
+  const id = toIdByNameOrId(reference, page.cycles);
+
+  if (id === undefined) {
+    return {
+      ok: false,
+      result: toolFailure(
+        `No cycle in this workspace matches "${reference}". Known cycles: ${page.cycles.map((cycle) => cycle.name).join(', ') || 'none yet'}.`,
+        'CYCLE_NOT_FOUND',
+      ),
+    };
+  }
+
+  return { ok: true, value: id };
+}
+
+/**
+ * Label names as the ids the service takes. An unknown name fails the whole
+ * call rather than attaching the labels that did match: a create that silently
+ * dropped one of four labels is worse than one that asked again.
+ */
+export async function resolveLabelIds(
+  names: string[] | undefined,
+  tool: McpToolContext,
+): Promise<Resolved<string[]>> {
+  if (names === undefined || names.length === 0) {
+    return { ok: true, value: [] };
+  }
+
+  const page = await issuesService.listLabels(tool.context);
+  const wanted = names.map((name) => name.trim().toLowerCase());
+  const matched = page.labels.filter((label) =>
+    wanted.includes(label.name.toLowerCase()),
+  );
+
+  if (matched.length !== wanted.length) {
+    const missing = names.filter(
+      (name) =>
+        !page.labels.some(
+          (label) => label.name.toLowerCase() === name.trim().toLowerCase(),
+        ),
+    );
+
+    return {
+      ok: false,
+      result: toolFailure(
+        `No label named ${missing.join(', ')} in this workspace. Labels here: ${page.labels.map((label) => label.name).join(', ') || 'none yet'}.`,
+        'LABEL_NOT_FOUND',
+      ),
+    };
+  }
+
+  return { ok: true, value: matched.map((label) => label.id) };
+}
+
+/** `before → after`, for a change the caller asked for. */
+export function changeLine(
+  label: string,
+  before: string | null,
+  after: string | null,
+): string {
+  return `- ${label}: ${before ?? 'none'} → ${after ?? 'none'}`;
+}
+
+/** One issue as a write confirms it: identifier, title, and its current state. */
+export function issueLine(issue: {
+  identifier: string;
+  title: string;
+  status: string;
+  assignee: { name: string } | null;
+  blocked: boolean;
+}): string {
+  return [
+    `${issue.identifier} ${issue.title}`,
+    issue.status.toLowerCase(),
+    issue.assignee === null ? 'unassigned' : `@${issue.assignee.name}`,
+    ...(issue.blocked ? ['blocked'] : []),
+  ].join(' · ');
+}
+
+/**
+ * An issue as this surface returns it (api-design §7).
+ *
+ * Names, not ids — every action here takes a name or an identifier, so an
+ * internal id is a token the model would have to carry for no reason. And
+ * **no email address**: the member projections on this surface are a name,
+ * never the address, which is why this exists rather than the service's own
+ * detail object (whose assignee and creator carry one).
+ */
+export function issueProjection(issue: {
+  identifier: string;
+  title: string;
+  status: string;
+  priority: string;
+  assignee: { name: string } | null;
+  dueDate: string | null;
+  blocked: boolean;
+  blockedReason: string | null;
+  labels: { name: string }[];
+  archivedAt: string | null;
+}) {
+  return {
+    identifier: issue.identifier,
+    title: issue.title,
+    status: issue.status,
+    priority: issue.priority,
+    assignee: issue.assignee === null ? null : issue.assignee.name,
+    dueDate: issue.dueDate,
+    blocked: issue.blocked,
+    blockedReason: issue.blockedReason,
+    labels: issue.labels.map((label) => label.name),
+    archivedAt: issue.archivedAt,
+  };
 }

@@ -148,7 +148,7 @@ describe('origin trust', () => {
 });
 
 describe('the registry', () => {
-  it('advertises the eight read tools, in a fixed order (M5)', () => {
+  it('advertises the whole registry in a fixed order — reads first, then the writes (M5, M7)', () => {
     expect(advertisedTools().map((tool) => tool.name)).toEqual([
       'shipyard_list_issues',
       'shipyard_get_issue',
@@ -158,13 +158,34 @@ describe('the registry', () => {
       'shipyard_workspace_overview',
       'shipyard_recent_activity',
       'shipyard_list_members',
+      'shipyard_create_issue',
+      'shipyard_update_issue',
+      'shipyard_set_issue_status',
+      'shipyard_assign_issue',
+      'shipyard_block_issue',
+      'shipyard_add_comment',
     ]);
+  });
 
-    // Every tool shipped so far is a read tool, so a credential that carries no
-    // READ scope discovers nothing at all — the pruning is asserted by name
-    // because a refactor must not be able to leak a write tool into a list.
+  it('prunes the list by scope, asserted by name', () => {
+    // A credential that carries no scope discovers nothing at all.
     expect(advertisedTools([])).toEqual([]);
-    expect(advertisedTools(['ISSUES_WRITE'])).toEqual([]);
+
+    // The scopes are separate doors, and pruning is by name because a refactor
+    // must not be able to leak a write tool into a read-only list: an issues
+    // writer sees the five issue writers and cannot see the comment tool.
+    expect(advertisedTools(['ISSUES_WRITE']).map((tool) => tool.name)).toEqual([
+      'shipyard_create_issue',
+      'shipyard_update_issue',
+      'shipyard_set_issue_status',
+      'shipyard_assign_issue',
+      'shipyard_block_issue',
+    ]);
+    expect(
+      advertisedTools(['COMMENTS_WRITE']).map((tool) => tool.name),
+    ).toEqual(['shipyard_add_comment']);
+    // The gated lifecycle tools arrive in M8, and are not reachable early.
+    expect(advertisedTools(['ISSUES_DELETE'])).toEqual([]);
 
     expect(findTool('shipyard_list_issues')).toBeDefined();
     expect(findTool('shipyard_delete_issue')).toBeUndefined();

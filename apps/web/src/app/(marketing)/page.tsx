@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { Container } from '@/components/marketing/container';
 import { REPOSITORY_URL } from '@/components/marketing/site-header';
 
 /**
@@ -80,7 +81,7 @@ export default function LandingPage() {
           id={section.id}
           className="border-b border-dashed border-ds-border"
         >
-          <div className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+          <Container className="py-16 sm:py-24">
             <p className="font-mono text-[10px] font-semibold uppercase tracking-[1.2px] text-ds-text-muted">
               {section.eyebrow}
             </p>
@@ -109,7 +110,7 @@ export default function LandingPage() {
                 </a>
               </div>
             ) : null}
-          </div>
+          </Container>
         </section>
       ))}
     </>

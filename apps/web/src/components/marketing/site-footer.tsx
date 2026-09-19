@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { PrecisionLoopMark } from '@/components/auth/precision-loop-mark';
+import { Container } from '@/components/marketing/container';
 import { REPOSITORY_URL } from '@/components/marketing/site-header';
 
 /**
@@ -18,7 +19,7 @@ import { REPOSITORY_URL } from '@/components/marketing/site-header';
 export function SiteFooter() {
   return (
     <footer className="border-t border-ds-border bg-ds-bg">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <Container className="flex flex-col gap-4 py-8 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2 text-ds-text-muted">
           <PrecisionLoopMark className="size-4 text-ds-brand" />
           <span className="text-sm">
@@ -51,7 +52,7 @@ export function SiteFooter() {
             Sign in
           </Link>
         </nav>
-      </div>
+      </Container>
     </footer>
   );
 }

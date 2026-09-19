@@ -234,3 +234,18 @@ The repository foundation currently includes:
 - Strict GitHub Actions CI
 
 Product feature implementation follows the engineering plan in `shipyard-design/04-Engineering`.
+
+## License
+
+Shipyard is released under the [MIT License](LICENSE).
+
+The license covers the source code. It does not cover the project's name or its logo: forks are
+welcome, but a fork must not present itself as the official Shipyard project, and the Shipyard name
+and the Precision Loop mark may not be used in a way that suggests endorsement or authorship.
+
+Third-party components and assets keep their own licenses — including the typefaces the web app
+bundles. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md); regenerate it with
+`pnpm licenses:notices` after adding or changing a dependency.
+
+Self-hosters run their own instance: their users' data, and any terms of service or privacy notice
+they publish, are their responsibility rather than this project's.

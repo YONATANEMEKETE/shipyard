@@ -213,3 +213,29 @@ pnpm outdated
 Do not add a dependency to an individual app when it belongs at the root, and do not add application dependencies to the root just because the root can resolve them. Keep package dependency boundaries explicit.
 
 Generated directories such as `node_modules`, `.turbo`, `.next`, `dist`, and TypeScript build-info files should not be committed.
+
+## Licensing
+
+Shipyard is released under the MIT License — see [`LICENSE`](../LICENSE).
+
+By opening a pull request you agree that your contribution is licensed under the same terms. No
+contributor agreement, copyright assignment, or sign-off is required, which means three rules apply
+to what you send:
+
+- **Do not paste code, configuration, or assets you do not have the right to license under MIT.** If
+  a snippet came from a blog post, another repository, or a generated file whose terms you have not
+  checked, say where it came from in the pull request so its license can be verified.
+- **Keep dependencies license-compatible.** Permissive licenses (MIT, ISC, BSD, Apache-2.0), weak
+  copyleft (MPL-2.0, LGPL-3.0), and public-domain dedications are acceptable when unmodified. Do not
+  add a GPL or AGPL dependency to any workspace, and do not add an asset under a non-commercial or
+  no-derivatives license.
+- **Keep the notices current.** After adding, removing, or upgrading a dependency, run:
+
+  ```bash
+  pnpm licenses:notices
+  ```
+
+  and commit the regenerated `THIRD_PARTY_NOTICES.md` in the same pull request.
+
+If you want your contribution attributed differently than your commit author line, say so in the
+pull request.

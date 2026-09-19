@@ -77,7 +77,7 @@ describe('VerifyEmailFlow — user behaviour (isolated)', () => {
       screen.getByText(/one moment while we confirm/i),
     ).toBeInTheDocument();
     expect(mockVerifyEmail).toHaveBeenCalledWith({
-      query: { token: 'tok_123', callbackURL: '/' },
+      query: { token: 'tok_123', callbackURL: '/w' },
     });
   });
 
@@ -94,7 +94,7 @@ describe('VerifyEmailFlow — user behaviour (isolated)', () => {
     expect(screen.getByText(/signing you in/i)).toBeInTheDocument();
     expect(mockReplace).not.toHaveBeenCalled();
 
-    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'), {
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/w'), {
       timeout: 2000,
     });
   });
@@ -134,7 +134,7 @@ describe('VerifyEmailFlow — user behaviour (isolated)', () => {
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
-  it('calls verify with callbackURL / for autoSignIn cookie', async () => {
+  it('calls verify with callbackURL /w for autoSignIn cookie', async () => {
     mockVerifyEmail.mockResolvedValue({ error: null });
 
     renderFlow({ token: 'tok_cb' });
@@ -145,7 +145,7 @@ describe('VerifyEmailFlow — user behaviour (isolated)', () => {
 
     expect(mockVerifyEmail).toHaveBeenCalledWith(
       expect.objectContaining({
-        query: expect.objectContaining({ callbackURL: '/' }),
+        query: expect.objectContaining({ callbackURL: '/w' }),
       }),
     );
   });

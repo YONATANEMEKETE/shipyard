@@ -45,8 +45,10 @@ export function VerifyEmailFlow({
       // session cookie (the JSON-only path skips auto-sign-in). The response
       // body is the followed redirect's HTML — only the error matters here;
       // by this point the browser has already applied the session cookie.
+      // `/w` rather than the app root: `/` is the public landing page, and a
+      // freshly verified user belongs in the workspace dispatcher.
       const { error } = await authClient.verifyEmail({
-        query: { token, callbackURL: '/' },
+        query: { token, callbackURL: '/w' },
       });
       if (cancelled) return;
       setState(error ? 'error' : 'success');
@@ -67,7 +69,7 @@ export function VerifyEmailFlow({
   // the workspace automatically (or back to the invitation being accepted).
   useEffect(() => {
     if (state !== 'success') return;
-    const timer = setTimeout(() => router.replace(next ?? '/'), 1400);
+    const timer = setTimeout(() => router.replace(next ?? '/w'), 1400);
     return () => clearTimeout(timer);
   }, [state, router, next]);
 

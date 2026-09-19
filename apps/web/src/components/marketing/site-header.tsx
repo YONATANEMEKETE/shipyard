@@ -1,6 +1,8 @@
+import Image from 'next/image';
 import Link from 'next/link';
+import { Fragment } from 'react';
 
-import { PrecisionLoopMark } from '@/components/auth/precision-loop-mark';
+import { MarketingActions } from '@/components/marketing/marketing-actions';
 
 /**
  * Canonical public repository link — the marketing surface's "open source"
@@ -10,60 +12,100 @@ import { PrecisionLoopMark } from '@/components/auth/precision-loop-mark';
 export const REPOSITORY_URL = 'https://github.com/YONATANEMEKETE/shipyard';
 
 /**
+ * Centre of the header. Deliberately short: only pages that exist. A "Product"
+ * dropdown would be a fake affordance until there is more than one product page
+ * to point at.
+ */
+const NAV_LINKS = [
+  { label: 'Changelog', href: '/changelog' },
+  { label: 'GitHub', href: REPOSITORY_URL, external: true },
+] as const;
+
+/**
  * Marketing site header for the public surface (`/`, `/changelog`).
  *
- * PLACEHOLDER: structure only. The final header is designed in
- * `shipyard-design/03-UI/shipyard.pen` first; this version exists so the route
- * shell can be reviewed before any pixels are committed to. It is deliberately
- * static — no scroll behaviour, no motion, no client JavaScript — and the CTAs
- * are plain links rather than `components/ui/button` so no client bundle is
- * pulled into the marketing shell until the design is approved.
+ * Structure follows the layout study of a dark fintech landing page: a
+ * transparent bar (no background block, no border), mark and wordmark at the
+ * left, links dead-centre, and the calls to action at the right. The centre
+ * group is mathematically centred rather than optically nudged — the brand and
+ * action regions are both `flex-1`, so the links sit on the page's own axis
+ * instead of on the axis of whatever space is left over.
  *
- * Open question for the build phase: session awareness. `src/proxy.ts` keeps
- * `/` public "even for authed stays", so an authenticated visitor sees the
- * signed-out calls to action. Decide whether the header swaps them for a
- * "Go to your workspace" link (needs a session read) or stays static.
+ * Reached from the design system: 72px bar, Inter for links and buttons, the
+ * Geist wordmark beside the app icon (the same lockup the app sidebar uses),
+ * 36px controls at `ds-radius-md` — the marketing page deliberately does not
+ * introduce a pill-shaped button the product does not use.
+ *
+ * The bar is full-bleed: its background, rule and content all run edge to edge
+ * with the page gutters, so the header is a band across the viewport rather than
+ * a box inside the `Container` column. Sections below it still use `Container`,
+ * which means the header's content and the hero copy do not share a left edge at
+ * wide viewports — that is the intended trade of a full-width bar.
+ *
+ * `public/app-icon.png` is the mark: it already carries its own amber container
+ * and corner radius, so it sits directly on the canvas without a wrapper.
+ *
+ * This stays a server component; only the actions are a client island, so the
+ * rest of the bar ships no JavaScript. Motion (the reference dims the bar as the
+ * page scrolls) is an implementation-time concern, not a layout one.
  */
 export function SiteHeader() {
   return (
     <header className="border-b border-ds-border bg-ds-bg">
-      <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-6 px-4 sm:px-6">
-        <Link href="/" className="flex items-center gap-2 text-ds-text">
-          <PrecisionLoopMark className="size-5 text-ds-brand" />
-          <span className="text-sm font-semibold tracking-tight">Shipyard</span>
-        </Link>
+      <div className="flex h-[72px] w-full items-center px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-1 items-center">
+          <Link
+            href="/"
+            aria-label="Shipyard — home"
+            className="flex items-center gap-2.5"
+          >
+            <Image
+              src="/app-icon.png"
+              alt=""
+              width={32}
+              height={32}
+              priority
+              className="size-8"
+            />
+            <span className="text-[18px] font-[650] tracking-[-0.5px] text-ds-text [font-family:var(--font-display)]">
+              Shipyard
+            </span>
+          </Link>
+        </div>
 
         <nav
-          className="flex items-center gap-4 text-sm sm:gap-6"
           aria-label="Marketing"
+          className="hidden items-center gap-4 md:flex"
         >
-          <Link
-            href="/changelog"
-            className="text-ds-text-muted transition-colors hover:text-ds-text"
-          >
-            Changelog
-          </Link>
-          <a
-            href={REPOSITORY_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="text-ds-text-muted transition-colors hover:text-ds-text"
-          >
-            GitHub
-          </a>
-          <Link
-            href="/sign-in"
-            className="text-ds-text-muted transition-colors hover:text-ds-text"
-          >
-            Sign in
-          </Link>
-          <Link
-            href="/sign-up"
-            className="text-ds-text underline-offset-4 hover:underline"
-          >
-            Get started
-          </Link>
+          {NAV_LINKS.map((link, index) => (
+            <Fragment key={link.label}>
+              {index > 0 ? (
+                <span aria-hidden className="h-4 w-px bg-ds-border" />
+              ) : null}
+              {'external' in link ? (
+                <a
+                  href={link.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm font-medium text-ds-text-muted transition-colors hover:text-ds-text"
+                >
+                  {link.label}
+                </a>
+              ) : (
+                <Link
+                  href={link.href}
+                  className="text-sm font-medium text-ds-text-muted transition-colors hover:text-ds-text"
+                >
+                  {link.label}
+                </Link>
+              )}
+            </Fragment>
+          ))}
         </nav>
+
+        <div className="flex flex-1 items-center justify-end gap-2">
+          <MarketingActions />
+        </div>
       </div>
     </header>
   );

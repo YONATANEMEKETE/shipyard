@@ -2,6 +2,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Fragment } from 'react';
 
+import { HeaderShell } from '@/components/marketing/header-shell';
+import { Container } from '@/components/marketing/container';
 import { MarketingActions } from '@/components/marketing/marketing-actions';
 
 /**
@@ -36,23 +38,22 @@ const NAV_LINKS = [
  * 36px controls at `ds-radius-md` — the marketing page deliberately does not
  * introduce a pill-shaped button the product does not use.
  *
- * The bar is full-bleed: its background, rule and content all run edge to edge
- * with the page gutters, so the header is a band across the viewport rather than
- * a box inside the `Container` column. Sections below it still use `Container`,
- * which means the header's content and the hero copy do not share a left edge at
- * wide viewports — that is the intended trade of a full-width bar.
+ * The bar is full-bleed (background, rule and hover states run edge to edge) but
+ * its **content** sits in the shared `Container`, so the brand, the centre links
+ * and the actions line up with the page's content axis.
  *
  * `public/app-icon.png` is the mark: it already carries its own amber container
  * and corner radius, so it sits directly on the canvas without a wrapper.
  *
- * This stays a server component; only the actions are a client island, so the
- * rest of the bar ships no JavaScript. Motion (the reference dims the bar as the
- * page scrolls) is an implementation-time concern, not a layout one.
+ * This stays a server component; only the shell (the bar's rule on scroll) and the
+ * actions are client islands, so the rest of the bar ships no JavaScript. Motion
+ * (the reference dims the bar as the page scrolls) is still an implementation-time
+ * concern, not a layout one.
  */
 export function SiteHeader() {
   return (
-    <header className="border-b border-ds-border bg-ds-bg">
-      <div className="flex h-[72px] w-full items-center px-4 sm:px-6 lg:px-8">
+    <HeaderShell>
+      <Container className="flex h-[72px] items-center">
         <div className="flex flex-1 items-center">
           <Link
             href="/"
@@ -106,7 +107,7 @@ export function SiteHeader() {
         <div className="flex flex-1 items-center justify-end gap-2">
           <MarketingActions />
         </div>
-      </div>
-    </header>
+      </Container>
+    </HeaderShell>
   );
 }

@@ -1,31 +1,24 @@
-import Link from 'next/link';
-
 import { Container } from '@/components/marketing/container';
-import { REPOSITORY_URL } from '@/components/marketing/site-header';
+import { Hero } from '@/components/marketing/hero';
 
 /**
  * Landing page — `/`.
  *
- * PLACEHOLDER CONTENT. Copy, layout and visuals for this page are designed in
- * `shipyard-design/03-UI/shipyard.pen` first (inspiration board → high-fidelity
- * static design → approval) and only then implemented here. What exists now is
- * the agreed *structure*, so the route, the shell and the section order can be
- * reviewed before any pixels are committed to. Motion is out of scope for the
- * design pass.
+ * The hero is built (`components/marketing/hero.tsx`). Everything below it is
+ * still PLACEHOLDER STRUCTURE: each section states what belongs there so the
+ * order can be reviewed while it is built out one section at a time.
  *
  * Agreed section order:
- *   1. Hero            — positioning line, two CTAs, real product screenshot
- *   2. The problem     — "too simple" (Trello) vs. "too complex" (Jira)
- *   3. The five workflows — manage work · plan projects · run cycles ·
- *                           collaborate · track progress, one real UI shot each
- *   4. Developer-first — design system, dark mode, keyboard-first, ADRs, tests
- *                        (the engineering proof, on the landing page itself)
- *   5. Open source     — GitHub, one-command local setup
- *   6. Closing CTA
+ *  1. Hero            — built: badge, headline, hairline, promise, one CTA
+ *  2. The problem     — "too simple" (Trello) vs. "too complex" (Jira)
+ *  3. The five workflows — manage work · plan projects · run cycles ·
+ *                          collaborate · track progress, one real UI shot each
+ *  4. Developer-first — design system, dark mode, keyboard-first, ADRs, tests
+ *                       (the engineering proof, on the landing page itself)
+ *  5. Open source     — GitHub, one-command local setup
+ *  6. Closing CTA
  *
  * Build-phase checklist for this page (not yet done):
- *   - repository has no `LICENSE` file — required before the page claims
- *     "open source"
  *   - privacy/terms pages do not exist — required before the footer links them
  *   - real product screenshots from a seeded workspace (no mockups)
  *   - per-route `openGraph` image + metadata, `sitemap.ts`, `robots.ts`
@@ -33,12 +26,6 @@ import { REPOSITORY_URL } from '@/components/marketing/site-header';
  */
 
 const SECTIONS = [
-  {
-    id: 'hero',
-    eyebrow: '1 · Hero',
-    heading: 'Plan. Build. Ship.',
-    note: 'Positioning line, subline, Try it live / GitHub CTAs, real product screenshot.',
-  },
   {
     id: 'problem',
     eyebrow: '2 · The problem',
@@ -75,6 +62,8 @@ const SECTIONS = [
 export default function LandingPage() {
   return (
     <>
+      <Hero />
+
       {SECTIONS.map((section) => (
         <section
           key={section.id}
@@ -91,25 +80,6 @@ export default function LandingPage() {
             <p className="mt-4 max-w-2xl text-sm leading-6 text-ds-text-muted">
               {section.note}
             </p>
-
-            {section.id === 'hero' ? (
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                <Link
-                  href="/sign-up"
-                  className="inline-flex h-9 items-center rounded-md bg-ds-brand px-4 text-sm font-medium text-white"
-                >
-                  Try it live
-                </Link>
-                <a
-                  href={REPOSITORY_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex h-9 items-center rounded-md border border-ds-border bg-ds-surface px-4 text-sm font-medium text-ds-text"
-                >
-                  GitHub
-                </a>
-              </div>
-            ) : null}
           </Container>
         </section>
       ))}

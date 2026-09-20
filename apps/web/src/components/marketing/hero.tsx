@@ -101,10 +101,10 @@ export function Hero() {
             what gives the band its width — the video frames it top and bottom. */}
         <Container className="relative py-16">
           <Image
-            src="/hero-product-image.png"
+            src="/hero-product-mockup.png"
             alt="The Shipyard issues board"
-            width={1920}
-            height={1280}
+            width={3600}
+            height={2025}
             priority
             sizes="(min-width: 1504px) 1440px, 100vw"
             className="h-auto w-full"

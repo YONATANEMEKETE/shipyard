@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 
 import { NOISE_BACKGROUND } from '@/components/marketing/noise';
-import { SiteFooter } from '@/components/marketing/site-footer';
 import { SiteHeader } from '@/components/marketing/site-header';
 
 /**
@@ -19,6 +18,10 @@ import { SiteHeader } from '@/components/marketing/site-header';
  * transparent, so one background layer covers the whole page from the hero to the
  * footer and no section has to carry it. See `components/marketing/noise.ts`.
  *
+ * There is no footer: the landing page ends on its own call to action
+ * (`components/marketing/cta.tsx`), and the links a footer would carry — the
+ * changelog, the repository and sign-in — are in the header.
+ *
  * No product chrome (sidebar, workspace header) belongs here: this is the
  * surface a visitor sees before they have a workspace.
  */
@@ -30,7 +33,6 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
     >
       <SiteHeader />
       <main className="flex-1">{children}</main>
-      <SiteFooter />
     </div>
   );
 }

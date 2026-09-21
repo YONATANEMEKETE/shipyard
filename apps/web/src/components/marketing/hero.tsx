@@ -3,6 +3,11 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Container } from '@/components/marketing/container';
 import {
+  FadeIn,
+  FadeInLetters,
+  FadeInWords,
+} from '@/components/motion/fade-in';
+import {
   ALL_CORNERS,
   BOTTOM_CORNERS,
   Marks,
@@ -61,29 +66,47 @@ export function Hero() {
             filled surface. */}
           <div className="relative flex items-center justify-center border-b border-ds-border bg-gradient-to-b from-ds-text/[0.045] to-transparent py-3">
             <Marks corners={ALL_CORNERS} className={MARK_STACKING} />
-            <span className="font-mono text-[11px] font-semibold tracking-[1.2px] text-ds-text-muted uppercase">
-              Open source · Self-hostable
-            </span>
+            <FadeInLetters
+              text="Open source · Self-hostable"
+              className="font-mono text-[11px] font-semibold tracking-[1.2px] text-ds-text-muted uppercase"
+              delay={0.08}
+              stagger={0.016}
+            />
           </div>
 
           <div className="flex flex-col items-center py-28">
             <h1 className="flex flex-col text-[56px] leading-[1.05] font-bold tracking-[-1.2px] text-ds-text">
-              <span>You build the software.</span>
               <span>
-                We keep the work{' '}
-                <span className="text-ds-brand">organized</span>.
+                <FadeInWords
+                  text="You build the software."
+                  delay={0.18}
+                  stagger={0.045}
+                />
+              </span>
+              <span>
+                <FadeInWords
+                  text="We keep the work organized."
+                  accent="organized"
+                  accentClassName="text-ds-brand"
+                  delay={0.34}
+                  stagger={0.045}
+                />
               </span>
             </h1>
 
             <p className="mt-8 max-w-[560px] text-base leading-relaxed text-ds-text-muted">
-              Project management for small engineering teams: projects, cycles,
-              issues and activity in one place, without the enterprise
-              machinery.
+              <FadeInWords
+                text="Project management for small engineering teams: projects, cycles, issues and activity in one place, without the enterprise machinery."
+                delay={0.55}
+                stagger={0.022}
+              />
             </p>
 
-            <Button size="lg" asChild className="mt-8">
-              <a href="/sign-up">Start a workspace</a>
-            </Button>
+            <FadeIn delay={0.9} className="mt-8">
+              <Button size="lg" asChild>
+                <a href="/sign-up">Start a workspace</a>
+              </Button>
+            </FadeIn>
           </div>
 
           {/* The middle column's vertical rules end on the rule that closes the
@@ -111,15 +134,21 @@ export function Hero() {
         {/* The product shot sits in the shared `Container` (1440px), which is
             what gives the band its width: the video frames it top and bottom. */}
         <Container className="relative py-16">
-          <Image
-            src="/hero-product-mockup.png"
-            alt="The Shipyard issues board"
-            width={3600}
-            height={2025}
-            priority
-            sizes="(min-width: 1504px) 1440px, 100vw"
-            className="h-auto w-full"
-          />
+          {/* The shot rises into place as the band scrolls in: it is the largest
+              thing on the page, so it travels further and takes longer than the
+              copy above, and it is left unblurred, since a blur pass over a
+              full-width image costs more than it reads. */}
+          <FadeIn inView y={40} duration={0.7} delay={0.1} blur={false}>
+            <Image
+              src="/hero-product-mockup.png"
+              alt="The Shipyard issues board"
+              width={3600}
+              height={2025}
+              priority
+              sizes="(min-width: 1504px) 1440px, 100vw"
+              className="h-auto w-full"
+            />
+          </FadeIn>
         </Container>
       </div>
     </section>

@@ -1,8 +1,19 @@
 import Image from 'next/image';
-import { Plus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Container } from '@/components/marketing/container';
+import {
+  ALL_CORNERS,
+  BOTTOM_CORNERS,
+  Marks,
+} from '@/components/marketing/marks';
+import {
+  TILE,
+  TILE_COLUMNS,
+  TILE_FILL,
+  TILE_MASK,
+  TILE_MASK_MIRRORED,
+} from '@/components/marketing/tiles';
 
 /**
  * The hero's opening statement.
@@ -49,7 +60,7 @@ export function Hero() {
             the strip from the flat page background below it without reading as a
             filled surface. */}
           <div className="relative flex items-center justify-center border-b border-ds-border bg-gradient-to-b from-ds-text/[0.045] to-transparent py-3">
-            <Marks corners={BADGE_CORNERS} />
+            <Marks corners={ALL_CORNERS} className={MARK_STACKING} />
             <span className="font-mono text-[11px] font-semibold tracking-[1.2px] text-ds-text-muted uppercase">
               Open source · Self-hostable
             </span>
@@ -77,7 +88,7 @@ export function Hero() {
 
           {/* The middle column's vertical rules end on the rule that closes the
               top part — the same plus marks that pin the badge mark each end. */}
-          <Marks corners={RULE_END_MARKS} />
+          <Marks corners={BOTTOM_CORNERS} className={MARK_STACKING} />
         </div>
 
         <SquarePattern side="right" />
@@ -116,114 +127,33 @@ export function Hero() {
 }
 
 /**
- * A single plus mark — the hero's line-crossing motif. Decorative, so it is
- * hidden from assistive technology; it straddles whatever line it is placed on
- * by pairing its offset with its transform. The mark sits above the bar's
- * stacking order (`z-50` against the header's `z-40`) because the line under the
- * bar is the hero's own top border — the crossing half would otherwise be hidden
- * behind the header, which is what makes them look clipped — and it drops behind
- * the bar (`z-30`) as soon as the bar takes over the line.
+ * The hero's mark stacking (`components/marketing/marks.tsx`). The mark must sit
+ * above the bar's layer (`z-50` against the header's `z-40`): the line under the
+ * bar is the hero's own top border, and the crossing half would otherwise be
+ * hidden behind the header — which is what makes the marks look clipped. It
+ * drops behind the bar (`z-30`) as soon as the bar takes over the line on
+ * scroll, so the marks stay on whichever line is actually drawn.
  */
-function PlusMark({ position, shift }: { position: string; shift: string }) {
-  return (
-    <Plus
-      aria-hidden
-      className={`absolute ${position} ${shift} z-50 size-2.5 text-ds-brand [html[data-scrolled=true]_&]:z-30`}
-      strokeWidth={1.5}
-    />
-  );
-}
-
-type Mark = { position: string; shift: string };
-
-/** The four marks pinning the badge strip's corners. */
-const BADGE_CORNERS = [
-  { position: 'top-0 left-0', shift: '-translate-x-1/2 -translate-y-1/2' },
-  { position: 'top-0 right-0', shift: 'translate-x-1/2 -translate-y-1/2' },
-  { position: 'bottom-0 left-0', shift: '-translate-x-1/2 translate-y-1/2' },
-  { position: 'bottom-0 right-0', shift: 'translate-x-1/2 translate-y-1/2' },
-] as const satisfies readonly Mark[];
+const MARK_STACKING = 'z-50 [html[data-scrolled=true]_&]:z-30';
 
 /**
- * The pair at the bottom ends of the middle column's vertical rules, where they
- * meet the rule that closes the top part.
- */
-const RULE_END_MARKS = [
-  { position: 'bottom-0 left-0', shift: '-translate-x-1/2 translate-y-1/2' },
-  { position: 'bottom-0 right-0', shift: 'translate-x-1/2 translate-y-1/2' },
-] as const satisfies readonly Mark[];
-
-/** Renders a set of plus marks inside a `relative` parent. */
-function Marks({ corners }: { corners: readonly Mark[] }) {
-  return (
-    <>
-      {corners.map(({ position, shift }) => (
-        <PlusMark key={position} position={position} shift={shift} />
-      ))}
-    </>
-  );
-}
-
-/**
- * The faint tile field in each side column, edge to edge.
+ * The tile field in each side column, edge to edge.
  *
- * Reference (Ledger): the side margins are tiled with square cells — no gaps and
- * no padding — where only some cells carry a low-opacity grey and the rest are
- * exactly the page background. Ours: 92px cells at 15% of `--ds-border-strong`,
- * with the grey set a deliberate scatter — the `GREY_CELLS` below, two per row in
- * a 6×6 tile, none orthogonally adjacent to another (including across the tile
- * seam) — so nothing about it reads as a grid or a checkerboard.
- *
- * Painted on the column itself: a translucent background colour masked by the
- * SVG tile, so there are no nodes to place, the tiling fills whatever height the
- * top part has, and the colour stays a theme token — the mask carries no colour
- * of its own. The left field is the right one **mirrored** — its mask reflects
- * the grey cells (column `c` → `5 − c`) and the phase hangs off its inner edge —
- * so the pair reads as one symmetric arrangement either side of the centre column
- * rather than the same pattern twice. The column is a fixed 20% of the row — the
- * field is present at every width, and it is the middle column's percentage that
- * keeps the hero's composition stable as the viewport changes.
+ * Painted on the column itself — a translucent background colour masked by the
+ * shared tile mask (`components/marketing/tiles.ts`) — so there are no nodes to
+ * place and the colour stays a theme token. The left field is the right one
+ * **mirrored**: its mask reflects the grey cells and the phase hangs off its
+ * inner edge, so the pair reads as one symmetric arrangement either side of the
+ * centre column rather than the same pattern twice. The column is a fixed 20% of
+ * the row, so the field is present at every width.
  */
-const TILE = 92;
-const TILE_COLUMNS = 6;
-// [row, column] of each grey cell inside one 6×6 tile of the mask.
-const GREY_CELLS: Array<[number, number]> = [
-  [0, 1],
-  [0, 4],
-  [1, 0],
-  [1, 3],
-  [2, 1],
-  [2, 5],
-  [3, 2],
-  [3, 4],
-  [4, 1],
-  [4, 3],
-  [5, 0],
-];
-
-const tileMask = (cells: Array<[number, number]>) =>
-  `url("data:image/svg+xml,${encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${TILE * TILE_COLUMNS}" height="${TILE * TILE_COLUMNS}"><g fill="#fff">${cells
-      .map(
-        ([row, col]) =>
-          `<rect x="${col * TILE}" y="${row * TILE}" width="${TILE}" height="${TILE}"/>`,
-      )
-      .join('')}</g></svg>`,
-  )}")`;
-
-const TILE_MASK = tileMask(GREY_CELLS);
-const TILE_MASK_MIRRORED = tileMask(
-  GREY_CELLS.map(([row, col]) => [row, TILE_COLUMNS - 1 - col]),
-);
-
 function SquarePattern({ side }: { side: 'left' | 'right' }) {
   return (
     <div
       aria-hidden
       className="w-1/5 shrink-0"
       style={{
-        backgroundColor:
-          'color-mix(in oklab, var(--ds-border-strong) 15%, transparent)',
+        backgroundColor: TILE_FILL,
         maskImage: side === 'left' ? TILE_MASK_MIRRORED : TILE_MASK,
         maskSize: `${TILE * TILE_COLUMNS}px ${TILE * TILE_COLUMNS}px`,
         maskPosition: side === 'left' ? 'right top' : 'left top',

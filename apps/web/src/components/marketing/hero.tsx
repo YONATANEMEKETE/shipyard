@@ -22,20 +22,20 @@ import {
  * into Harbor Amber's light theme: a micro badge with a plus mark at each corner,
  * a two-line headline carrying exactly one amber word, one centred sentence, and
  * a single dominant action. Everything shares one centre axis and one narrow
- * measure — 56px of type on a 1200px-wide page needs a short line length or it
+ * measure: 56px of type on a 1200px-wide page needs a short line length or it
  * stops scanning.
  *
  * The hero is divided into two parts, top and bottom:
  *
- *  - **Top** is the three-column row, split by **percentage** — 20% / 60% / 20%
+ *  - **Top** is the three-column row, split by **percentage**, 20% / 60% / 20%
  *    of the viewport, not by the page `Container`. The middle column carries the
  *    badge strip, the headline and the CTA inside the vertical hairlines that
  *    frame them; the two side columns carry the tile fields. The hero is
- *    deliberately its own composition — the split does not track the text column
- *    of the sections below it. The square fields live in the top part only — that
+ *    deliberately its own composition: the split does not track the text column
+ *    of the sections below it. The square fields live in the top part only: that
  *    is the part that is divided in three.
  *  - **Bottom** is the product band: the backdrop video, full-bleed and muted,
- *    with the issues-board screenshot in the container column on top of it — the
+ *    with the issues-board screenshot in the container column on top of it. The
  *    screenshot gives the band its height (its own aspect ratio, no fixed
  *    window). No rule between the two parts.
  *
@@ -46,14 +46,14 @@ import {
 export function Hero() {
   return (
     <section className="flex flex-col border-t border-ds-border">
-      {/* Top part — the three-column row. `items-stretch` makes the side columns
+      {/* Top part: the three-column row. `items-stretch` makes the side columns
           exactly as tall as the middle one, so the vertical hairlines and the
           square fields span the whole band between its top and bottom rules. */}
       <div className="flex items-stretch border-b border-ds-border">
         <SquarePattern side="left" />
 
         <div className="relative flex w-3/5 shrink-0 flex-col border-x border-ds-border text-center">
-          {/* The badge is a strip across the top of the column — the column has no
+          {/* The badge is a strip across the top of the column: the column has no
             gutters, so the strip spans it edge to edge, its text stays centred,
             and its corner marks land on the strip's own corners. A top-down grey
             wash (4.5% of the text colour, so it works in both themes) separates
@@ -76,7 +76,7 @@ export function Hero() {
             </h1>
 
             <p className="mt-8 max-w-[560px] text-base leading-relaxed text-ds-text-muted">
-              Project management for small engineering teams — projects, cycles,
+              Project management for small engineering teams: projects, cycles,
               issues and activity in one place, without the enterprise
               machinery.
             </p>
@@ -87,17 +87,17 @@ export function Hero() {
           </div>
 
           {/* The middle column's vertical rules end on the rule that closes the
-              top part — the same plus marks that pin the badge mark each end. */}
+              top part: the same plus marks that pin the badge mark each end. */}
           <Marks corners={BOTTOM_CORNERS} className={MARK_STACKING} />
         </div>
 
         <SquarePattern side="right" />
       </div>
 
-      {/* Bottom part — the product band: the backdrop video runs full-bleed
+      {/* Bottom part: the product band. The backdrop video runs full-bleed
           behind everything, and the issues-board screenshot sits in the container
           column on top of it. The screenshot sets the band's height now, so the
-          band is as tall as its own aspect ratio needs — there is no fixed
+          band is as tall as its own aspect ratio needs: there is no fixed
           window any more. The product cards, if any, come on top of the shot. */}
       <div className="relative">
         <video
@@ -109,7 +109,7 @@ export function Hero() {
           className="absolute inset-0 h-full w-full object-cover"
         />
         {/* The product shot sits in the shared `Container` (1440px), which is
-            what gives the band its width — the video frames it top and bottom. */}
+            what gives the band its width: the video frames it top and bottom. */}
         <Container className="relative py-16">
           <Image
             src="/hero-product-mockup.png"
@@ -130,7 +130,7 @@ export function Hero() {
  * The hero's mark stacking (`components/marketing/marks.tsx`). The mark must sit
  * above the bar's layer (`z-50` against the header's `z-40`): the line under the
  * bar is the hero's own top border, and the crossing half would otherwise be
- * hidden behind the header — which is what makes the marks look clipped. It
+ * hidden behind the header, which is what makes the marks look clipped. It
  * drops behind the bar (`z-30`) as soon as the bar takes over the line on
  * scroll, so the marks stay on whichever line is actually drawn.
  */
@@ -139,8 +139,8 @@ const MARK_STACKING = 'z-50 [html[data-scrolled=true]_&]:z-30';
 /**
  * The tile field in each side column, edge to edge.
  *
- * Painted on the column itself — a translucent background colour masked by the
- * shared tile mask (`components/marketing/tiles.ts`) — so there are no nodes to
+ * Painted on the column itself, a translucent background colour masked by the
+ * shared tile mask (`components/marketing/tiles.ts`), so there are no nodes to
  * place and the colour stays a theme token. The left field is the right one
  * **mirrored**: its mask reflects the grey cells and the phase hangs off its
  * inner edge, so the pair reads as one symmetric arrangement either side of the

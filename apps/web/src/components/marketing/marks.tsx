@@ -3,18 +3,18 @@ import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /**
- * The plus mark — the marketing surface's line-crossing motif.
+ * The plus mark: the marketing surface's line-crossing motif.
  *
  * A small amber plus straddles a hairline wherever two rules meet or end: the
  * hero's badge strip and the bottom ends of its centre column, and the top
- * corners of sections below it. It is decorative — hidden from assistive
- * technology — and it is placed by pairing an inset (`position`) with the
+ * corners of sections below it. It is decorative, hidden from assistive
+ * technology, and it is placed by pairing an inset (`position`) with the
  * offset that pushes its centre onto the line (`shift`), so it draws the
  * crossing rather than sitting beside it.
  *
  * Stacking: the marks clear the page's own layer by default (`z-10`). Callers
  * that sit under the sticky header pass the hero's own stacking rules in
- * `className` — the top border of the hero *is* the line under the bar, so those
+ * `className`: the top border of the hero *is* the line under the bar, so those
  * marks rise above it (`z-50`) and drop behind it (`z-30`) once the bar takes the
  * line over on scroll.
  */
@@ -24,7 +24,7 @@ export type Mark = { position: string; shift: string };
 
 /**
  * The four corners of a box, each mark offset so its centre sits on the corner
- * itself — half in, half out.
+ * itself: half in, half out.
  */
 export const CORNERS = {
   topLeft: {
@@ -53,10 +53,10 @@ export const ALL_CORNERS: readonly Mark[] = [
   CORNERS.bottomRight,
 ];
 
-/** The top two corners only — a rule's own ends. */
+/** The top two corners only: a rule's own ends. */
 export const TOP_CORNERS: readonly Mark[] = [CORNERS.topLeft, CORNERS.topRight];
 
-/** The bottom two corners only — where a vertical rule meets the one below it. */
+/** The bottom two corners only: where a vertical rule meets the one below it. */
 export const BOTTOM_CORNERS: readonly Mark[] = [
   CORNERS.bottomLeft,
   CORNERS.bottomRight,

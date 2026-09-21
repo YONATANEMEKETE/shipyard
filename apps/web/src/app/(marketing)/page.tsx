@@ -1,59 +1,44 @@
 import { Container } from '@/components/marketing/container';
 import { Hero } from '@/components/marketing/hero';
+import { Workflows } from '@/components/marketing/workflows';
 
 /**
  * Landing page — `/`.
  *
- * The hero is built (`components/marketing/hero.tsx`). Everything below it is
- * still PLACEHOLDER STRUCTURE: each section states what belongs there so the
- * order can be reviewed while it is built out one section at a time.
+ * The hero and the workflows section are built (`components/marketing/hero.tsx`,
+ * `components/marketing/workflows.tsx`). Everything below them is still
+ * PLACEHOLDER STRUCTURE: each section states what belongs there so the order can
+ * be reviewed while it is built out one section at a time.
  *
- * Agreed section order:
- *  1. Hero            — built: badge, headline, hairline, promise, one CTA
- *  2. The problem     — "too simple" (Trello) vs. "too complex" (Jira)
- *  3. The five workflows — manage work · plan projects · run cycles ·
- *                          collaborate · track progress, one real UI shot each
- *  4. Developer-first — design system, dark mode, keyboard-first, ADRs, tests
- *                       (the engineering proof, on the landing page itself)
- *  5. Open source     — GitHub, one-command local setup
- *  6. Closing CTA
+ * Agreed order:
+ *  1. Hero       — built: badge, headline, one CTA, product band
+ *  2. Workflows  — built: intro panel + three cards
+ *  3. MCP        — the agent surface: tokens, scopes, attributed actions
+ *  4. Open source — repository link, one-command setup, contribution path
+ *  5. Closing CTA
  *
  * Build-phase checklist for this page (not yet done):
  *   - privacy/terms pages do not exist — required before the footer links them
- *   - real product screenshots from a seeded workspace (no mockups)
  *   - per-route `openGraph` image + metadata, `sitemap.ts`, `robots.ts`
  *   - honesty guardrail: no invented logos, testimonials or usage numbers
  */
 
 const SECTIONS = [
   {
-    id: 'problem',
-    eyebrow: '2 · The problem',
-    heading: 'Small engineering teams are underserved',
-    note: 'Too simple to grow with, or too heavy to configure. Shipyard takes the middle.',
-  },
-  {
-    id: 'workflows',
-    eyebrow: '3 · The five workflows',
-    heading:
-      'Manage work. Plan projects. Run cycles. Collaborate. Track progress.',
-    note: 'One section per workflow, each with a real screenshot of the shipped UI.',
-  },
-  {
-    id: 'developer-first',
-    eyebrow: '4 · Developer-first',
-    heading: 'Built the way the product asks you to build',
-    note: 'Design system, dark mode, keyboard-first flows, ADRs, test suites, self-hosting.',
+    id: 'mcp',
+    eyebrow: '3 · MCP',
+    heading: 'Your agents work in the same workspace',
+    note: 'A token belongs to one member and one workspace; agent actions are the member’s own actions, attributed in history and activity.',
   },
   {
     id: 'open-source',
-    eyebrow: '5 · Open source',
+    eyebrow: '4 · Open source',
     heading: 'Read the code, run it locally',
     note: 'Repository link, one-command setup, contribution path.',
   },
   {
     id: 'closing',
-    eyebrow: '6 · Closing',
+    eyebrow: '5 · Closing',
     heading: 'Start with the workspace you already have',
     note: 'Final CTA into sign-up.',
   },
@@ -63,6 +48,7 @@ export default function LandingPage() {
   return (
     <>
       <Hero />
+      <Workflows />
 
       {SECTIONS.map((section) => (
         <section

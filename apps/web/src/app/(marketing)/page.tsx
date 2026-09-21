@@ -1,35 +1,33 @@
 import { Container } from '@/components/marketing/container';
 import { Hero } from '@/components/marketing/hero';
+import { Mcp } from '@/components/marketing/mcp';
 import { Workflows } from '@/components/marketing/workflows';
 
 /**
- * Landing page — `/`.
+ * Landing page: `/`.
  *
- * The hero and the workflows section are built (`components/marketing/hero.tsx`,
- * `components/marketing/workflows.tsx`). Everything below them is still
- * PLACEHOLDER STRUCTURE: each section states what belongs there so the order can
- * be reviewed while it is built out one section at a time.
+ * The hero, the workflows section and the MCP section are built
+ * (`components/marketing/hero.tsx`, `workflows.tsx`, `mcp.tsx`). Everything below
+ * them is still PLACEHOLDER STRUCTURE: each section states what belongs there so
+ * the order can be reviewed while it is built out one section at a time.
  *
  * Agreed order:
- *  1. Hero       — built: badge, headline, one CTA, product band
- *  2. Workflows  — built: intro panel + three cards
- *  3. MCP        — the agent surface: tokens, scopes, attributed actions
- *  4. Open source — repository link, one-command setup, contribution path
+ *  1. Hero        built: badge, headline, one CTA, product band
+ *  2. Workflows   built: intro panel + three cards
+ *  3. MCP         built: the agent surface, one column per client
+ *  4. Open source repository link, one-command setup, contribution path
  *  5. Closing CTA
  *
+ * The built sections share the same anatomy (`SectionPanel` + `RuledColumns`), so
+ * the page reads as one composition rather than three designs.
+ *
  * Build-phase checklist for this page (not yet done):
- *   - privacy/terms pages do not exist — required before the footer links them
+ *   - privacy/terms pages do not exist, and are required before the footer links them
  *   - per-route `openGraph` image + metadata, `sitemap.ts`, `robots.ts`
  *   - honesty guardrail: no invented logos, testimonials or usage numbers
  */
 
 const SECTIONS = [
-  {
-    id: 'mcp',
-    eyebrow: '3 · MCP',
-    heading: 'Your agents work in the same workspace',
-    note: 'A token belongs to one member and one workspace; agent actions are the member’s own actions, attributed in history and activity.',
-  },
   {
     id: 'open-source',
     eyebrow: '4 · Open source',
@@ -49,6 +47,7 @@ export default function LandingPage() {
     <>
       <Hero />
       <Workflows />
+      <Mcp />
 
       {SECTIONS.map((section) => (
         <section

@@ -1,4 +1,4 @@
-import { Container } from '@/components/marketing/container';
+import { Cta } from '@/components/marketing/cta';
 import { Hero } from '@/components/marketing/hero';
 import { Mcp } from '@/components/marketing/mcp';
 import { Workflows } from '@/components/marketing/workflows';
@@ -6,68 +6,28 @@ import { Workflows } from '@/components/marketing/workflows';
 /**
  * Landing page: `/`.
  *
- * The hero, the workflows section and the MCP section are built
- * (`components/marketing/hero.tsx`, `workflows.tsx`, `mcp.tsx`). Everything below
- * them is still PLACEHOLDER STRUCTURE: each section states what belongs there so
- * the order can be reviewed while it is built out one section at a time.
+ * The page is complete, top to bottom: hero, what the product does, how an agent
+ * gets in, and the closing call to action. All four sections share one anatomy
+ * (`SectionPanel` opens each, `RuledColumns` carries the lower half where there is
+ * one), so the page reads as one composition rather than four designs.
  *
- * Agreed order:
- *  1. Hero        built: badge, headline, one CTA, product band
- *  2. Workflows   built: intro panel + three cards
- *  3. MCP         built: the agent surface, one column per client
- *  4. Open source repository link, one-command setup, contribution path
- *  5. Closing CTA
- *
- * The built sections share the same anatomy (`SectionPanel` + `RuledColumns`), so
- * the page reads as one composition rather than three designs.
+ * There is no open-source section and no footer by decision, not by omission: the
+ * repository's README is where self-hosting is explained, in more detail than a
+ * marketing section could carry, and the header already links the changelog, the
+ * repository and sign-in. The page ends on the wordmark in
+ * `components/marketing/cta.tsx`.
  *
  * Build-phase checklist for this page (not yet done):
- *   - privacy/terms pages do not exist, and are required before the footer links them
  *   - per-route `openGraph` image + metadata, `sitemap.ts`, `robots.ts`
  *   - honesty guardrail: no invented logos, testimonials or usage numbers
  */
-
-const SECTIONS = [
-  {
-    id: 'open-source',
-    eyebrow: '4 · Open source',
-    heading: 'Read the code, run it locally',
-    note: 'Repository link, one-command setup, contribution path.',
-  },
-  {
-    id: 'closing',
-    eyebrow: '5 · Closing',
-    heading: 'Start with the workspace you already have',
-    note: 'Final CTA into sign-up.',
-  },
-] as const;
-
 export default function LandingPage() {
   return (
     <>
       <Hero />
       <Workflows />
       <Mcp />
-
-      {SECTIONS.map((section) => (
-        <section
-          key={section.id}
-          id={section.id}
-          className="border-b border-dashed border-ds-border"
-        >
-          <Container className="py-16 sm:py-24">
-            <p className="font-mono text-[10px] font-semibold uppercase tracking-[1.2px] text-ds-text-muted">
-              {section.eyebrow}
-            </p>
-            <h2 className="mt-3 max-w-3xl text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-              {section.heading}
-            </h2>
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-ds-text-muted">
-              {section.note}
-            </p>
-          </Container>
-        </section>
-      ))}
+      <Cta />
     </>
   );
 }

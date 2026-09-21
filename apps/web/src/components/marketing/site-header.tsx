@@ -14,12 +14,16 @@ import { MarketingActions } from '@/components/marketing/marketing-actions';
 export const REPOSITORY_URL = 'https://github.com/YONATANEMEKETE/shipyard';
 
 /**
- * Centre of the header. Deliberately short: only pages that exist. A "Product"
- * dropdown would be a fake affordance until there is more than one product page
- * to point at.
+ * The author's X profile — the same reasoning as `REPOSITORY_URL`: the header's
+ * nav and the closing section's signature point at one string.
+ */
+export const X_URL = 'https://x.com/Yonatanem2';
+
+/**
+ * Centre of the header. Deliberately short: the repository and the author's feed.
  */
 const NAV_LINKS = [
-  { label: 'Changelog', href: '/changelog' },
+  { label: 'X', href: X_URL, external: true },
   { label: 'GitHub', href: REPOSITORY_URL, external: true },
 ] as const;
 
@@ -83,23 +87,14 @@ export function SiteHeader() {
               {index > 0 ? (
                 <span aria-hidden className="h-4 w-px bg-ds-border" />
               ) : null}
-              {'external' in link ? (
-                <a
-                  href={link.href}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-sm font-medium text-ds-text-muted transition-colors hover:text-ds-text"
-                >
-                  {link.label}
-                </a>
-              ) : (
-                <Link
-                  href={link.href}
-                  className="text-sm font-medium text-ds-text-muted transition-colors hover:text-ds-text"
-                >
-                  {link.label}
-                </Link>
-              )}
+              <a
+                href={link.href}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm font-medium text-ds-text-muted transition-colors hover:text-ds-text"
+              >
+                {link.label}
+              </a>
             </Fragment>
           ))}
         </nav>

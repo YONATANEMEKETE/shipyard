@@ -10,7 +10,11 @@ vi.mock('@/hooks/use-session', () => ({
   useSession: () => mockSession,
 }));
 
-import { REPOSITORY_URL, SiteHeader } from '@/components/marketing/site-header';
+import {
+  REPOSITORY_URL,
+  SiteHeader,
+  X_URL,
+} from '@/components/marketing/site-header';
 
 /**
  * The header is the marketing surface's navigation: brand back to the landing
@@ -37,8 +41,12 @@ describe('SiteHeader', () => {
 
     const nav = screen.getByRole('navigation', { name: 'Marketing' });
 
-    expect(nav).toHaveTextContent('Changelog');
+    expect(nav).toHaveTextContent('X');
     expect(nav).toHaveTextContent('GitHub');
+    expect(screen.getByRole('link', { name: 'X' })).toHaveAttribute(
+      'href',
+      X_URL,
+    );
   });
 
   it('opens the repository in a new tab without leaking the referrer', () => {

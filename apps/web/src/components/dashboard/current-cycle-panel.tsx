@@ -1,21 +1,22 @@
 'use client';
 
 import { format } from 'date-fns';
-import { CalendarClock, Plus, RotateCw, Timer } from 'lucide-react';
-import dynamic from 'next/dynamic';
+import { CalendarClock, Plus, RotateCw } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { CycleCard } from '@shipyard/shared';
 
 import { CreateCycleDialog } from '@/components/cycles/create-cycle-dialog';
 import {
-  ISSUE_STATUS_META,
-  ISSUE_STATUS_ORDER,
   cycleLengthDays,
   cycleProgressPercent,
   emptyStatusCounts,
   type IssueStatusCounts,
 } from '@/components/cycles/cycle-progress';
+import {
+  CurrentCycleCardBody,
+  CurrentCycleCardHeader,
+} from '@/components/dashboard/current-cycle-card';
 import { Loader } from '@/components/motion/loader';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -23,43 +24,21 @@ import { ErrorState } from '@/components/ui/error-state';
 import { dashboardKeys, useDashboard } from '@/hooks/use-dashboard';
 import { useIssues } from '@/hooks/use-issues';
 import { useWorkspace } from '@/hooks/use-workspaces';
-import { cn } from '@/lib/utils';
-
-// `echarts` is a heavy client-only dependency and the hub is a landing page —
-// the same reasoning the cycle rail uses for its own chart. The placeholder
-// reserves the ring's box so nothing shifts when it lands.
-const CurrentCycleChart = dynamic(
-  () =>
-    import('@/components/dashboard/current-cycle-chart').then(
-      (mod) => mod.CurrentCycleChart,
-    ),
-  {
-    ssr: false,
-    loading: () => (
-      <div
-        aria-hidden
-        className="size-32 shrink-0 animate-pulse rounded-full bg-ds-border/40"
-      />
-    ),
-  },
-);
 
 /**
  * Current Cycle — the dashboard rail's first panel, mirroring "Current Cycle
  * Panel" (ex7PC) in `Screen / Dashboard` (s4L8ST): the label + days-left chip,
  * the cycle name + date range, then the ring with its legend.
  *
+ * The card itself lives in `current-cycle-card.tsx`, because the landing page
+ * shows the same card with sample numbers. This file owns everything that
+ * decides *whether* to draw it: the query, the role rule, the empty and error
+ * states, and the create dialog.
+ *
  * With no active cycle the panel keeps its label and shows the designed empty
  * state from `02-UX/Empty-states.md` §6.8 — copy split by role, because
  * "Create Cycle" is OWNER|ADMIN only (api-design §4.1) and a Member would be
  * offered an action they could never complete.
- *
- * The ring is sliced by *issue status* (Backlog → Done) rather than done/undone
- * — a cycle's progress is the mix of its issues, and the slices line up with the
- * groups on the Issues page. The API's inline `progress` carries only
- * `{ total, completed, percent }`, so per-status counts come from the cycle's
- * issue list, the same fetch and the same derivation the cycle detail page uses
- * ("the cycle's issues, only for the ring's status breakdown").
  */
 
 /** "4 days left" / "Due today" / "Ended" — from the cycle's last day. */
@@ -73,13 +52,16 @@ function daysLeftLabel(endDate: string): string {
   return days === 1 ? '1 day left' : `${days} days left`;
 }
 
-function CurrentCycleBody({ slug, cycle }: { slug: string; cycle: CycleCard }) {
-  const percent = cycleProgressPercent(cycle);
-  const { total, completed } = cycle.progress;
-
-  // Per-status counts for the ring — derived the way the cycle detail page
-  // derives them. The default list is non-archived, which is the same scope the
-  // API's `progress` counts, so the slices always total `progress.total`.
+/**
+ * The live cycle's card body. Per-status counts for the ring come from the
+ * cycle's issue list — derived the way the cycle detail page derives them. The
+ * default list is non-archived, which is the same scope the API's `progress`
+ * counts, so the slices always total `progress.total`.
+ *
+ * Kept as its own component so the issue query only runs once there is a cycle
+ * to ask about.
+ */
+function LiveCycleBody({ slug, cycle }: { slug: string; cycle: CycleCard }) {
   const issuesQuery = useIssues(slug, { cycleId: cycle.id });
   const statusCounts: IssueStatusCounts = useMemo(() => {
     const counts = emptyStatusCounts();
@@ -87,55 +69,16 @@ function CurrentCycleBody({ slug, cycle }: { slug: string; cycle: CycleCard }) {
     return counts;
   }, [issuesQuery.data]);
 
-  const range = `${format(new Date(`${cycle.startDate}T12:00:00`), 'MMM d')} → ${format(
-    new Date(`${cycle.endDate}T12:00:00`),
-    'MMM d',
-  )}`;
-
   return (
-    <>
-      {/* Name + dates. */}
-      <div className="flex w-full items-center justify-between gap-3">
-        <span className="truncate text-[15px] font-semibold leading-none text-foreground">
-          {cycle.name}
-        </span>
-        <span className="shrink-0 font-mono text-[11px] leading-none text-ds-text-muted">
-          {range}
-        </span>
-      </div>
-
-      {/* Ring + legend. */}
-      <div className="flex w-full items-center gap-5">
-        <CurrentCycleChart
-          percent={percent}
-          statusCounts={statusCounts}
-          completed={completed}
-          total={total}
-        />
-
-        {/* Legend — same labels, order and tones as the Issues groups, so the
-            key doubles as the breakdown. */}
-        <ul className="flex min-w-0 flex-1 flex-col gap-3">
-          {ISSUE_STATUS_ORDER.map((status) => {
-            const meta = ISSUE_STATUS_META[status];
-            return (
-              <li key={status} className="flex w-full items-center gap-2">
-                <span
-                  aria-hidden
-                  className={cn('size-2 shrink-0 rounded-full', meta.dot)}
-                />
-                <span className="min-w-0 flex-1 truncate text-[11.5px] leading-none text-ds-text-muted">
-                  {meta.label}
-                </span>
-                <span className="shrink-0 font-mono text-[11px] font-bold tabular-nums leading-none text-foreground">
-                  {statusCounts[status]}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    </>
+    <CurrentCycleCardBody
+      name={cycle.name}
+      startDate={cycle.startDate}
+      endDate={cycle.endDate}
+      percent={cycleProgressPercent(cycle)}
+      statusCounts={statusCounts}
+      completed={cycle.progress.completed}
+      total={cycle.progress.total}
+    />
   );
 }
 
@@ -168,17 +111,9 @@ export function CurrentCyclePanel({ slug }: { slug: string }) {
       {/* The label is not part of the cycle — it renders either way, so the card
           still says what it is when there is nothing in it. The days-left chip
           is cycle-specific, so it only appears alongside one. */}
-      <div className="flex w-full items-center justify-between gap-3">
-        <span className="font-mono text-[10px] font-semibold uppercase tracking-[1.5px] text-ds-text-muted">
-          Current Cycle
-        </span>
-        {cycle ? (
-          <span className="inline-flex shrink-0 items-center gap-[5px] rounded-full bg-ds-warning-soft px-2 py-[3px] font-mono text-[10px] font-semibold leading-none text-ds-warning">
-            <Timer aria-hidden className="size-[11px]" />
-            {daysLeftLabel(cycle.endDate)}
-          </span>
-        ) : null}
-      </div>
+      <CurrentCycleCardHeader
+        daysLeft={cycle ? daysLeftLabel(cycle.endDate) : undefined}
+      />
 
       {query.isPending ? (
         <div className="flex min-h-[164px] w-full items-center justify-center">
@@ -227,7 +162,7 @@ export function CurrentCyclePanel({ slug }: { slug: string }) {
           />
         </div>
       ) : (
-        <CurrentCycleBody slug={slug} cycle={cycle} />
+        <LiveCycleBody slug={slug} cycle={cycle} />
       )}
 
       {canCreate ? (

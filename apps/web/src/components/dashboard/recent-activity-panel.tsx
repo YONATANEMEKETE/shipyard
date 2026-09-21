@@ -101,14 +101,14 @@ function ActivityRow({
 }: {
   item: DashboardActivityItem;
   bucket: ActivityBucket;
-  onOpen: () => void;
+  /** Absent on a surface with nowhere to link to (the landing page). */
+  onOpen?: () => void;
 }) {
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="relative flex h-8 w-full items-center gap-2 rounded-md px-2 text-left transition-colors hover:bg-ds-bg/60"
-    >
+  const className =
+    'relative flex h-8 w-full items-center gap-2 rounded-md px-2 text-left transition-colors';
+
+  const body = (
+    <>
       <ActorAvatar item={item} />
       <span className="min-w-0 flex-1 truncate text-[12px] leading-none text-foreground">
         {item.text}
@@ -116,7 +116,77 @@ function ActivityRow({
       <span className="shrink-0 font-mono text-[10px] leading-none text-ds-text-muted">
         {activityTimeOf(item.createdAt, bucket)}
       </span>
+    </>
+  );
+
+  if (!onOpen) {
+    return <div className={className}>{body}</div>;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={cn(className, 'hover:bg-ds-bg/60')}
+    >
+      {body}
     </button>
+  );
+}
+
+/**
+ * The feed itself: a bucket label per day-group, the spine between the rows'
+ * avatars, and one row per event.
+ *
+ * Its own export because the landing page shows this same feed with sample
+ * events. There it passes no `onOpen`, so the rows are rows rather than deep
+ * links into a workspace it does not have.
+ */
+export function ActivityFeedView({
+  events,
+  onOpen,
+}: {
+  events: DashboardActivityItem[];
+  onOpen?: (item: DashboardActivityItem) => void;
+}) {
+  const groups = groupByActivityBucket(events);
+
+  return (
+    <div className="flex w-full flex-col gap-1.5">
+      {groups.map((group) => (
+        <div key={group.bucket} className="flex w-full flex-col gap-1.5">
+          <div className="flex h-4 w-full items-center pl-[18px]">
+            <span className="font-mono text-[9px] font-semibold uppercase tracking-[0.7px] text-ds-text-muted">
+              {ACTIVITY_BUCKET_LABEL[group.bucket]}
+            </span>
+          </div>
+
+          {/* `relative` + the spine first: the rows are positioned too, so
+              they paint over it and leave only the segments between
+              avatars visible. */}
+          <div className="relative flex w-full flex-col">
+            <span
+              aria-hidden
+              className={cn(
+                'absolute left-[18px] top-4 bottom-4 w-px bg-ds-border',
+                // A single row has no gap to bridge, and top+bottom on a
+                // 32px stack would otherwise leave a zero-height rule that
+                // still paints a stray speck.
+                group.rows.length === 1 && 'hidden',
+              )}
+            />
+            {group.rows.map((item) => (
+              <ActivityRow
+                key={`${item.kind}-${item.issue.id}-${item.createdAt}`}
+                item={item}
+                bucket={group.bucket}
+                onOpen={onOpen ? () => onOpen(item) : undefined}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -125,7 +195,6 @@ export function RecentActivityPanel({ slug }: { slug: string }) {
   const query = useDashboard(slug);
 
   const events = (query.data?.recentActivity ?? []).slice(0, MAX_ROWS);
-  const groups = groupByActivityBucket(events);
 
   // Comment events deep-link to the comment itself; the issue page re-runs the
   // scroll once the thread is in the DOM (issue-conversation.tsx).
@@ -166,7 +235,7 @@ export function RecentActivityPanel({ slug }: { slug: string }) {
             }
           />
         </div>
-      ) : groups.length === 0 ? (
+      ) : events.length === 0 ? (
         // No recent activity is data, not an error (spec rule 5).
         <EmptyState
           icon={History}
@@ -174,41 +243,7 @@ export function RecentActivityPanel({ slug }: { slug: string }) {
           description="Updates will appear here as your team collaborates."
         />
       ) : (
-        <div className="flex w-full flex-col gap-1.5">
-          {groups.map((group) => (
-            <div key={group.bucket} className="flex w-full flex-col gap-1.5">
-              <div className="flex h-4 w-full items-center pl-[18px]">
-                <span className="font-mono text-[9px] font-semibold uppercase tracking-[0.7px] text-ds-text-muted">
-                  {ACTIVITY_BUCKET_LABEL[group.bucket]}
-                </span>
-              </div>
-
-              {/* `relative` + the spine first: the rows are positioned too, so
-                  they paint over it and leave only the segments between
-                  avatars visible. */}
-              <div className="relative flex w-full flex-col">
-                <span
-                  aria-hidden
-                  className={cn(
-                    'absolute left-[18px] top-4 bottom-4 w-px bg-ds-border',
-                    // A single row has no gap to bridge, and top+bottom on a
-                    // 32px stack would otherwise leave a zero-height rule that
-                    // still paints a stray speck.
-                    group.rows.length === 1 && 'hidden',
-                  )}
-                />
-                {group.rows.map((item) => (
-                  <ActivityRow
-                    key={`${item.kind}-${item.issue.id}-${item.createdAt}`}
-                    item={item}
-                    bucket={group.bucket}
-                    onOpen={() => openEvent(item)}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+        <ActivityFeedView events={events} onOpen={openEvent} />
       )}
     </section>
   );

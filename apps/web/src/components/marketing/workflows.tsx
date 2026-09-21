@@ -1,3 +1,10 @@
+import type { DashboardActivityItem, ProjectCard } from '@shipyard/shared';
+
+import {
+  CurrentCycleCardBody,
+  CurrentCycleCardHeader,
+} from '@/components/dashboard/current-cycle-card';
+import { ActivityFeedView } from '@/components/dashboard/recent-activity-panel';
 import { Container } from '@/components/marketing/container';
 import { Marks, TOP_CORNERS } from '@/components/marketing/marks';
 import {
@@ -6,6 +13,8 @@ import {
   TILE_FILL,
   TILE_MASK,
 } from '@/components/marketing/tiles';
+import { ProjectKanbanCardView } from '@/components/projects/project-kanban-card';
+import { cn } from '@/lib/utils';
 
 /**
  * The workflows section: what the product does, three cards deep.
@@ -29,140 +38,218 @@ import {
  * "the same data" true rather than a slogan.
  */
 
-/** A progress bar using the product's own track and fill tokens. */
-function Progress({ value }: { value: number }) {
-  return (
-    <span className="block h-1.5 w-full overflow-hidden rounded-full bg-ds-border">
-      <span
-        className="block h-full rounded-full bg-ds-brand"
-        style={{ width: `${value}%` }}
-      />
-    </span>
-  );
-}
+/**
+ * The members' faces, shared by the project card and the activity feed so one
+ * workspace reads across both.
+ *
+ * Real photographs from Unsplash (the Unsplash License, which needs no
+ * attribution; the photographers are named here anyway), cropped to a face at
+ * 48px so an 18px avatar and a 20px row avatar are both sharp on a 2x screen.
+ * They stand in for the members of the seeded workspace: nobody in these photos
+ * works on Shipyard, and the workspace does not ship its members' pictures.
+ */
+const FACES = {
+  /** Jurica Koletić */
+  yonatane:
+    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=48&h=48&q=80&crop=faces',
+  /** Michael Dam */
+  selam:
+    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=48&h=48&q=80&crop=faces',
+  /** Albert Dera */
+  dawit:
+    'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=48&h=48&q=80&crop=faces',
+  /** Christina @ wocintechchat.com */
+  maya: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=48&h=48&q=80&crop=faces',
+} as const;
 
-/** Projects: the planning card's visual. */
+/**
+ * Projects: the board's own project card, with sample numbers.
+ *
+ * Reused rather than redrawn (`components/projects/project-kanban-card.tsx`), so
+ * the landing page cannot drift from the board: the owner row, the progress bar
+ * and its "N of M issues done" meta, the worker avatar stack and the target date
+ * are the product's. The board's own surface is flattened here because this card
+ * sits in a ring of its own (see `RINGED`): no hairline, square, on the ring's
+ * white. The numbers are the shape a seeded workspace's board has, and the
+ * workers are the members with work in it.
+ */
+const SAMPLE_PROJECT: ProjectCard = {
+  id: 'sample-project',
+  workspaceId: 'sample-workspace',
+  name: 'Shipyard 1.0',
+  status: 'ACTIVE',
+  owner: {
+    memberId: 'sample-member-1',
+    userId: 'sample-user-1',
+    name: 'Yonatane Mekete',
+    email: 'yonatane@example.com',
+    image: FACES.yonatane,
+  },
+  description:
+    'Workspaces, projects, cycles, issues and activity: the first release.',
+  startDate: '2026-08-18',
+  targetDate: '2026-10-15',
+  progress: { total: 18, completed: 11, percent: 61 },
+  workers: [
+    // The owner works on their own project, so the same face is in the stack.
+    { userId: 'sample-user-1', name: 'Yonatane M.', image: FACES.yonatane },
+    { userId: 'sample-user-2', name: 'Selam T.', image: FACES.selam },
+    { userId: 'sample-user-3', name: 'Dawit A.', image: FACES.dawit },
+    { userId: 'sample-user-4', name: 'Maya T.', image: FACES.maya },
+  ],
+  archivedAt: null,
+  createdAt: '2026-08-18T09:00:00.000Z',
+  updatedAt: '2026-09-20T09:00:00.000Z',
+};
+
 function ProjectsVisual() {
-  const projects = [
-    { name: 'Shipyard 1.0', meta: '18 issues', value: 62, state: 'Active' },
-    { name: 'Web app', meta: '14 issues', value: 38, state: 'Active' },
-    {
-      name: 'Design system',
-      meta: '12 issues',
-      value: 100,
-      state: 'Completed',
-    },
-  ];
-
   return (
-    <div className="space-y-4">
-      {projects.map((project) => (
-        <div key={project.name} className="space-y-2">
-          <span className="flex items-baseline justify-between gap-3">
-            <span className="text-xs font-medium text-foreground">
-              {project.name}
-            </span>
-            <span
-              className={
-                project.state === 'Completed'
-                  ? 'rounded-full bg-ds-success-soft px-2 py-0.5 text-[10px] font-semibold text-ds-success'
-                  : 'rounded-full bg-ds-brand-soft px-2 py-0.5 text-[10px] font-semibold text-ds-brand'
-              }
-            >
-              {project.state}
-            </span>
-          </span>
-          <Progress value={project.value} />
-          <span className="block text-[11px] leading-none text-ds-text-muted">
-            {project.meta}
-          </span>
-        </div>
-      ))}
-    </div>
+    <ProjectKanbanCardView
+      project={SAMPLE_PROJECT}
+      description={SAMPLE_PROJECT.description}
+      className="rounded-none border-0 bg-transparent p-0 shadow-none"
+    />
   );
 }
 
-/** Cycles: the running card's visual. */
+/**
+ * Cycles: the dashboard's own Current Cycle card, with sample numbers.
+ *
+ * Reused rather than redrawn (`components/dashboard/current-cycle-card.tsx`), so
+ * the landing page cannot drift from the hub: the ring, the legend, the status
+ * tones and the date-range format are the product's. The numbers are the shape a
+ * seeded workspace's board has, not a live workspace's.
+ *
+ * The chip is passed rather than derived: the dashboard computes days-left from
+ * the real cycle's end date, and a fixed sample date would read "Ended" once it
+ * passed.
+ */
 function CycleVisual() {
   return (
-    <div className="space-y-4">
-      <span className="flex items-baseline justify-between gap-3">
-        <span className="text-sm font-semibold text-foreground">Cycle 12</span>
-        <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-ds-text-muted">
-          Ends Sep 28
-        </span>
-      </span>
-      <Progress value={44} />
-      <span className="flex items-center justify-between gap-2 text-[11px] leading-none text-ds-text-muted">
-        <span className="flex items-center gap-1.5">
-          <span aria-hidden className="size-1.5 rounded-full bg-ds-success" />4
-          done
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span aria-hidden className="size-1.5 rounded-full bg-ds-brand" />3 in
-          progress
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span aria-hidden className="size-1.5 rounded-full bg-ds-danger" />1
-          blocked
-        </span>
-      </span>
+    <div className="flex flex-col gap-3">
+      <CurrentCycleCardHeader daysLeft="7 days left" />
+      <CurrentCycleCardBody
+        name="Cycle 12"
+        startDate="2026-09-01"
+        endDate="2026-09-28"
+        percent={40}
+        completed={4}
+        total={10}
+        statusCounts={{ BACKLOG: 2, TODO: 1, IN_PROGRESS: 3, DONE: 4 }}
+      />
     </div>
   );
 }
 
-/** Activity: the collaboration card's visual. */
-const ACTIVITY = [
-  {
-    initials: 'YM',
-    tone: 'bg-ds-brand',
-    actor: 'Yonatane M.',
-    action: 'commented on',
-    subject: 'Activity feed shows duplicate entries',
-    when: '2h',
-  },
-  {
-    initials: 'Y5',
-    tone: 'bg-ds-info',
-    actor: 'Yonatanem 55',
-    action: 'moved to In progress',
-    subject: 'Optimistic updates for drag and drop',
-    when: '6h',
-  },
-  {
-    initials: 'Y2',
-    tone: 'bg-ds-success',
-    actor: 'YONATANEM 2025',
-    action: 'opened',
-    subject: 'Keyboard shortcuts for the board',
-    when: '1d',
-  },
-];
+/**
+ * Activity: the hub's own Recent Activity feed, with sample events.
+ *
+ * Reused rather than redrawn: `ActivityFeedView` in
+ * `components/dashboard/recent-activity-panel.tsx` is what the rail's panel
+ * renders, so the day buckets, the trailing stamps, the spine between the
+ * avatars and the row shape are all the product's.
+ *
+ * The `text` is the composed summary the API stores at emit time, so it is
+ * copied from the emitters, not written here: `${actor} moved ${identifier} from
+ * ${status} to ${status}` and `${actor} created ${identifier} “${title}”` from
+ * `features/issues/service.ts`, `${actor} commented on ${title}` from
+ * `features/comments/service.ts`. Statuses are the four the product has
+ * (Backlog, Todo, In Progress, Done), and the actor is the member's full name,
+ * because that is the name the emitters put in the sentence.
+ *
+ * The stamps are relative to render time. The feed groups by day, and fixed
+ * stamps would fall out of Today and Yesterday within a day or two, leaving the
+ * card showing a single stale bucket.
+ */
+function sampleActivity(): DashboardActivityItem[] {
+  const now = Date.now();
+  const at = (hoursAgo: number) =>
+    new Date(now - hoursAgo * 3_600_000).toISOString();
+
+  return [
+    {
+      kind: 'COMMENT_CREATED',
+      actor: {
+        userId: 'sample-user-1',
+        name: 'Yonatane Mekete',
+        email: 'yonatane@example.com',
+        image: FACES.yonatane,
+      },
+      issue: {
+        id: 'sample-issue-1',
+        identifier: 'SHIP-142',
+        title: 'Activity feed shows duplicate entries',
+      },
+      workspaceId: 'sample-workspace',
+      commentId: 'sample-comment-1',
+      text: 'Yonatane Mekete commented on Activity feed shows duplicate entries',
+      createdAt: at(2),
+    },
+    {
+      kind: 'ISSUE_STATUS_CHANGED',
+      actor: {
+        userId: 'sample-user-2',
+        name: 'Selam Tesfaye',
+        email: 'selam@example.com',
+        image: FACES.selam,
+      },
+      issue: {
+        id: 'sample-issue-2',
+        identifier: 'SHIP-138',
+        title: 'Optimistic updates for drag and drop',
+      },
+      workspaceId: 'sample-workspace',
+      commentId: null,
+      text: 'Selam Tesfaye moved SHIP-138 from Todo to In Progress',
+      createdAt: at(6),
+    },
+    {
+      kind: 'ISSUE_CREATED',
+      actor: {
+        userId: 'sample-user-3',
+        name: 'Dawit Alemu',
+        email: 'dawit@example.com',
+        image: FACES.dawit,
+      },
+      issue: {
+        id: 'sample-issue-3',
+        identifier: 'SHIP-131',
+        title: 'Keyboard shortcuts for the board',
+      },
+      workspaceId: 'sample-workspace',
+      commentId: null,
+      text: 'Dawit Alemu created SHIP-131 “Keyboard shortcuts for the board”',
+      createdAt: at(28),
+    },
+  ];
+}
 
 function ActivityVisual() {
-  return (
-    <div className="space-y-3">
-      {ACTIVITY.map((row) => (
-        <div key={row.subject} className="flex items-start gap-2.5">
-          <span
-            aria-hidden
-            className={`grid size-5 shrink-0 place-items-center rounded-full font-mono text-[7px] font-bold text-white ${row.tone}`}
-          >
-            {row.initials}
-          </span>
-          <span className="min-w-0 flex-1 text-xs leading-5 text-ds-text-muted">
-            <span className="font-medium text-foreground">{row.actor}</span>{' '}
-            {row.action}{' '}
-            <span className="font-medium text-foreground">{row.subject}</span>
-          </span>
-          <span className="shrink-0 font-mono text-[10px] leading-5 text-ds-text-muted">
-            {row.when}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
+  return <ActivityFeedView events={sampleActivity()} />;
 }
+
+/**
+ * The ringed card treatment, shared by all three sections, each of which shows
+ * the product's own card (a project, a cycle, the activity feed).
+ *
+ * The card wears no hairline. Instead it is set in a ring: a band around the
+ * card whose fill is a backdrop blur of the photograph, so the picture stays
+ * legible right up to the card's edge without a pixel of it landing under the
+ * card's own text.
+ *
+ * The band is the section's own padding, taken one step further: the section
+ * area pads by 12px, and the band — a plain padded box inside it — pads by
+ * another 12px, so the card lands 24px in and the picture shows 12px sharp, then
+ * 12px frosted. Nothing here has a negative margin, so the band cannot reach past
+ * the section it is drawn in.
+ *
+ * Square corners, like the panel above: the product's own cards are square here,
+ * and the ring follows them rather than the page's rounded language.
+ */
+const RINGED = {
+  ring: 'min-w-0 p-3 backdrop-blur-sm',
+  surface: 'min-w-0 rounded-none bg-ds-surface',
+} as const;
 
 const CARDS = [
   {
@@ -170,18 +257,21 @@ const CARDS = [
     heading: 'Projects that hold the whole picture',
     body: 'A project is a page for one objective: the issues inside it, an owner, and a lifecycle of its own, from planned to active to completed, without a second tool to keep in step.',
     visual: <ProjectsVisual />,
+    ...RINGED,
   },
   {
     eyebrow: 'Run',
     heading: 'Cycles that keep the pace honest',
     body: 'Time-boxed cycles whose progress comes from the work itself, with nothing to update by hand and nothing to reconcile.',
     visual: <CycleVisual />,
+    ...RINGED,
   },
   {
     eyebrow: 'Collaborate',
     heading: 'Every change has a name on it',
     body: 'Comments, mentions and an activity feed that reads like a changelog: who moved what, and when.',
     visual: <ActivityVisual />,
+    ...RINGED,
   },
 ];
 
@@ -291,9 +381,9 @@ export function Workflows() {
             {CARDS.map((card) => (
               <div
                 key={card.eyebrow}
-                className="flex flex-col border-t border-ds-border first:border-t-0 md:row-span-2 md:grid md:grid-rows-subgrid md:border-t-0 md:border-l md:first:border-l-0"
+                className="flex min-w-0 flex-col border-t border-ds-border first:border-t-0 md:row-span-2 md:grid md:grid-rows-subgrid md:border-t-0 md:border-l md:first:border-l-0"
               >
-                <div className="border-b border-ds-border p-6">
+                <div className="min-w-0 border-b border-ds-border p-6">
                   <p className="font-mono text-[10px] font-semibold tracking-[1.2px] text-ds-text-muted uppercase">
                     {card.eyebrow}
                   </p>
@@ -305,11 +395,20 @@ export function Workflows() {
                   </p>
                 </div>
 
-                <div className="flex-1 p-6">
-                  {/* The card's own UI is its visual: a panel on the page's own
-                      background so it reads as a screen, not as another card. */}
-                  <div className="rounded-lg border border-ds-border bg-ds-bg p-4">
-                    {card.visual}
+                {/* 12px of the picture, then the band takes the next 12px:
+                    see `RINGED`. */}
+                <div className="min-w-0 flex-1 bg-[url(/workflow-sections-bg.jpg)] bg-cover bg-center p-3">
+                  {/* The card's own UI is its visual, set in its ring (see
+                      `ring` above). */}
+                  <div className={cn(card.ring)}>
+                    <div
+                      className={cn(
+                        'min-w-0 overflow-hidden rounded-lg p-4',
+                        card.surface,
+                      )}
+                    >
+                      {card.visual}
+                    </div>
                   </div>
                 </div>
               </div>

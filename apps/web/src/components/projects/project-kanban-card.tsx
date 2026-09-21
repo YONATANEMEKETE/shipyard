@@ -12,6 +12,12 @@ import { cn } from '@/lib/utils';
  * description, progress bar + "N of M issues done" meta, divider, and a
  * footer of worker avatar stack + target date. Clicking selects the project
  * (drives the detail panel via the parent).
+ *
+ * Split in two on purpose: `ProjectKanbanCardView` is the card's presentation
+ * (no handlers, no drag affordances) and `ProjectKanbanCard` is the board's
+ * interactive wrapper around it. The landing page renders the view — the same
+ * card, without pretending to be clickable — and the board keeps the button,
+ * the drag cursor and the pointer wiring.
  */
 
 const AVATAR_TONES = [
@@ -119,28 +125,27 @@ function WorkerStack({ workers }: { workers: ProjectWorkerCard[] }) {
   );
 }
 
-export function ProjectKanbanCard({
+export function ProjectKanbanCardView({
   project,
   description,
-  onOpen,
-  onPointerDown,
+  className,
 }: {
   project: ProjectCard;
   /** Optional description (list card omits it; kanban shows it). */
   description?: string | null;
-  onOpen: () => void;
-  onPointerDown?: (event: React.PointerEvent<HTMLElement>) => void;
+  /** Callers restyle the card's own surface (the landing page flattens it). */
+  className?: string;
 }) {
   const pct = displayProgress(project);
   const total = project.progress.total;
   const completed = project.progress.completed;
 
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      onPointerDown={onPointerDown}
-      className="flex w-full cursor-grab flex-col gap-2.5 rounded-xl border border-ds-border bg-ds-surface p-3 text-left shadow-[0_2px_8px_#17171714] transition-colors active:cursor-grabbing hover:border-ds-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    <div
+      className={cn(
+        'flex w-full flex-col gap-2.5 rounded-xl border border-ds-border bg-ds-surface p-3 text-left shadow-[0_2px_8px_#17171714] transition-colors',
+        className,
+      )}
     >
       {/* Owner row */}
       <span className="flex w-full items-center gap-1.5">
@@ -209,6 +214,40 @@ export function ProjectKanbanCard({
           {formatDate(project.targetDate)}
         </span>
       </span>
+    </div>
+  );
+}
+
+/**
+ * The board's card: the view above, in the wrapper that makes it a control.
+ * The wrapper carries only interaction — the drag cursor, the pointer wiring
+ * and the focus ring — while the surface and its hover live on the view, so a
+ * caller that restyles the surface restyles the whole card.
+ */
+export function ProjectKanbanCard({
+  project,
+  description,
+  onOpen,
+  onPointerDown,
+}: {
+  project: ProjectCard;
+  /** Optional description (list card omits it; kanban shows it). */
+  description?: string | null;
+  onOpen: () => void;
+  onPointerDown?: (event: React.PointerEvent<HTMLElement>) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      onPointerDown={onPointerDown}
+      className="group w-full cursor-grab rounded-xl text-left active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <ProjectKanbanCardView
+        project={project}
+        description={description}
+        className="group-hover:border-ds-border-strong"
+      />
     </button>
   );
 }

@@ -5,6 +5,7 @@ import {
   renderPasswordResetEmail,
 } from '@shipyard/email';
 import { env } from '../common/config/env.js';
+import { trustedOrigins } from '../common/config/trustedOrigins.js';
 import { prisma } from '../common/db/client.js';
 import { logger } from '../common/logger/index.js';
 import { sendEmail } from './mailer.js';
@@ -22,11 +23,15 @@ const socialProviders = {
 
 export const auth = betterAuth({
   appName: 'Shipyard',
-  // API is internal-only when deployed; all requests proxy through the Next.js app
-  baseURL: env.WEB_URL,
+  // The API's own public origin: Better Auth builds OAuth redirect URIs,
+  // auth links and its session cookies against it. Browsers call this
+  // origin directly — nothing proxies the API through the web app.
+  baseURL: env.API_URL,
   basePath: '/api/v1/auth',
   secret: env.BETTER_AUTH_SECRET,
-  trustedOrigins: [env.WEB_URL],
+  // Browser origins allowed to make credentialed auth calls (the origin
+  // check on state-changing requests). Same list the CORS middleware uses.
+  trustedOrigins: [...trustedOrigins],
 
   database: prismaAdapter(prisma, {
     provider: 'postgresql',
@@ -98,13 +103,26 @@ export const auth = betterAuth({
         { userId: user.id, email: user.email },
         'auth.password_reset_requested',
       );
-      // v1.7 link shape: {webOrigin}/api/v1/auth/reset-password/{token}
-      // ?callbackURL=… — an API endpoint that validates the token and then
-      // redirects to the callback URL with a fresh ?token= for the
-      // reset-password page. It flows through the Next.js rewrite; no
-      // rewriting needed here.
+      // v1.7 link shape: {apiOrigin}/api/v1/auth/reset-password/{token}
+      // ?callbackURL=… — an API endpoint that validates the token, then
+      // redirects to the callback URL with a fresh ?token= for the web
+      // reset-password page.
+      //
+      // Better Auth resolves that redirect against its baseURL (the API
+      // origin, where no page exists), so the callback is absolutized
+      // against WEB_URL here: whatever the web app passed (a relative
+      // '/reset-password' today), the post-validation redirect lands on
+      // the web app.
+      const resetUrl = new URL(url);
+      const callback = resetUrl.searchParams.get('callbackURL');
+      if (callback) {
+        resetUrl.searchParams.set(
+          'callbackURL',
+          new URL(callback, env.WEB_URL).toString(),
+        );
+      }
       const { html, text } = await renderPasswordResetEmail({
-        url,
+        url: resetUrl.toString(),
         userEmail: user.email,
       });
       // mailer logs locally in dev and never throws, so auth flow is never
@@ -136,11 +154,14 @@ export const auth = betterAuth({
         { userId: user.id, email: user.email },
         'auth.verification_email_sent',
       );
-      // The generated url targets the API's verify-email endpoint; rewrite
-      // it to the web page that owns the post-click experience. The page
-      // reads ?token= and performs the verification client-side.
-      const verifyUrl = new URL(url);
-      verifyUrl.pathname = '/verify-email';
+      // The generated url targets the API's verify-email endpoint. Rebuild
+      // it on the web origin — path and host both move: the web page owns
+      // the post-click experience (it reads ?token= and verifies
+      // client-side) and in production the two origins differ. The query
+      // (token + callbackURL) is carried over untouched.
+      const generated = new URL(url);
+      const verifyUrl = new URL('/verify-email', env.WEB_URL);
+      verifyUrl.search = generated.search;
       const { html, text } = await renderEmailVerificationEmail({
         url: verifyUrl.toString(),
         userEmail: user.email,

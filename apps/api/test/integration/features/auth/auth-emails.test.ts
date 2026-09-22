@@ -68,10 +68,15 @@ describe('auth email link contracts (integration)', () => {
     expect(response.status).toBe(200);
 
     const url = linkFromEmail(lastEmail());
-    // v1.7 shape: an endpoint path carrying the token, which validates and
-    // redirects to the callback URL with a fresh ?token= for the page.
+    // v1.7 shape: an endpoint on the API origin carrying the token, which
+    // validates and redirects to the callback URL with a fresh ?token= for
+    // the page. The callback is absolutized against the web origin — a
+    // relative value would redirect to the API host, where no page exists.
+    expect(url.origin).toBe(env.API_URL);
     expect(url.pathname).toMatch(/^\/api\/v1\/auth\/reset-password\/[^/]+$/);
-    expect(url.searchParams.get('callbackURL')).toBe('/reset-password');
+    expect(url.searchParams.get('callbackURL')).toBe(
+      `${env.WEB_URL}/reset-password`,
+    );
   });
 
   it('reset request for an unknown email answers identically', async () => {

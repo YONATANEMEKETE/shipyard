@@ -124,10 +124,16 @@ describe('auth error envelope contract', () => {
       const url = /https?:\/\/\S+/u.exec(message.text ?? '')?.[0] ?? '';
       expect(url).toContain('/api/v1/auth/reset-password/');
 
-      const response = await createTestApp().get(url.replace(env.WEB_URL, ''));
+      const response = await createTestApp().get(url.replace(env.API_URL, ''));
 
       expect(response.status).toBe(302);
-      expect(response.headers.location).toContain('/reset-password?token=');
+      // The email link lives on the API origin, but the post-validation
+      // redirect must land on the web app's reset page (the email's
+      // callbackURL was absolutized against WEB_URL).
+      const location = response.headers.location as string;
+      expect(location.startsWith(`${env.WEB_URL}/reset-password?token=`)).toBe(
+        true,
+      );
     });
 
     it('passes the session cookie through on sign-in', async () => {

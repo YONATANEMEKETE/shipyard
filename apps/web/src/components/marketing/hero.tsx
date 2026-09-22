@@ -2,6 +2,7 @@ import Image from 'next/image';
 
 import { Button } from '@/components/ui/button';
 import { Container } from '@/components/marketing/container';
+import { HeroVideo } from '@/components/marketing/hero-video';
 import {
   FadeIn,
   FadeInLetters,
@@ -134,14 +135,7 @@ export function Hero() {
           band is as tall as its own aspect ratio needs: there is no fixed
           window any more. The product cards, if any, come on top of the shot. */}
       <div className="relative">
-        <video
-          src="/hero-video.mp4"
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="absolute inset-0 h-full w-full object-cover"
-        />
+        <HeroVideo />
         {/* The product shot sits in the shared `Container` (1440px), which is
             what gives the band its width: the video frames it top and bottom. */}
         <Container className="relative py-16">

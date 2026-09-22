@@ -60,11 +60,15 @@ export function Hero() {
         <div className="relative flex w-3/5 shrink-0 flex-col border-x border-ds-border text-center">
           {/* The badge is a strip across the top of the column: the column has no
             gutters, so the strip spans it edge to edge, its text stays centred,
-            and its corner marks land on the strip's own corners. A top-down grey
-            wash (4.5% of the text colour, so it works in both themes) separates
-            the strip from the flat page background below it without reading as a
-            filled surface. */}
-          <div className="relative flex items-center justify-center border-b border-ds-border bg-gradient-to-b from-ds-text/[0.045] to-transparent py-3">
+            and its corner marks land on the strip's own corners. A top-down wash
+            separates the strip from the flat page background below it without
+            reading as a filled surface. Two washes, because the lift has to be
+            warm in both themes: 4.5% of the text colour in light, where that lands
+            as a neutral grey over warm-white; 7% of the brand amber in dark,
+            because the dark page is brown-black and a white wash over it comes out
+            neutral grey — the dark theme's neutrals (its borders, `#332513`) are
+            warm, so the strip's lift is too. */}
+          <div className="relative flex items-center justify-center border-b border-ds-border bg-gradient-to-b from-ds-text/[0.045] to-transparent py-3 dark:from-ds-brand/[0.07]">
             <Marks corners={ALL_CORNERS} className={MARK_STACKING} />
             <FadeInLetters
               text="Open source · Self-hostable"

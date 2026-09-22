@@ -37,7 +37,7 @@ export function SectionPanel({
   body,
   tilesSide = 'right',
 }: {
-  eyebrow: string;
+  eyebrow: ReactNode;
   heading: ReactNode;
   body: ReactNode;
   tilesSide?: 'right' | 'left';

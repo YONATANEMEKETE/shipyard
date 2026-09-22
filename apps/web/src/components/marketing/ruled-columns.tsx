@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { Curtain } from '@/components/motion/curtain';
 import { cn } from '@/lib/utils';
 
 /**
@@ -22,6 +23,13 @@ import { cn } from '@/lib/utils';
  * set a `ring` (a band whose fill is a backdrop blur of that picture) and the
  * `surface` its card wears; a column that sets neither sits on the page's canvas
  * inside a hairline.
+ *
+ * `curtain` brings a column in: the visual area (the picture and the product
+ * card on it) is covered edge to edge and the cover lifts off it, bottom edge
+ * upward, so the column is uncovered rather than faded in. The cover's colour is
+ * the page's canvas (`bg-ds-bg`), the colour of the copy above it and not of the
+ * picture, so it reads as the page lifting off the column. It is opt-in per
+ * section, and a section that wants its columns static leaves the flag off.
  */
 export type RuledColumn = {
   /** The mono label, and the React key. */
@@ -38,54 +46,79 @@ export type RuledColumn = {
 export function RuledColumns({
   columns,
   background,
+  curtain = false,
 }: {
   columns: readonly RuledColumn[];
   background?: string;
+  /** Reveal each column's visual from under a cover, left to right. Default false. */
+  curtain?: boolean;
 }) {
+  /** Seconds between one column's copy and the next one's. */
+  const COLUMN_STEP = 0.12;
+  /** Seconds the cover takes to lift off one column. */
+  const CURTAIN_LIFT = 0.9;
+
   return (
     <div className="border-x border-b border-ds-border">
       <div className="grid md:grid-cols-3 md:grid-rows-[auto_auto]">
-        {columns.map((column) => (
-          <div
-            key={column.eyebrow}
-            className="flex min-w-0 flex-col border-t border-ds-border first:border-t-0 md:row-span-2 md:grid md:grid-rows-subgrid md:border-t-0 md:border-l md:first:border-l-0"
-          >
-            <div className="min-w-0 border-b border-ds-border p-6">
-              <p className="font-mono text-[10px] font-semibold tracking-[1.2px] text-ds-text-muted uppercase">
-                {column.eyebrow}
-              </p>
-              <h3 className="mt-3 text-lg font-semibold tracking-tight text-foreground">
-                {column.heading}
-              </h3>
-              <p className="mt-3 text-sm leading-6 text-ds-text-muted">
-                {column.body}
-              </p>
-            </div>
+        {columns.map((column, index) => {
+          const at = index * COLUMN_STEP;
 
+          return (
             <div
-              className={cn(
-                'min-w-0 flex-1 p-3',
-                background && 'bg-cover bg-center',
-              )}
-              style={
-                background
-                  ? { backgroundImage: `url(${background})` }
-                  : undefined
-              }
+              key={column.eyebrow}
+              className="flex min-w-0 flex-col border-t border-ds-border first:border-t-0 md:row-span-2 md:grid md:grid-rows-subgrid md:border-t-0 md:border-l md:first:border-l-0"
             >
-              <div className={cn(column.ring)}>
-                <div
-                  className={cn(
-                    'min-w-0 overflow-hidden rounded-lg p-4',
-                    column.surface,
-                  )}
-                >
-                  {column.visual}
+              <div className="min-w-0 border-b border-ds-border p-6">
+                <p className="font-mono text-[10px] font-semibold tracking-[1.2px] text-ds-text-muted uppercase">
+                  {column.eyebrow}
+                </p>
+                <h3 className="mt-3 text-lg font-semibold tracking-tight text-foreground">
+                  {column.heading}
+                </h3>
+                <p className="mt-3 text-sm leading-6 text-ds-text-muted">
+                  {column.body}
+                </p>
+              </div>
+
+              <div
+                className={cn(
+                  'min-w-0 flex-1 p-3',
+                  background && 'bg-cover bg-center',
+                  curtain && 'relative overflow-hidden',
+                )}
+                style={
+                  background
+                    ? { backgroundImage: `url(${background})` }
+                    : undefined
+                }
+              >
+                <div className={cn(column.ring)}>
+                  <div
+                    className={cn(
+                      'min-w-0 overflow-hidden rounded-lg p-4',
+                      column.surface,
+                    )}
+                  >
+                    {column.visual}
+                  </div>
                 </div>
+
+                {/* The cover sits over the whole visual area, picture and card
+                    alike, and is the colour of the copy above it: the page's
+                    canvas, not the picture, so it reads as the page lifting off
+                    the column. Last, so it paints over both. */}
+                {curtain ? (
+                  <Curtain
+                    className="bg-ds-bg"
+                    delay={at}
+                    duration={CURTAIN_LIFT}
+                  />
+                ) : null}
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

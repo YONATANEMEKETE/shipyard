@@ -3,9 +3,28 @@ import { errorResponseSchema } from '@shipyard/shared';
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared request helpers for the web API clients.
 //
-// Single source of truth for cookie forwarding, error envelope parsing, and
-// the { confirm: true } literal required by destructive endpoints.
+// Single source of truth for the API origin, cookie forwarding, error envelope
+// parsing, and the { confirm: true } literal required by destructive endpoints.
 // ─────────────────────────────────────────────────────────────────────────────
+
+// The API lives on its own origin — `NEXT_PUBLIC_API_URL` is inlined at build
+// time and the fallback matches the local dev API. Trailing slashes are
+// trimmed so `${origin}${path}` never doubles up.
+const API_ORIGIN = (
+  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+).replace(/\/+$/, '');
+
+/**
+ * Resolves path-style inputs (`/api/v1/…`) against the API origin. Every web
+ * client passes relative paths — they mean the API, never the web host.
+ * Absolute URLs pass through untouched.
+ */
+export function resolveApiUrl(input: RequestInfo): RequestInfo {
+  if (typeof input === 'string' && input.startsWith('/')) {
+    return `${API_ORIGIN}${input}`;
+  }
+  return input;
+}
 
 export class ApiError extends Error {
   readonly code: string;
@@ -89,7 +108,7 @@ export async function requestJson<T>(
   fallbackMessage: string,
   ErrorCtor: ApiErrorCtor = ApiError,
 ): Promise<T> {
-  const response = await fetch(input, {
+  const response = await fetch(resolveApiUrl(input), {
     ...init,
     credentials: 'include',
     headers: {
@@ -114,7 +133,7 @@ export async function requestForm<T>(
   fallbackMessage: string,
   ErrorCtor: ApiErrorCtor = ApiError,
 ): Promise<T> {
-  const response = await fetch(input, {
+  const response = await fetch(resolveApiUrl(input), {
     method: 'POST',
     body,
     credentials: 'include',

@@ -273,9 +273,11 @@ describe('SignInForm — user behaviour (isolated)', () => {
     renderWithProviders(<SignInForm />);
 
     await user.click(screen.getByRole('button', { name: /^google$/i }));
+    // Absolute: Better Auth resolves the post-OAuth redirect against the
+    // API's baseURL, so a relative path would land on the API origin.
     expect(mockSocialSignIn).toHaveBeenCalledWith({
       provider: 'google',
-      callbackURL: '/w',
+      callbackURL: `${window.location.origin}/w`,
     });
     expect(screen.getByRole('button', { name: /^google$/i })).toBeDisabled();
 

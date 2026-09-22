@@ -3,10 +3,14 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const mockVerifyEmail = vi.fn();
+const mockGetSession = vi.fn();
 const mockReplace = vi.fn();
 
 vi.mock('@/lib/auth-client', () => ({
-  authClient: { verifyEmail: (...args: unknown[]) => mockVerifyEmail(...args) },
+  authClient: {
+    verifyEmail: (...args: unknown[]) => mockVerifyEmail(...args),
+    getSession: (...args: unknown[]) => mockGetSession(...args),
+  },
 }));
 
 vi.mock('next/navigation', () => ({
@@ -39,6 +43,8 @@ describe('VerifyEmailFlow — user behaviour (isolated)', () => {
     vi.clearAllMocks();
     vi.useRealTimers();
     mockVerifyEmail.mockResolvedValue({ error: null });
+    // Default: verification succeeded, so the session probe finds a session.
+    mockGetSession.mockResolvedValue({ data: { session: { id: 's1' } } });
   });
 
   it('shows invalid link when no token provided and does not call API', () => {
@@ -77,7 +83,10 @@ describe('VerifyEmailFlow — user behaviour (isolated)', () => {
       screen.getByText(/one moment while we confirm/i),
     ).toBeInTheDocument();
     expect(mockVerifyEmail).toHaveBeenCalledWith({
-      query: { token: 'tok_123', callbackURL: '/w' },
+      query: {
+        token: 'tok_123',
+        callbackURL: `${window.location.origin}/w`,
+      },
     });
   });
 
@@ -99,8 +108,9 @@ describe('VerifyEmailFlow — user behaviour (isolated)', () => {
     });
   });
 
-  it('shows error when verification fails', async () => {
+  it('shows error when verification fails and no session exists', async () => {
     mockVerifyEmail.mockResolvedValue({ error: { message: 'invalid' } });
+    mockGetSession.mockResolvedValue({ data: null });
 
     renderFlow({ token: 'tok_bad' });
 
@@ -114,6 +124,21 @@ describe('VerifyEmailFlow — user behaviour (isolated)', () => {
       screen.getByRole('link', { name: /back to sign in/i }),
     ).toHaveAttribute('href', '/sign-in');
     expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('treats a transport error as success when the session exists', async () => {
+    // Cross-origin follow-through of the verify redirect can reject even
+    // though the API verified the token and set the session cookie.
+    mockVerifyEmail.mockRejectedValue(new TypeError('Failed to fetch'));
+    mockGetSession.mockResolvedValue({ data: { session: { id: 's1' } } });
+
+    renderFlow({ token: 'tok_transport' });
+
+    expect(
+      await screen.findByRole('heading', {
+        name: /email verified successfully/i,
+      }),
+    ).toBeInTheDocument();
   });
 
   it('does not update state if unmounted before verification resolves (cancelled)', async () => {
@@ -134,7 +159,7 @@ describe('VerifyEmailFlow — user behaviour (isolated)', () => {
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
-  it('calls verify with callbackURL /w for autoSignIn cookie', async () => {
+  it('calls verify with an absolute web callbackURL for autoSignIn cookie', async () => {
     mockVerifyEmail.mockResolvedValue({ error: null });
 
     renderFlow({ token: 'tok_cb' });
@@ -145,7 +170,9 @@ describe('VerifyEmailFlow — user behaviour (isolated)', () => {
 
     expect(mockVerifyEmail).toHaveBeenCalledWith(
       expect.objectContaining({
-        query: expect.objectContaining({ callbackURL: '/w' }),
+        query: expect.objectContaining({
+          callbackURL: `${window.location.origin}/w`,
+        }),
       }),
     );
   });
@@ -167,6 +194,7 @@ describe('VerifyEmailFlow — user behaviour (isolated)', () => {
 
   it('leaves the cache alone when verification fails', async () => {
     mockVerifyEmail.mockResolvedValue({ error: { message: 'invalid' } });
+    mockGetSession.mockResolvedValue({ data: null });
 
     const { queryClient } = renderFlow({ token: 'tok_noinvalidate' });
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');

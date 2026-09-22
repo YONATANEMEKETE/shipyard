@@ -140,9 +140,9 @@ export default async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Skip Next internals, static assets, and the same-origin auth API
-  // (/api/v1/auth/* must reach its endpoint, never a redirect); everything
-  // else goes through the protection rules.
+  // Skip Next internals, static assets, and /api — the web origin serves no
+  // API routes (the API lives on its own origin), so nothing under /api ever
+  // meets the protection rules. Everything else goes through them.
   matcher: [
     '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|webp|avif|ico|txt|xml)$).*)',
   ],

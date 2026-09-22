@@ -42,21 +42,36 @@ export function VerifyEmailFlow({
 
     const verify = async () => {
       // callbackURL is required for autoSignInAfterVerification to set the
-      // session cookie (the JSON-only path skips auto-sign-in). The response
-      // body is the followed redirect's HTML — only the error matters here;
-      // by this point the browser has already applied the session cookie.
-      // `/w` rather than the app root: `/` is the public landing page, and a
+      // session cookie (the JSON-only path skips auto-sign-in), and it is
+      // sent absolute: Better Auth resolves the redirect against the API's
+      // baseURL, so a relative path would land on the API origin. `/w`
+      // rather than the app root: `/` is the public landing page, and a
       // freshly verified user belongs in the workspace dispatcher.
-      const { error } = await authClient.verifyEmail({
-        query: { token, callbackURL: '/w' },
-      });
+      let requestFailed = false;
+      try {
+        const { error } = await authClient.verifyEmail({
+          query: { token, callbackURL: `${window.location.origin}/w` },
+        });
+        requestFailed = Boolean(error);
+      } catch {
+        // The API answers this call with a redirect (the session cookie is
+        // set on it); following that redirect cross-origin can surface as a
+        // transport error even though verification itself succeeded.
+        requestFailed = true;
+      }
       if (cancelled) return;
-      setState(error ? 'error' : 'success');
+
+      // Verification's job is to sign the user in, so the session — not the
+      // redirect's follow-through — is the source of truth.
+      const { data } = await authClient.getSession();
+      if (cancelled) return;
+      const verified = Boolean(data?.session) || !requestFailed;
+      setState(verified ? 'success' : 'error');
       // Clicking this link is what commits the change — a change-email
       // verification rewrites the address on the user row. Everything cached
       // is user-scoped, and the session query holds a 5-minute staleTime, so
       // the sidebar would keep showing the old address without this.
-      if (!error) void queryClient.invalidateQueries();
+      if (verified) void queryClient.invalidateQueries();
     };
 
     void verify();

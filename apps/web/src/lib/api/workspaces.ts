@@ -7,8 +7,10 @@ import type {
 } from '@shipyard/shared';
 import { errorResponseSchema } from '@shipyard/shared';
 
+import { resolveApiUrl } from '@/lib/api/request';
+
 // ─────────────────────────────────────────────────────────────────────────────
-// Workspace API client — browser → Next rewrite → internal API (ADR-003)
+// Workspace API client — browser → API origin (NEXT_PUBLIC_API_URL)
 // Every request forwards the HttpOnly session cookie via credentials:include.
 // Response envelopes: success { data }, error { error: { code, message, ... } }
 // ─────────────────────────────────────────────────────────────────────────────
@@ -79,7 +81,7 @@ async function requestJson<T>(
   init: RequestInit,
   fallbackMessage: string,
 ): Promise<T> {
-  const response = await fetch(input, {
+  const response = await fetch(resolveApiUrl(input), {
     ...init,
     credentials: 'include',
     headers: {

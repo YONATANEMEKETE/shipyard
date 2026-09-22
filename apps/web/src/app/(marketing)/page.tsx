@@ -1,7 +1,19 @@
+import type { Metadata } from 'next';
+
 import { Cta } from '@/components/marketing/cta';
 import { Hero } from '@/components/marketing/hero';
 import { Mcp } from '@/components/marketing/mcp';
 import { Workflows } from '@/components/marketing/workflows';
+
+/**
+ * Title and description come from the root layout's defaults — the landing
+ * page is the one route where "Shipyard — Plan. Build. Ship." is already the
+ * right answer. The canonical is explicit so a query string or a trailing
+ * slash never competes with `/` as a separate URL.
+ */
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+};
 
 /**
  * Landing page: `/`.
@@ -18,7 +30,7 @@ import { Workflows } from '@/components/marketing/workflows';
  * `components/marketing/cta.tsx`.
  *
  * Build-phase checklist for this page (not yet done):
- *   - per-route `openGraph` image + metadata, `sitemap.ts`, `robots.ts`
+ *   - the `openGraph` image itself, `sitemap.ts`, `robots.ts`
  *   - honesty guardrail: no invented logos, testimonials or usage numbers
  */
 export default function LandingPage() {

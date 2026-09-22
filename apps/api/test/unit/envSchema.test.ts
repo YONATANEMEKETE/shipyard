@@ -75,6 +75,17 @@ describe('envSchema (startup validation)', () => {
     expect(result.data.NODE_ENV).toBe('development');
     expect(result.data.API_PORT).toBe(4000);
     expect(result.data.LOG_LEVEL).toBe('info');
+    expect(result.data.COOKIE_DOMAIN).toBe('');
+  });
+
+  it('strips a leading dot from COOKIE_DOMAIN', () => {
+    const result = envSchema.safeParse({
+      ...validEnv(),
+      COOKIE_DOMAIN: '.yonatanem.com',
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) throw new Error('should succeed');
+    expect(result.data.COOKIE_DOMAIN).toBe('yonatanem.com');
   });
 
   it('applies the API_URL default when not provided', () => {

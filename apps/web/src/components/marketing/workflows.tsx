@@ -6,6 +6,7 @@ import {
 } from '@/components/dashboard/current-cycle-card';
 import { ActivityFeedView } from '@/components/dashboard/recent-activity-panel';
 import { Container } from '@/components/marketing/container';
+import { marketingAsset } from '@/lib/assets';
 import { RuledColumns } from '@/components/marketing/ruled-columns';
 import { SectionPanel } from '@/components/marketing/section-panel';
 import { FadeInWords } from '@/components/motion/fade-in';
@@ -315,7 +316,7 @@ export function Workflows() {
             see `RINGED` for the card treatment. */}
         <RuledColumns
           columns={CARDS}
-          background="/workflow-sections-bg.jpg"
+          background={marketingAsset('workflow-sections-bg.jpg')}
           curtain
         />
       </Container>

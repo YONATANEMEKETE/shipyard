@@ -108,3 +108,19 @@ export const footer: CSSProperties = {
   lineHeight: '1.5',
   margin: '0',
 };
+
+// ── Assets ───────────────────────────────────────────────────────────────────
+
+// The app mark is uploaded to the public R2 bucket under a stable key, and
+// emails must reference it absolutely: mail clients fetch images through their
+// own proxy, so the `/static/…` path only ever worked in the react-email
+// preview. The base is read at render time rather than at module load, because
+// the API imports this module before it has loaded its environment.
+// `R2_PUBLIC_BASE_URL` is the r2.dev URL in development and the custom domain
+// in production (deployment.md §5).
+export function appIconUrl(): string {
+  const base = (
+    process.env.R2_PUBLIC_BASE_URL ?? 'https://assets.example.com'
+  ).replace(/\/+$/, '');
+  return `${base}/brand/app-icon.png`;
+}

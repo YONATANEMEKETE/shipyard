@@ -225,9 +225,12 @@
   --popover: var(--ds-surface);
   --popover-foreground: var(--ds-text);
 
-  /* Brand actions — amber on brown-black */
+  /* Brand actions — amber on brown-black. The label on an amber fill is white
+     in both themes, which is what the product's own brand buttons use
+     (`bg-ds-brand … text-white`); the near-black the fill might otherwise
+     suggest is not the pair. */
   --primary: var(--ds-accent);
-  --primary-foreground: #161512;
+  --primary-foreground: #ffffff;
   --secondary: var(--ds-brand-soft);
   --secondary-foreground: var(--ds-text);
   --muted: var(--ds-surface);

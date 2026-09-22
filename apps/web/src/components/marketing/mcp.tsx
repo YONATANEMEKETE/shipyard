@@ -40,8 +40,20 @@ import { Snippet } from '@/components/marketing/snippet';
  * `.headers.Authorization` is Cursor's remote shape.
  */
 
-/** The panel a column's snippet sits on: the product's surface, square. */
-const SNIPPET_PANEL = 'rounded-none border border-ds-border bg-ds-surface';
+/** The panel a column's snippet sits on: the product's surface, square.
+ *
+ *  In dark the block has to be *findable* on the page at all. The page is
+ *  `#161512`, the dark card surface is `#1b1916` — five steps apart — and the
+ *  hairline that is supposed to separate them (`#332513`) is nearly the same
+ *  value again, so the surface alone reads as a flat rectangle. Two moves fix
+ *  that without inventing a colour: the border goes to `--ds-border-strong`, the
+ *  token the system keeps for a border that has to be seen, and the block takes
+ *  the same warm top-down lift the hero's badge strip takes — `--ds-brand` at 6%,
+ *  not `--ds-text`, which over a brown-black page comes out neutral grey. Light
+ *  unchanged: a white surface on a warm-white page already reads as a card.
+ */
+const SNIPPET_PANEL =
+  'rounded-none border border-ds-border bg-ds-surface dark:border-ds-border-strong dark:bg-gradient-to-b dark:from-ds-brand/[0.06] dark:to-transparent';
 
 const COLUMNS: readonly RuledColumn[] = [
   {

@@ -74,8 +74,15 @@ export function Hero() {
             />
           </div>
 
-          <div className="flex flex-col items-center py-28">
-            <h1 className="flex flex-col text-[56px] leading-[1.05] font-bold tracking-[-1.2px] text-ds-text">
+          <div className="flex flex-col items-center px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-28">
+            {/* The headline steps with the viewport rather than sitting at one
+                fixed size: 56px only ever fits the full-width desktop column,
+                and the centre column is a fixed 60% of the row, so on a phone
+                it is the type that has to give, not the column. Each step is
+                paired with a tracking that tightens as the size grows — large
+                type needs the negative tracking, small type starts to collide
+                with it. */}
+            <h1 className="flex flex-col text-[30px] leading-[1.1] font-bold tracking-[-0.6px] text-balance text-ds-text sm:text-[36px] sm:tracking-[-0.8px] md:text-[44px] md:tracking-[-1px] lg:text-[56px] lg:leading-[1.05] lg:tracking-[-1.2px]">
               <span>
                 <FadeInWords
                   text="You build the software."
@@ -94,7 +101,7 @@ export function Hero() {
               </span>
             </h1>
 
-            <p className="mt-8 max-w-[560px] text-base leading-relaxed text-ds-text-muted">
+            <p className="mt-6 max-w-[560px] text-sm leading-6 text-ds-text-muted sm:mt-8 sm:text-base sm:leading-relaxed">
               <FadeInWords
                 text="Project management for small engineering teams: projects, cycles, issues and activity in one place, without the enterprise machinery."
                 delay={0.55}

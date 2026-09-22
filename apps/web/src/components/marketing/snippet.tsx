@@ -19,8 +19,11 @@ import { cn } from '@/lib/utils';
  *  - `punct` — braces, commas, `=`, the quotes around a value, and the shell's
  *    line continuations.
  *
- * A token carries its own leading whitespace, and lines render `pre-wrap` so a
- * long URL wraps instead of running under the card's `overflow-hidden`.
+ * A token carries its own leading whitespace, and each line renders `pre` at its
+ * own max-content width (`w-max`) inside a block that scrolls sideways
+ * (`overflow-x-auto`), so a long URL stays on one line and the reader pans to it
+ * rather than the card clipping its tail. The snippet is the only thing that
+ * scrolls: the column and the card around it keep their width.
  */
 export type SnippetTone =
   'comment' | 'command' | 'flag' | 'value' | 'placeholder' | 'punct';
@@ -39,11 +42,11 @@ const TONE_CLASS = {
 
 export function Snippet({ lines }: { lines: readonly SnippetLine[] }) {
   return (
-    <div className="flex flex-col font-mono text-[11px] leading-5">
+    <div className="flex flex-col overflow-x-auto font-mono text-[11px] leading-5 [scrollbar-width:thin]">
       {lines.map((line) => (
         <span
           key={line.map(([, text]) => text).join('')}
-          className="whitespace-pre-wrap"
+          className="w-max min-w-full whitespace-pre"
         >
           {line.map(([tone, text]) => (
             <span key={text} className={cn(TONE_CLASS[tone])}>

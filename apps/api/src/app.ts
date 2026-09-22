@@ -6,6 +6,7 @@ import {
 } from '@shipyard/shared';
 import { ServiceUnavailableError } from './common/errors/httpErrors.js';
 import { env } from './common/config/env.js';
+import { corsMiddleware } from './common/middlewares/cors.js';
 import { errorHandler } from './common/middlewares/errorHandler.js';
 import { notFoundHandler } from './common/middlewares/notFound.js';
 import { requestLogger } from './common/middlewares/requestLogger.js';
@@ -72,6 +73,11 @@ export function createApp(options: CreateAppOptions = {}): express.Express {
     'trust proxy',
     env.TRUST_PROXY_HOPS === 0 ? false : env.TRUST_PROXY_HOPS,
   );
+
+  // Cross-origin policy first: preflights are answered before the loggers
+  // and rate limiters see them, and every response a browser reads —
+  // including 429s and errors — carries the CORS headers it needs.
+  app.use(corsMiddleware);
 
   app.use(
     helmet({
@@ -195,8 +201,9 @@ export function createApp(options: CreateAppOptions = {}): express.Express {
   // purpose: no session cookie, no shared envelope, no workspace guard chain —
   // the transport speaks JSON-RPC, so its failures are JSON-RPC too.
   //
-  // Publicly reachable only through the Next rewrite (`https://<web>/mcp` →
-  // `http://api:4000/mcp`); the API port stays unpublished.
+  // Reachable directly at the API origin (`https://api.<domain>/mcp`): MCP
+  // clients are agents, not browsers, so they call the public API hostname
+  // themselves instead of proxying through the web app.
   app.use('/mcp', mcpRouter);
 
   // The global `express.json()` above is earlier in the stack than that mount,

@@ -1,0 +1,18 @@
+# Build-context hygiene for the API image (see apps/api/Dockerfile).
+#
+# Secrets and local state must never reach the image.
+.env
+.env.*
+!.env.example
+.git
+.gitignore
+.github
+.agents
+.claude
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/.turbo
+**/src/generated
+docker-compose.yml

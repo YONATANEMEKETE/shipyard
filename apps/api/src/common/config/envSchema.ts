@@ -38,6 +38,24 @@ export const envSchema = z.object({
   MCP_RATE_LIMIT_MAX: z.coerce.number().int().min(1).max(100000).default(120),
   API_URL: z.string().url().default('http://localhost:4000'),
   WEB_URL: z.string().url().default('http://localhost:3000'),
+  // Additional browser origins allowed to call the API cross-origin, read by
+  // both the CORS middleware and Better Auth's trustedOrigins (see
+  // common/config/trustedOrigins.ts). Comma-separated; WEB_URL is always
+  // trusted. Used for Vercel preview deployments and temporary hosts.
+  EXTRA_TRUSTED_ORIGINS: z
+    .string()
+    .default('')
+    .transform((value) =>
+      value
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter((origin) => origin.length > 0),
+    )
+    .pipe(
+      z.array(
+        z.string().url('EXTRA_TRUSTED_ORIGINS entries must be valid origins'),
+      ),
+    ),
   LOG_LEVEL: z
     .enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent'])
     .default('info'),

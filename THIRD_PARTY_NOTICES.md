@@ -20,7 +20,7 @@ pnpm licenses:notices
 
 | Licence                             | Packages |
 | ----------------------------------- | -------: |
-| MIT                                 |     1049 |
+| MIT                                 |     1050 |
 | Apache-2.0                          |      106 |
 | ISC                                 |       63 |
 | BSD-3-Clause                        |       23 |
@@ -39,11 +39,11 @@ pnpm licenses:notices
 | (MIT OR WTFPL)                      |        1 |
 | (BSD-2-Clause OR MIT OR Apache-2.0) |        1 |
 | (MIT OR CC0-1.0)                    |        1 |
-| **Total**                           | **1290** |
+| **Total**                           | **1291** |
 
 ## Packages by licence
 
-### MIT — 1049 packages
+### MIT — 1050 packages
 
 - `@adobe/css-tools@4.5.0` — Copyright (c) 2012 TJ Holowaychuk <tj@vision-media.ca>
 - `@alloc/quick-lru@5.2.0` — Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
@@ -762,6 +762,7 @@ pnpm licenses:notices
 - `language-tags@1.0.9`
 - `lazystream@1.0.1` — Copyright (c) 2013 J. Pommerening, contributors.
 - `leac@0.6.0` — Copyright (c) 2021-2022 KillyMXI <killy@mxii.eu.org>
+- `lenis@1.3.26` — Copyright (c) 2024 darkroom.engineering
 - `levn@0.4.1` — Copyright (c) George Zahariev
 - `lilconfig@2.1.0` — Copyright (c) 2022 Anton Kastritskiy
 - `lines-and-columns@1.2.4` — Copyright (c) 2015 Brian Donovan
@@ -2553,7 +2554,7 @@ The GNU General Public License does not permit incorporating your program into p
 
 ### MIT
 
-Declared by 1053 packages, including `@adobe/css-tools@4.5.0`, `@alloc/quick-lru@5.2.0`, `@ark-ui/react@5.39.1`.
+Declared by 1054 packages, including `@adobe/css-tools@4.5.0`, `@alloc/quick-lru@5.2.0`, `@ark-ui/react@5.39.1`.
 
 The reproduced text is the template SPDX publishes; the copyright notices for the packages that use it are the lines listed with each package above.
 

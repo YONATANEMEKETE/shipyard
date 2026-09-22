@@ -91,6 +91,35 @@ describe('envSchema (startup validation)', () => {
     expect(result.success).toBe(false);
   });
 
+  it('defaults EXTRA_TRUSTED_ORIGINS to an empty list', () => {
+    const result = envSchema.safeParse(validEnv());
+    expect(result.success).toBe(true);
+    if (!result.success) throw new Error('should succeed');
+    expect(result.data.EXTRA_TRUSTED_ORIGINS).toEqual([]);
+  });
+
+  it('parses EXTRA_TRUSTED_ORIGINS as a trimmed, comma-separated list', () => {
+    const result = envSchema.safeParse({
+      ...validEnv(),
+      EXTRA_TRUSTED_ORIGINS:
+        ' https://preview-1.example.com ,https://preview-2.example.com, ',
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) throw new Error('should succeed');
+    expect(result.data.EXTRA_TRUSTED_ORIGINS).toEqual([
+      'https://preview-1.example.com',
+      'https://preview-2.example.com',
+    ]);
+  });
+
+  it('rejects an invalid EXTRA_TRUSTED_ORIGINS entry', () => {
+    const result = envSchema.safeParse({
+      ...validEnv(),
+      EXTRA_TRUSTED_ORIGINS: 'https://preview-1.example.com,not-a-url',
+    });
+    expect(result.success).toBe(false);
+  });
+
   it('rejects an invalid DATABASE_URL', () => {
     const result = envSchema.safeParse({
       ...validEnv(),

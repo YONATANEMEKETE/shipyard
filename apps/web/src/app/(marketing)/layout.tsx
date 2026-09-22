@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import { NOISE_BACKGROUND } from '@/components/marketing/noise';
 import { SiteHeader } from '@/components/marketing/site-header';
+import { SmoothScroll } from '@/components/marketing/smooth-scroll';
 
 /**
  * Shell for the public marketing surface — `/` (landing) and `/changelog`.
@@ -33,6 +34,7 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
     >
       <SiteHeader />
       <main className="flex-1">{children}</main>
+      <SmoothScroll />
     </div>
   );
 }

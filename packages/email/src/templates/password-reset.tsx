@@ -15,6 +15,7 @@ import {
 } from 'react-email';
 import type { ReactElement } from 'react';
 import {
+  appIconUrl,
   body,
   button,
   container,
@@ -62,7 +63,7 @@ export function PasswordResetEmail({
       <Body style={body}>
         <Container style={container}>
           <Img
-            src="/static/app-icon.png"
+            src={appIconUrl()}
             alt="Shipyard"
             width={40}
             height={40}

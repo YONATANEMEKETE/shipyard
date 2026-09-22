@@ -1,9 +1,16 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono, Inter } from 'next/font/google';
 import { QueryProvider } from '@/components/providers/query-provider';
 import { ToastProvider } from '@/components/providers/toast-provider';
 import { ThemeProvider } from '@/components/theme-provider';
 import { ThemeSync } from '@/components/theme-sync';
+import {
+  SITE_DESCRIPTION,
+  SITE_LOCALE,
+  SITE_NAME,
+  SITE_TAGLINE,
+  SITE_URL,
+} from '@/lib/site';
 import './globals.css';
 
 const inter = Inter({
@@ -25,13 +32,47 @@ const geistMono = Geist_Mono({
   display: 'swap',
 });
 
+/**
+ * The defaults every route inherits. Per-route metadata (a canonical, an
+ * `openGraph` image, a `robots` directive) belongs in that route's own file:
+ * anything set here is inherited by `/w/*` and the auth pages too.
+ *
+ * `metadataBase` is what lets the rest of the app write relative paths —
+ * Next resolves them against `SITE_URL` and refuses to guess a domain.
+ */
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: 'Shipyard — Plan. Build. Ship.',
-    template: '%s — Shipyard',
+    default: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    template: `%s — ${SITE_NAME}`,
   },
-  description:
-    'Shipyard is a focused project-management product. Plan, build, and ship with calm, dependable precision.',
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  openGraph: {
+    type: 'website',
+    siteName: SITE_NAME,
+    locale: SITE_LOCALE,
+    // No `title`/`description`/`images` here on purpose: with neither set,
+    // Next fills `og:title`/`og:description` from the page's own resolved
+    // metadata, so every page unfurls with its real title. The image lands
+    // with the asset (M3), referenced from `SITE_OG_IMAGE`.
+  },
+  twitter: {
+    card: 'summary_large_image',
+  },
+};
+
+/**
+ * `themeColor` is a viewport export, not metadata — it tints the browser
+ * chrome around the page. The two hex values mirror `--ds-bg` for each theme
+ * in `globals.css`; if that token moves, this moves with it.
+ */
+export const viewport: Viewport = {
+  colorScheme: 'light dark',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f4f3ef' },
+    { media: '(prefers-color-scheme: dark)', color: '#161512' },
+  ],
 };
 
 export default function RootLayout({

@@ -36,6 +36,9 @@ export const envSchema = z.object({
     .max(86400000)
     .default(60000),
   MCP_RATE_LIMIT_MAX: z.coerce.number().int().min(1).max(100000).default(120),
+  // Public origins: API_URL is the API's own base (Better Auth baseURL,
+  // OAuth redirect URIs, links that must hit the API); WEB_URL is the web
+  // app (links in emails, trusted browser origin).
   API_URL: z.string().url().default('http://localhost:4000'),
   WEB_URL: z.string().url().default('http://localhost:3000'),
   // Additional browser origins allowed to call the API cross-origin, read by

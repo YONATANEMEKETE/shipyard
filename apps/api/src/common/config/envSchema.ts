@@ -59,6 +59,15 @@ export const envSchema = z.object({
         z.string().url('EXTRA_TRUSTED_ORIGINS entries must be valid origins'),
       ),
     ),
+  // Session-cookie sharing across the web and API hosts. Production sets the
+  // parent domain (e.g. yonatanem.com) so the cookie reaches both
+  // shipyard.… and api.shipyard.…; empty keeps host-only cookies, which is
+  // right for dev (localhost cookies ignore ports). A leading dot is
+  // stripped — modern browsers treat it as meaningless.
+  COOKIE_DOMAIN: z
+    .string()
+    .default('')
+    .transform((value) => value.trim().replace(/^\./, '')),
   LOG_LEVEL: z
     .enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent'])
     .default('info'),

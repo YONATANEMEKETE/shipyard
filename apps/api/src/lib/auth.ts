@@ -219,6 +219,15 @@ export const auth = betterAuth({
 
   advanced: {
     useSecureCookies: env.NODE_ENV === 'production',
+    // The web app and the API live on different hosts, so the session cookie
+    // is shared across the parent domain in production — the web origin's
+    // server-side session checks must see it. Unset in dev: host-only
+    // localhost cookies already reach every port.
+    ...(env.COOKIE_DOMAIN
+      ? {
+          crossSubDomainCookies: { enabled: true, domain: env.COOKIE_DOMAIN },
+        }
+      : {}),
     database: {
       // Let Better Auth generate base62 IDs (default). Never "serial"/"uuid" for MVP.
       generateId: undefined,

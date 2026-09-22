@@ -31,15 +31,24 @@ import { Button } from '@/components/ui/button';
 export function Cta() {
   return (
     <section className="relative overflow-hidden border-t border-ds-border">
-      {/* The watermark: pinned to the section's bottom edge and running the full
+      {/* The watermark: pinned to the section's bottom edge, running the full
           width of the viewport rather than the content axis, so the word is as
           large as the page can carry. The viewBox is narrower than the word's
           natural advance, which scales the glyphs up until they nearly touch; the
           crop at the bottom is the viewBox's own height. Decorative, so it stays
-          out of the tree. */}
+          out of the tree.
+
+          Below `lg` the word is allowed to **bleed past both edges** (the section
+          is `overflow-hidden`, so the bleed is clipped): spanning the exact width
+          is what ties the letter height to the viewport, and a word that only just
+          fits a phone renders at ~61px of letter where the desktop shows ~235px.
+          Widening the box buys back the size at the price of slicing the outer
+          `S` and `D` — an acceptable trade on a watermark at 4% of the page's ink,
+          and the percentage is the one knob to tune. At `lg` it meets both edges
+          exactly again, which is the composition the section was drawn for. */}
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 select-none"
+        className="pointer-events-none absolute inset-x-[-8%] bottom-0 select-none sm:inset-x-[-5%] md:inset-x-[-3%] lg:inset-x-0"
       >
         <svg
           viewBox="0 0 880 200"

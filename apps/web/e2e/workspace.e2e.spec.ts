@@ -2,6 +2,10 @@ import { test, expect, type Page } from '@playwright/test';
 
 const PASSWORD = 'sup3r-secret-pass-123';
 
+// The API lives on its own origin; Playwright's request context defaults to
+// the web baseURL, so direct API calls must be absolute.
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+
 function unique(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -21,9 +25,12 @@ async function signUpAndVerify(
     page.getByRole('heading', { name: /check your email/i }),
   ).toBeVisible();
 
-  const markRes = await page.request.post('/api/v1/test/mark-verified', {
-    data: { email },
-  });
+  const markRes = await page.request.post(
+    `${API_ORIGIN}/api/v1/test/mark-verified`,
+    {
+      data: { email },
+    },
+  );
   expect(markRes.ok()).toBeTruthy();
 
   await page.goto('/sign-in');
@@ -177,7 +184,7 @@ test.describe('workspace lifecycle — golden path + isolation', () => {
         .or(outsiderPage.getByText(/check your email/i)),
     ).toBeVisible({ timeout: 10_000 });
     const markRes2 = await outsiderPage.request.post(
-      '/api/v1/test/mark-verified',
+      `${API_ORIGIN}/api/v1/test/mark-verified`,
       {
         data: { email: email2 },
       },

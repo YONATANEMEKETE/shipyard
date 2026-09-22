@@ -3,17 +3,17 @@ import { createAuthClient } from 'better-auth/client';
 /**
  * Better Auth vanilla client.
  *
- * In the browser it targets the same origin (`/api/v1/auth`), which Next.js
- * rewrites to the internal-only API server — that keeps session cookies
- * first-party and avoids any CORS surface. Outside the browser (the Next.js
- * proxy validating sessions), it calls the API server directly.
+ * Both the browser and the Next.js middleware (validating sessions) call the
+ * API on its own origin — same-site with the web app, but cross-origin, so
+ * every request carries credentials. `NEXT_PUBLIC_API_URL` is inlined at
+ * build time; the fallback matches the local dev API.
  */
+const API_ORIGIN = (
+  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+).replace(/\/+$/, '');
+
 export function resolveBaseURL(): string {
-  if (typeof window !== 'undefined') {
-    return `${window.location.origin}/api/v1/auth`;
-  }
-  const apiUrl = process.env.API_URL ?? 'http://localhost:4000';
-  return `${apiUrl}/api/v1/auth`;
+  return `${API_ORIGIN}/api/v1/auth`;
 }
 
 export const authClient = createAuthClient({

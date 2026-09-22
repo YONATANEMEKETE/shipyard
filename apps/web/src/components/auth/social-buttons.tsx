@@ -25,10 +25,14 @@ interface SocialButtonsProps {
  * Google/GitHub OAuth buttons shared by the sign-in and sign-up forms.
  *
  * Starting the flow redirects the browser to the provider's consent screen;
- * the provider calls back to the API (proxied through the web origin), the
- * session cookie is set, and Better Auth lands the user on callbackURL.
- * Sign-up vs. sign-in is resolved server-side: existing accounts sign in,
- * new identities create an account.
+ * the provider calls back to the API's own origin, the session cookie is set,
+ * and Better Auth lands the user on callbackURL. Sign-up vs. sign-in is
+ * resolved server-side: existing accounts sign in, new identities create an
+ * account.
+ *
+ * callbackURL is sent absolute: Better Auth resolves the post-OAuth redirect
+ * against the API's baseURL, so a relative path would land on the API origin,
+ * where no page exists.
  *
  * The clicked button keeps its spinner through the hand-off to the
  * provider — the mutation settles before the browser actually navigates,
@@ -45,7 +49,7 @@ export function SocialButtons({ callbackURL = '/w' }: SocialButtonsProps) {
     mutationFn: async (provider: SocialProvider) => {
       const { error } = await authClient.signIn.social({
         provider,
-        callbackURL,
+        callbackURL: new URL(callbackURL, window.location.origin).toString(),
       });
       if (error) {
         throw new Error(error.message || GENERIC_SOCIAL_ERROR);

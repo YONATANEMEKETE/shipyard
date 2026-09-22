@@ -350,7 +350,7 @@ describe('SignUpForm — user behaviour (isolated)', () => {
 
     expect(mockSocialSignIn).toHaveBeenCalledWith({
       provider: 'google',
-      callbackURL: '/w',
+      callbackURL: `${window.location.origin}/w`,
     });
     // While pending, busy disables both
     expect(

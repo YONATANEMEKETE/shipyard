@@ -15,7 +15,7 @@ export default defineConfig({
     exclude: ['e2e/**', 'node_modules/**'],
     setupFiles: ['test/setup.ts'],
     css: true,
-    env: { NODE_ENV: 'test' },
+    env: { NODE_ENV: 'test', NEXT_PUBLIC_API_URL: 'http://localhost:4000' },
     // jsdom + RTL under parallel CI load: the settings prefill test was the
     // first to blow past the 5s default under heavy CPU contention. Roomier
     // per-test budget keeps real failures (which fail fast) distinguishable

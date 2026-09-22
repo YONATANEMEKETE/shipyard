@@ -58,6 +58,18 @@ function cascade(stagger: number, delay: number): Variants {
 }
 
 /**
+ * How a cascade is fired: on mount, or when the block scrolls into view.
+ *
+ * Anything below the fold wants `inView`, or it spends its entrance off screen
+ * and is simply there by the time it is looked at.
+ */
+function trigger(inView: boolean) {
+  return inView
+    ? { whileInView: 'visible' as const, viewport: { once: true, amount: 0.3 } }
+    : { animate: 'visible' as const };
+}
+
+/**
  * A line whose words fade in one after another.
  *
  * `accent` paints one word with `accentClassName`, for a headline that carries
@@ -73,6 +85,8 @@ export function FadeInWords({
   stagger = 0.06,
   /** Seconds before the first word starts. Default 0.25. */
   delay = 0.25,
+  /** Start when it scrolls into view instead of on mount. Default false. */
+  inView = false,
 }: {
   text: string;
   className?: string;
@@ -81,6 +95,7 @@ export function FadeInWords({
   accentClassName?: string;
   stagger?: number;
   delay?: number;
+  inView?: boolean;
 }) {
   const reduce = useReducedMotion();
 
@@ -100,7 +115,7 @@ export function FadeInWords({
     <motion.span
       className={className}
       initial="hidden"
-      animate="visible"
+      {...trigger(inView)}
       variants={cascade(stagger, delay)}
     >
       {words.map((word, index) => (
@@ -137,11 +152,14 @@ export function FadeInLetters({
   stagger = 0.02,
   /** Seconds before the first letter starts. Default 0.12. */
   delay = 0.12,
+  /** Start when it scrolls into view instead of on mount. Default false. */
+  inView = false,
 }: {
   text: string;
   className?: string;
   stagger?: number;
   delay?: number;
+  inView?: boolean;
 }) {
   const reduce = useReducedMotion();
 
@@ -155,7 +173,7 @@ export function FadeInLetters({
     <motion.span
       className={className}
       initial="hidden"
-      animate="visible"
+      {...trigger(inView)}
       variants={cascade(stagger, delay)}
     >
       {words.map((word, wordIndex) => (

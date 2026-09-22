@@ -8,6 +8,7 @@ import { ActivityFeedView } from '@/components/dashboard/recent-activity-panel';
 import { Container } from '@/components/marketing/container';
 import { RuledColumns } from '@/components/marketing/ruled-columns';
 import { SectionPanel } from '@/components/marketing/section-panel';
+import { FadeInWords } from '@/components/motion/fade-in';
 import { ProjectKanbanCardView } from '@/components/projects/project-kanban-card';
 
 /**
@@ -280,21 +281,43 @@ export function Workflows() {
           page's gap, not the band's. */}
       <Container className="py-20 sm:py-28">
         <SectionPanel
-          eyebrow="The workflows"
-          heading={
-            <>
-              The whole loop, in <span className="text-ds-brand">one</span>{' '}
-              workspace
-            </>
+          eyebrow={
+            <FadeInWords
+              text="The workflows"
+              inView
+              delay={0.05}
+              stagger={0.018}
+            />
           }
-          body="Issues, projects, cycles and activity are one model. Progress on a project and on a cycle is derived from the issues inside it, so planning, doing and reporting all read from the same data."
+          heading={
+            <FadeInWords
+              text="The whole loop, in one workspace"
+              accent="one"
+              accentClassName="text-ds-brand"
+              inView
+              delay={0.18}
+              stagger={0.045}
+            />
+          }
+          body={
+            <FadeInWords
+              text="Issues, projects, cycles and activity are one model. Progress on a project and on a cycle is derived from the issues inside it, so planning, doing and reporting all read from the same data."
+              inView
+              delay={0.42}
+              stagger={0.02}
+            />
+          }
         />
 
         {/* The lower half: the panel's own bottom rule is its top edge, and the
             three columns below carry the product's own cards on the section's
             photograph. 12px of the picture, then the band takes the next 12px:
             see `RINGED` for the card treatment. */}
-        <RuledColumns columns={CARDS} background="/workflow-sections-bg.jpg" />
+        <RuledColumns
+          columns={CARDS}
+          background="/workflow-sections-bg.jpg"
+          curtain
+        />
       </Container>
     </section>
   );

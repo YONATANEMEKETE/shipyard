@@ -5,7 +5,7 @@ import { SiteHeader } from '@/components/marketing/site-header';
 import { SmoothScroll } from '@/components/marketing/smooth-scroll';
 
 /**
- * Shell for the public marketing surface — `/` (landing) and `/changelog`.
+ * Shell for the public marketing surface — `/`, the landing page.
  *
  * Route group, so it adds no URL segment. `src/proxy.ts` treats `/` and
  * `/(marketing)/*` as public tier 1: no session required, and an authenticated
@@ -21,7 +21,7 @@ import { SmoothScroll } from '@/components/marketing/smooth-scroll';
  *
  * There is no footer: the landing page ends on its own call to action
  * (`components/marketing/cta.tsx`), and the links a footer would carry — the
- * changelog, the repository and sign-in — are in the header.
+ * repository and sign-in — are in the header.
  *
  * No product chrome (sidebar, workspace header) belongs here: this is the
  * surface a visitor sees before they have a workspace.

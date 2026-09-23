@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import * as Sentry from '@sentry/nextjs';
 
 /**
  * The last resort — `app/global-error.tsx`.
@@ -156,6 +157,10 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error(error);
+
+    // Report the throw before anything else: this boundary is the last resort,
+    // so nothing upstream has seen it.
+    Sentry.captureException(error);
 
     // Restore the reader's theme choice onto the document this file owns. An
     // explicit choice is applied; `system` (and nothing stored) leaves the media

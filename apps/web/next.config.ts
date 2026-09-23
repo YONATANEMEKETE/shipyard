@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { withSentryConfig } from '@sentry/nextjs/config';
 
 import { NOINDEX_PATHS } from './src/lib/site';
 
@@ -32,4 +33,18 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+/**
+ * Sentry's build integration. At build time it uploads the source maps that
+ * make browser stack traces read as the original files, and it installs the
+ * `/sentry-tunnel` route (already excluded from the proxy matcher) so ad
+ * blockers don't eat browser events. The org, project and auth token come
+ * from the environment — the token is build-only and never committed.
+ * Errors only: no tracing or replay options.
+ */
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  tunnelRoute: '/sentry-tunnel',
+  silent: !process.env.CI,
+});

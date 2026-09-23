@@ -140,10 +140,12 @@ export default async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Skip Next internals, static assets, and /api — the web origin serves no
-  // API routes (the API lives on its own origin), so nothing under /api ever
-  // meets the protection rules. Everything else goes through them.
+  // Skip Next internals, static assets, /api, and the Sentry tunnel — the web
+  // origin serves no API routes (the API lives on its own origin), so nothing
+  // under /api ever meets the protection rules, and `/sentry-tunnel` is a
+  // POST-only relay that logged-out visitors' browsers must also reach.
+  // Everything else goes through them.
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|webp|avif|ico|txt|xml)$).*)',
+    '/((?!api|sentry-tunnel|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|webp|avif|ico|txt|xml)$).*)',
   ],
 };

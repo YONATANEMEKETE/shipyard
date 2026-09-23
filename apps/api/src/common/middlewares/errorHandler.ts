@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import type { NextFunction, Request, Response } from 'express';
 import { ZodError } from 'zod';
 import type { ErrorResponse } from '@shipyard/shared';
@@ -145,6 +146,16 @@ export function errorHandler(
     },
     'Unhandled request error',
   );
+  // Only unexpected errors reach the reporter — the AppError / ZodError /
+  // malformed-JSON branches above are expected traffic and stay in the logs.
+  Sentry.captureException(err, {
+    extra: {
+      requestId,
+      method: request.method,
+      path: request.originalUrl,
+    },
+  });
+
   sendErrorEnvelope(
     res,
     createErrorResponse(

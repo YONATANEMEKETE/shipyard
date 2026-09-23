@@ -11,4 +11,6 @@ set -e
 export API_PORT="${PORT:-${API_PORT:-4000}}"
 
 pnpm --filter @shipyard/api db:migrate:deploy
-exec node apps/api/dist/server.js
+# `--import` initialises the error reporter before the app's modules load
+# (apps/api/src/instrument.ts); without it the SDK cannot hook Express/pg.
+exec node --import ./apps/api/dist/instrument.js apps/api/dist/server.js

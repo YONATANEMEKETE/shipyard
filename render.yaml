@@ -56,3 +56,7 @@ services:
         sync: false
       - key: R2_SECRET_ACCESS_KEY
         sync: false
+      # Error monitoring (shipyard-api project). The DSN is write-only and safe
+      # to expose, but it is per-project — self-hosters bring their own.
+      - key: SENTRY_API_DSN
+        sync: false

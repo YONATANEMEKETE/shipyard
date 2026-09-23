@@ -30,6 +30,33 @@ const projectToken = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
 let posthog: PostHogSdk | null = null;
 let pending: PendingIdentity | null = null;
 
+/** A marker rather than an empty string, so a redacted URL still reads as a URL. */
+const REDACTED = '[redacted]';
+
+/** `/invite/<token>` — the invitation link's single-use token lives in the path. */
+const TOKEN_PATH = /(\/(?:invite|reset-password|verify-email)\/)[^/?#]+/;
+
+/** `?token=…` / `&code=…` — how those links arrive — plus anything an `error=`
+ * value might echo back. */
+const TOKEN_QUERY = /([?&](?:token|code|state|error)=)[^&#]*/g;
+
+/** Properties that are, or hold, a URL — down to the `href` of the element
+ * somebody clicked. */
+const URL_PROPERTY =
+  /(\$current_url|\$referrer|\$initial_current_url|\$initial_referrer|\$pathname|\$initial_pathname|attr__href|attr__action|attr__src)/;
+
+/**
+ * Rewrites the secrets out of a URL before it is reported: an invitation link
+ * carries a single-use token in its path, and the verify / reset links carry
+ * one in the query string. Only the token is replaced — the rest of the URL
+ * stays, so paths and referrers remain analysable.
+ */
+export function redactAnalyticsUrl(raw: string): string {
+  return raw
+    .replace(TOKEN_PATH, `$1${REDACTED}`)
+    .replace(TOKEN_QUERY, `$1${REDACTED}`);
+}
+
 export async function initAnalytics(): Promise<void> {
   if (!projectToken || posthog) return;
 
@@ -45,9 +72,25 @@ export async function initAnalytics(): Promise<void> {
     // Web Vitals (LCP, INP, CLS, FCP) — what the Web Analytics page graphs.
     capture_performance: true,
     // The DOM here is issue titles and comments. Autocapture keeps the shape of
-    // an interaction — what was clicked, where — but never its text, so the
-    // no-personal-data rule holds for the one channel we do not author.
+    // an interaction — what was clicked, where — but never its text or its
+    // attributes, so the no-personal-data rule holds for the one channel we do
+    // not author.
     mask_all_text: true,
+    mask_all_element_attributes: true,
+    // One-time tokens travel through pageviews, referrers and clicked hrefs;
+    // this is where they are rewritten before they leave. (`sanitize_properties`
+    // is the deprecated spelling of the same hook.)
+    before_send: (capture) => {
+      const properties = capture?.properties;
+      if (properties !== undefined) {
+        for (const [key, value] of Object.entries(properties)) {
+          if (typeof value === 'string' && URL_PROPERTY.test(key)) {
+            properties[key] = redactAnalyticsUrl(value);
+          }
+        }
+      }
+      return capture;
+    },
     // Visitors stay anonymous until they sign in; a person profile is created
     // only by `identify`, which the identity island calls.
     person_profiles: 'identified_only',

@@ -97,6 +97,16 @@ export const envSchema = z.object({
   R2_ACCESS_KEY_ID: z.string().min(1, 'R2_ACCESS_KEY_ID is required'),
   R2_SECRET_ACCESS_KEY: z.string().min(1, 'R2_SECRET_ACCESS_KEY is required'),
   R2_PUBLIC_BASE_URL: z.string().url('R2_PUBLIC_BASE_URL must be a valid URL'),
+
+  // Error monitoring (Sentry). Named per project (api / web) because the
+  // repository holds both; optional by design — with no DSN the SDK is
+  // disabled and sends nothing, which keeps tests and local dev silent.
+  // Production (Render) sets the real DSN; see apps/api/src/instrument.ts.
+  SENTRY_API_DSN: z.preprocess(
+    (value) =>
+      typeof value === 'string' && value.trim() === '' ? undefined : value,
+    z.string().url('SENTRY_API_DSN must be a valid DSN URL').optional(),
+  ),
 });
 
 export type Env = z.infer<typeof envSchema>;

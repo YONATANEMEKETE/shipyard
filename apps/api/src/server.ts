@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import * as Sentry from '@sentry/node';
 import app from './app.js';
 import { env } from './common/config/env.js';
 import { logger } from './common/logger/index.js';
@@ -81,6 +82,18 @@ async function shutdown(signal: string, exitCode = 0): Promise<void> {
 
     try {
       await flushLogger();
+    } catch {
+      finalExitCode = 1;
+    }
+
+    try {
+      // Fatal errors are captured asynchronously — give queued events a
+      // bounded chance to leave before exit so an uncaughtException is not
+      // lost with the process. Skipped when the SDK was never initialised
+      // (e.g. the process was started without `--import`).
+      if (Sentry.getClient() !== undefined) {
+        await Sentry.close(2000);
+      }
     } catch {
       finalExitCode = 1;
     }

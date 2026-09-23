@@ -38,18 +38,25 @@ async function handler(raw: unknown, tool: McpToolContext) {
   const labels = await resolveLabelIds(args.labels, tool);
   if (!labels.ok) return labels.result;
 
-  const created = await issuesService.create(context, credential.userId, {
-    title: args.title,
-    ...(args.description === undefined
-      ? {}
-      : { description: args.description }),
-    ...(args.priority === undefined ? {} : { priority: args.priority }),
-    ...(args.status === undefined ? {} : { status: args.status }),
-    assigneeId: assignee.value,
-    projectId: project.value ?? null,
-    ...(labels.value.length === 0 ? {} : { labelIds: labels.value }),
-    ...(args.dueDate === undefined ? {} : { dueDate: args.dueDate }),
-  });
+  const created = await issuesService.create(
+    context,
+    credential.userId,
+    {
+      title: args.title,
+      ...(args.description === undefined
+        ? {}
+        : { description: args.description }),
+      ...(args.priority === undefined ? {} : { priority: args.priority }),
+      ...(args.status === undefined ? {} : { status: args.status }),
+      assigneeId: assignee.value,
+      projectId: project.value ?? null,
+      ...(labels.value.length === 0 ? {} : { labelIds: labels.value }),
+      ...(args.dueDate === undefined ? {} : { dueDate: args.dueDate }),
+    },
+    // The door this came through: an agent, not the web UI. The service reports
+    // the value verbatim — nothing downstream infers it.
+    { source: 'mcp' },
+  );
 
   return listResult({
     heading: `Created ${created.identifier}`,

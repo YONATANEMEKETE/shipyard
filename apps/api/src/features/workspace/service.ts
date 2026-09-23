@@ -7,6 +7,7 @@ import type {
   WorkspaceRole,
 } from '@shipyard/shared';
 import { InternalServerError } from '../../common/errors/httpErrors.js';
+import { captureEvent } from '../../common/analytics/index.js';
 import { logger } from '../../common/logger/index.js';
 import { prisma } from '../../common/db/client.js';
 import { activityService } from '../activity/service.js';
@@ -142,6 +143,7 @@ export const workspaceService = {
       },
       'workspace.created',
     );
+    captureEvent(userId, 'workspace_created', { workspaceId: created.id });
 
     // Creator just became the Owner of a brand-new workspace: exactly 1 member.
     return toDetail({ ...created, _count: { members: 1 } }, 'OWNER');

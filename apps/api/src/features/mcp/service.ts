@@ -11,6 +11,7 @@ import {
   type RevokeMcpTokenResponse,
 } from '@shipyard/shared';
 import { prisma } from '../../common/db/client.js';
+import { captureEvent } from '../../common/analytics/index.js';
 import { logger } from '../../common/logger/index.js';
 import type { WorkspaceRequestContext } from '../../common/guards/workspace-context.js';
 import {
@@ -136,6 +137,10 @@ export const mcpTokensService = {
       },
       'mcp.token.created',
     );
+    captureEvent(userId, 'mcp_token_created', {
+      workspaceId: context.workspaceId,
+      scopes,
+    });
 
     return { ...toMcpTokenCard(row), token: generated.token };
   },

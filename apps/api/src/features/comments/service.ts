@@ -5,6 +5,7 @@ import type {
   UpdateCommentRequest,
 } from '@shipyard/shared';
 import { mentionTokenMatches, mentionTokenRegex } from '@shipyard/shared';
+import { captureEvent } from '../../common/analytics/index.js';
 import { logger } from '../../common/logger/index.js';
 import { resolveImageUrl } from '../../common/storage/imageUrl.js';
 import { prisma } from '../../common/db/client.js';
@@ -354,6 +355,10 @@ export const commentsService = {
       },
       'comment.created',
     );
+    captureEvent(actorUserId, 'comment_created', {
+      workspaceId: context.workspaceId,
+      issueId,
+    });
     return toCard(row);
   },
 

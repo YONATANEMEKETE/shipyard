@@ -4,6 +4,7 @@ import {
   renderEmailVerificationEmail,
   renderPasswordResetEmail,
 } from '@shipyard/email';
+import { captureEvent } from '../common/analytics/index.js';
 import { env } from '../common/config/env.js';
 import { trustedOrigins } from '../common/config/trustedOrigins.js';
 import { prisma } from '../common/db/client.js';
@@ -56,6 +57,15 @@ export const auth = betterAuth({
             },
             'auth.user.created',
           );
+          // The funnel's first step. The reporting id is the user id — the
+          // email above belongs to the operational log and never leaves for
+          // PostHog. The callback path names the provider (`/callback/google`);
+          // anything else is the credential flow.
+          const method =
+            (['google', 'github'] as const).find((provider) =>
+              path.includes(provider),
+            ) ?? 'email';
+          captureEvent(user.id, 'signed_up', { method });
         },
       },
     },

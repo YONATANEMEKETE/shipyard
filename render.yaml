@@ -60,3 +60,9 @@ services:
       # to expose, but it is per-project — self-hosters bring their own.
       - key: SENTRY_API_DSN
         sync: false
+      # Product analytics (PostHog). The token is write-only and per-product;
+      # self-hosters bring their own, or leave it unset to keep the reporter off.
+      - key: POSTHOG_PROJECT_TOKEN
+        sync: false
+      - key: POSTHOG_HOST
+        value: https://us.i.posthog.com

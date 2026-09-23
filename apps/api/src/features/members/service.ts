@@ -11,6 +11,7 @@ import type {
 import { INVITATION_TTL_DAYS } from '@shipyard/shared';
 import { env } from '../../common/config/env.js';
 import { prisma } from '../../common/db/client.js';
+import { captureEvent } from '../../common/analytics/index.js';
 import { logger } from '../../common/logger/index.js';
 import { resolveImageUrl } from '../../common/storage/imageUrl.js';
 import { renderWorkspaceInvitationEmail } from '@shipyard/email';
@@ -627,6 +628,10 @@ export const membersService = {
         },
         'member.invited',
       );
+      captureEvent(callerUserId, 'member_invited', {
+        workspaceId: context.workspaceId,
+        role: card.role,
+      });
     }
 
     return created;
@@ -891,6 +896,10 @@ export const membersService = {
         },
         'member.invitation_accepted',
       );
+      captureEvent(callerUserId, 'invitation_accepted', {
+        workspaceId: inv.workspaceId,
+        role: inv.role,
+      });
 
       return {
         member: toMemberCard(created),

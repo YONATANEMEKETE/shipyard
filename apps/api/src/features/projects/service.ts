@@ -10,6 +10,7 @@ import type {
   ViewType,
 } from '@shipyard/shared';
 import type { Prisma } from '../../generated/client.js';
+import { captureEvent } from '../../common/analytics/index.js';
 import { logger } from '../../common/logger/index.js';
 import { prisma } from '../../common/db/client.js';
 import { resolveImageUrl } from '../../common/storage/imageUrl.js';
@@ -374,6 +375,10 @@ export const projectsService = {
         },
         'project.created',
       );
+      captureEvent(userId, 'project_created', {
+        workspaceId: context.workspaceId,
+        projectId: row.id,
+      });
       // A fresh project tracks no issues and has no workers yet.
       return toDetail(row, emptyProgress(), []);
     } catch (error) {

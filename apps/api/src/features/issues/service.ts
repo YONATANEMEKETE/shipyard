@@ -15,6 +15,7 @@ import type {
 } from '@shipyard/shared';
 import { DEFAULT_LABEL_COLOR } from '@shipyard/shared';
 import type { Prisma } from '../../generated/client.js';
+import { captureEvent } from '../../common/analytics/index.js';
 import { logger } from '../../common/logger/index.js';
 import { prisma } from '../../common/db/client.js';
 import { resolveImageUrl } from '../../common/storage/imageUrl.js';
@@ -506,10 +507,17 @@ export const issuesService = {
 
   // ── Create (#3, spec §3.1) ─────────────────────────────────────────────
 
+  /**
+   * `options.source` names the door the request came through — the web UI or an
+   * agent. It is handed in by the caller rather than inferred, because the
+   * workspace context is deliberately the same shape on both paths
+   * (workspace-context.ts) and nothing downstream may guess.
+   */
   async create(
     context: WorkspaceRequestContext,
     actorUserId: string,
     input: CreateIssueRequest,
+    options: { source?: 'ui' | 'mcp' } = {},
   ): Promise<IssueDetail> {
     assertWorkspaceWritable(context);
 
@@ -611,6 +619,13 @@ export const issuesService = {
       },
       'issue.created',
     );
+    captureEvent(actorUserId, 'issue_created', {
+      workspaceId: context.workspaceId,
+      projectId: row.projectId,
+      issueId: row.id,
+      status: row.status,
+      source: options.source ?? 'ui',
+    });
     return toDetail(row);
   },
 

@@ -156,4 +156,30 @@ describe('envSchema (startup validation)', () => {
     const result = envSchema.safeParse({ ...validEnv(), NODE_ENV: 'staging' });
     expect(result.success).toBe(false);
   });
+
+  it('leaves the PostHog reporter off when the token is blank', () => {
+    const result = envSchema.safeParse({
+      ...validEnv(),
+      POSTHOG_PROJECT_TOKEN: '',
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) throw new Error('should succeed');
+    expect(result.data.POSTHOG_PROJECT_TOKEN).toBeUndefined();
+  });
+
+  it('defaults POSTHOG_HOST to the ingestion origin', () => {
+    const result = envSchema.safeParse(validEnv());
+    if (!result.success) throw new Error('should succeed');
+    expect(result.data.POSTHOG_HOST).toBe('https://us.i.posthog.com');
+  });
+
+  it('rejects a POSTHOG_HOST that is not a URL', () => {
+    // The dashboard origin is a plausible-looking mistake; only the ingestion
+    // origin works, and a bare host is not a URL.
+    const result = envSchema.safeParse({
+      ...validEnv(),
+      POSTHOG_HOST: 'us.posthog.com',
+    });
+    expect(result.success).toBe(false);
+  });
 });

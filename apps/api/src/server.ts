@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import * as Sentry from '@sentry/node';
 import app from './app.js';
+import { flushAnalytics } from './common/analytics/index.js';
 import { env } from './common/config/env.js';
 import { logger } from './common/logger/index.js';
 import { setReady } from './common/health/readiness.js';
@@ -82,6 +83,14 @@ async function shutdown(signal: string, exitCode = 0): Promise<void> {
 
     try {
       await flushLogger();
+    } catch {
+      finalExitCode = 1;
+    }
+
+    try {
+      // Buffered events are events a crash can lose: give them the same
+      // bounded chance to leave that the logger and Sentry get.
+      await flushAnalytics();
     } catch {
       finalExitCode = 1;
     }

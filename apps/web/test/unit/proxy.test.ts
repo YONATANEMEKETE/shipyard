@@ -322,9 +322,10 @@ describe('proxy routing', () => {
 });
 
 describe('config.matcher', () => {
-  it('excludes api, _next/static, and static assets', () => {
+  it('excludes api, the Sentry tunnel, _next/static, and static assets', () => {
     expect(config.matcher).toHaveLength(1);
     expect(config.matcher[0]).toContain('api');
+    expect(config.matcher[0]).toContain('sentry-tunnel');
     expect(config.matcher[0]).toContain('_next/static');
   });
 });

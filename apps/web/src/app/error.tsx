@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
+import * as Sentry from '@sentry/nextjs';
 
 import { Button } from '@/components/ui/button';
 import { Container } from '@/components/marketing/container';
@@ -47,6 +48,9 @@ export default function RootError({
 }) {
   useEffect(() => {
     console.error(error);
+    // Report the throw — an error boundary swallowing it is exactly the
+    // invisible failure the reporter exists for.
+    Sentry.captureException(error);
   }, [error]);
 
   return (

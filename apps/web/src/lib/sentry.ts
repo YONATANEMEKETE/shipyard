@@ -28,5 +28,21 @@ export function initSentry(): void {
     release:
       process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ??
       process.env.VERCEL_GIT_COMMIT_SHA,
+    // Automatic collection only: no user identity, no cookies, no request or
+    // response bodies. What this app renders is the user's own content and
+    // none of it needs to leave the browser.
+    dataCollection: {
+      userInfo: false,
+      cookies: false,
+      httpBodies: [],
+    },
+    // Genuine browser noise, and nothing else — a pattern earns a line here
+    // only after it shows up in the issue list as recurring junk. Chunk-load
+    // errors are deliberately absent: they are the signal that a deploy and
+    // the served bundles disagree, which is worth knowing about.
+    ignoreErrors: [
+      'ResizeObserver loop limit exceeded',
+      'ResizeObserver loop completed with undelivered notifications.',
+    ],
   });
 }

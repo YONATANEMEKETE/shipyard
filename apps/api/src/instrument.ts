@@ -18,4 +18,13 @@ Sentry.init({
   release: env.SENTRY_RELEASE ?? process.env.RENDER_GIT_COMMIT,
   // No DSN (tests, fresh clones): the client is disabled — nothing is sent.
   enabled: env.SENTRY_API_DSN !== undefined,
+  // Automatic collection only: no IP harvesting, no request/response bodies,
+  // no bound SQL parameters — those carry the user's own content (issue text,
+  // comments, email addresses). The parameterized query text still arrives,
+  // and anything set explicitly with Sentry.setUser() is always sent.
+  dataCollection: {
+    userInfo: false,
+    httpBodies: [],
+    databaseQueryData: false,
+  },
 });

@@ -31,8 +31,9 @@ import { Snippet } from '@/components/marketing/snippet';
  *    transactions as the UI, so it lands in history, activity and notifications
  *    as the member's own action (spec §1, §3.3).
  *
- * The URL is the canonical deployment (`shipyard.yonatanem.com`), which is also
- * the one thing a self-hoster swaps for their own host. Each snippet was read
+ * The URL is the API origin — the endpoint is served by the API host
+ * (`api.shipyard.yonatanem.com/mcp`), not the web host — and it is also the one
+ * thing a self-hoster swaps for their own host. Each snippet was read
  * off its client's own documentation rather than written from memory: `claude
  * mcp add --transport http <name> <url> --header "..."` is Claude Code's
  * documented bearer-token form, `[mcp_servers.<name>]` with `url` and
@@ -72,7 +73,7 @@ const COLUMNS: readonly RuledColumn[] = [
           ],
           [
             ['punct', '  '],
-            ['value', 'https://shipyard.yonatanem.com/mcp'],
+            ['value', 'https://api.shipyard.yonatanem.com/mcp'],
             ['punct', ' \\'],
           ],
           [
@@ -105,7 +106,7 @@ const COLUMNS: readonly RuledColumn[] = [
           [
             ['flag', 'url'],
             ['punct', ' = '],
-            ['value', '"https://shipyard.yonatanem.com/mcp"'],
+            ['value', '"https://api.shipyard.yonatanem.com/mcp"'],
           ],
           [
             ['flag', 'bearer_token_env_var'],
@@ -139,7 +140,7 @@ const COLUMNS: readonly RuledColumn[] = [
             ['punct', '      '],
             ['flag', '"url"'],
             ['punct', ': '],
-            ['value', '"https://shipyard.yonatanem.com/mcp"'],
+            ['value', '"https://api.shipyard.yonatanem.com/mcp"'],
             ['punct', ','],
           ],
           [

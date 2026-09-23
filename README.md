@@ -135,6 +135,7 @@ The repository tracks examples such as:
 
 ```text
 .env.example
+apps/web/.env.example
 ```
 
 Real local files such as these are ignored:

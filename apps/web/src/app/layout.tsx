@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono, Inter } from 'next/font/google';
+import { AnalyticsIdentity } from '@/components/analytics/analytics-identity';
 import { QueryProvider } from '@/components/providers/query-provider';
 import { ToastProvider } from '@/components/providers/toast-provider';
 import { ThemeProvider } from '@/components/theme-provider';
@@ -100,8 +101,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <QueryProvider>
-            {/* Inside the query provider: it reads the stored theme. */}
+            {/* Both read through TanStack Query, so they need its provider. */}
             <ThemeSync />
+            <AnalyticsIdentity />
             <ToastProvider>{children}</ToastProvider>
           </QueryProvider>
         </ThemeProvider>

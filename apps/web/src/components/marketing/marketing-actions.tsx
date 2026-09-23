@@ -10,8 +10,8 @@ import { useSession } from '@/hooks/use-session';
  * in: a signed-out visitor is offered the way in, a signed-in one is offered
  * the way back to their work.
  *
- * Client-side on purpose. The marketing routes are statically prerendered
- * (`next build` reports `/` and `/changelog` as static), and reading the session
+ * Client-side on purpose. The marketing route is statically prerendered
+ * (`next build` reports `/` as static), and reading the session
  * during rendering would make every marketing visit a server render against the
  * auth API. `useSession` is the same TanStack Query hook the product uses, so a
  * visitor who signs in and returns to `/` gets the cached answer immediately.

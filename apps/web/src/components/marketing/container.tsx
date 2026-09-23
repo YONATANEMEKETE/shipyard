@@ -15,9 +15,7 @@ import { cn } from '@/lib/utils';
  * scale, still narrow enough that the hero's centred copy keeps a comfortable
  * measure.
  *
- * Gutters step with the viewport (16 → 24 → 32px). The narrow reading column on
- * `/changelog` is a different thing on purpose: that page constrains the text
- * measure, not the page.
+ * Gutters step with the viewport (16 → 24 → 32px).
  */
 export function Container({
   className,

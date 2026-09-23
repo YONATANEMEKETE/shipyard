@@ -25,13 +25,13 @@ export const metadata: Metadata = {
  *
  * There is no open-source section and no footer by decision, not by omission: the
  * repository's README is where self-hosting is explained, in more detail than a
- * marketing section could carry, and the header already links the changelog, the
- * repository and sign-in. The page ends on the wordmark in
+ * marketing section could carry, and the header already links the repository and
+ * sign-in. The page ends on the wordmark in
  * `components/marketing/cta.tsx`.
  *
- * Build-phase checklist for this page (not yet done):
- *   - the `openGraph` image itself, `sitemap.ts`, `robots.ts`
- *   - honesty guardrail: no invented logos, testimonials or usage numbers
+ * Standing rule for this page: no invented logos, testimonials or usage
+ * numbers. Every claim has to be checkable — the repository, the board in the
+ * hero, the shipped tool list.
  */
 export default function LandingPage() {
   return (

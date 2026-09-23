@@ -13,8 +13,8 @@ import { SiteHeader } from '@/components/marketing/site-header';
  * Two things land here, and they are the reason this file sits at the root
  * rather than in a route group:
  *
- *  - **any URL no route matches.** The marketing shell owns `/` and
- *    `/changelog`; the auth shell owns the credential pages; the workspace shell
+ *  - **any URL no route matches.** The marketing shell owns `/`; the auth shell
+ *    owns the credential pages; the workspace shell
  *    owns `/w/*`. A typo'd or stale link matches none of them, and without this
  *    file Next renders its own bare page — centred text, no brand, nothing to
  *    click. This is the page a mistyped URL lands on, so it carries the brand and

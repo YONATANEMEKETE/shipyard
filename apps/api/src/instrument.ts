@@ -13,6 +13,9 @@ import { env } from './common/config/env.js';
 Sentry.init({
   dsn: env.SENTRY_API_DSN,
   environment: env.NODE_ENV,
+  // The code version this event belongs to: Render injects the deploy's commit
+  // SHA at runtime, and SENTRY_RELEASE overrides it on hosts that don't.
+  release: env.SENTRY_RELEASE ?? process.env.RENDER_GIT_COMMIT,
   // No DSN (tests, fresh clones): the client is disabled — nothing is sent.
   enabled: env.SENTRY_API_DSN !== undefined,
 });

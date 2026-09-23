@@ -107,6 +107,15 @@ export const envSchema = z.object({
       typeof value === 'string' && value.trim() === '' ? undefined : value,
     z.string().url('SENTRY_API_DSN must be a valid DSN URL').optional(),
   ),
+
+  // Optional release override — the code version events are tagged with, which
+  // powers "first seen in release" and regression detection. Render supplies
+  // the value automatically (RENDER_GIT_COMMIT); this exists for other hosts.
+  SENTRY_RELEASE: z.preprocess(
+    (value) =>
+      typeof value === 'string' && value.trim() === '' ? undefined : value,
+    z.string().optional(),
+  ),
 });
 
 export type Env = z.infer<typeof envSchema>;

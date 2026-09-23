@@ -21,5 +21,12 @@ export function initSentry(): void {
     // Vercel reports production | preview | development; anywhere else the
     // Node convention applies.
     environment: process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.NODE_ENV,
+    // The code version this event belongs to. Must be the exact value the
+    // build tagged the uploaded source maps with (next.config.ts) — otherwise
+    // the maps are filed under a release no event refers to and production
+    // stack traces stay minified.
+    release:
+      process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ??
+      process.env.VERCEL_GIT_COMMIT_SHA,
   });
 }

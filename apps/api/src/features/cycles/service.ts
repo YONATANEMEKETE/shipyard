@@ -6,6 +6,7 @@ import type {
   DeleteCycleResponse,
   UpdateCycleRequest,
 } from '@shipyard/shared';
+import { captureEvent } from '../../common/analytics/index.js';
 import { logger } from '../../common/logger/index.js';
 import { prisma } from '../../common/db/client.js';
 import { AppError } from '../../common/errors/AppError.js';
@@ -837,6 +838,13 @@ async function activate(
       },
       'cycle.activated',
     );
+    // A start is the planning signal; a reopen is not — both travel this path.
+    if (from === 'PLANNED') {
+      captureEvent(actorUserId, 'cycle_started', {
+        workspaceId: context.workspaceId,
+        cycleId,
+      });
+    }
     const progress = await progressFor(prisma, context.workspaceId, [row.id]);
     return toDetail(row, progress.get(row.id) ?? emptyProgress());
   } catch (error) {

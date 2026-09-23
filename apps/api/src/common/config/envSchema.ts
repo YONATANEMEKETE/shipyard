@@ -116,6 +116,19 @@ export const envSchema = z.object({
       typeof value === 'string' && value.trim() === '' ? undefined : value,
     z.string().optional(),
   ),
+
+  // Product analytics (PostHog). Optional by design — with no token the
+  // reporter is a no-op that sends nothing, which keeps tests and local
+  // development silent. One token per product; Render holds production's.
+  // See apps/api/src/common/analytics/index.ts.
+  POSTHOG_PROJECT_TOKEN: z.preprocess(
+    (value) =>
+      typeof value === 'string' && value.trim() === '' ? undefined : value,
+    z.string().optional(),
+  ),
+
+  // The ingestion origin — NOT the dashboard URL (`us.posthog.com`).
+  POSTHOG_HOST: z.string().url().default('https://us.i.posthog.com'),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -57,10 +57,13 @@ export const analyticsEventSchemas = {
    * *funnel* — server-side, for issues created through the web UI and for
    * those created by an agent (`source: 'mcp'`). Which interface a team works
    * through is the question this property exists to answer.
+   *
+   * `projectId` is nullable because an issue can legitimately belong to no
+   * project; it reports `null` rather than dropping the whole event.
    */
   issue_created: z.object({
     workspaceId: z.string().cuid(),
-    projectId: z.string().cuid(),
+    projectId: z.string().cuid().nullable(),
     issueId: z.string().cuid(),
     status: issueStatusSchema,
     source: z.enum(['ui', 'mcp']),

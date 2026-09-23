@@ -46,5 +46,13 @@ export default withSentryConfig(nextConfig, {
   project: process.env.SENTRY_PROJECT,
   authToken: process.env.SENTRY_AUTH_TOKEN,
   tunnelRoute: '/sentry-tunnel',
+  // The release the source maps are filed under. Must equal the runtime
+  // release in src/lib/sentry.ts — same expression on purpose, because a
+  // mismatch leaves every production stack trace minified.
+  release: {
+    name:
+      process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ??
+      process.env.VERCEL_GIT_COMMIT_SHA,
+  },
   silent: !process.env.CI,
 });

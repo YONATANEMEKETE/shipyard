@@ -5,6 +5,7 @@ import { Fragment } from 'react';
 import { HeaderShell } from '@/components/marketing/header-shell';
 import { Container } from '@/components/marketing/container';
 import { MarketingActions } from '@/components/marketing/marketing-actions';
+import { SITE_X_URL } from '@/lib/site';
 
 /**
  * Canonical public repository link — the marketing surface's "open source"
@@ -15,9 +16,10 @@ export const REPOSITORY_URL = 'https://github.com/YONATANEMEKETE/shipyard';
 
 /**
  * The author's X profile — the same reasoning as `REPOSITORY_URL`: the header's
- * nav and the closing section's signature point at one string.
+ * nav and the closing section's signature point at one string. Defined in
+ * `@/lib/site` because the Open Graph card tags need the same account.
  */
-export const X_URL = 'https://x.com/Yonatanem2';
+export const X_URL = SITE_X_URL;
 
 /**
  * Centre of the header. Deliberately short: the repository and the author's feed.
@@ -28,7 +30,7 @@ const NAV_LINKS = [
 ] as const;
 
 /**
- * Marketing site header for the public surface (`/`, `/changelog`).
+ * Marketing site header for the public surface (`/`).
  *
  * Structure follows the layout study of a dark fintech landing page: a
  * transparent bar (no background block, no border), mark and wordmark at the

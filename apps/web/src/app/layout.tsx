@@ -8,8 +8,10 @@ import {
   SITE_DESCRIPTION,
   SITE_LOCALE,
   SITE_NAME,
+  SITE_OG_IMAGE,
   SITE_TAGLINE,
   SITE_URL,
+  SITE_X_HANDLE,
 } from '@/lib/site';
 import './globals.css';
 
@@ -52,13 +54,17 @@ export const metadata: Metadata = {
     type: 'website',
     siteName: SITE_NAME,
     locale: SITE_LOCALE,
-    // No `title`/`description`/`images` here on purpose: with neither set,
-    // Next fills `og:title`/`og:description` from the page's own resolved
-    // metadata, so every page unfurls with its real title. The image lands
-    // with the asset (M3), referenced from `SITE_OG_IMAGE`.
+    // `title`/`description` stay unset: with neither present, Next fills
+    // `og:title`/`og:description` from each page's own resolved metadata, so
+    // every page unfurls with its real title. The image is global — one card
+    // for the whole site.
+    images: [SITE_OG_IMAGE],
   },
   twitter: {
     card: 'summary_large_image',
+    site: SITE_X_HANDLE,
+    creator: SITE_X_HANDLE,
+    images: [SITE_OG_IMAGE.url],
   },
 };
 

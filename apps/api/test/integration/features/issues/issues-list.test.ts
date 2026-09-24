@@ -96,6 +96,7 @@ interface IssueCard {
   dueDate: string | null;
   blocked: boolean;
   labels: { id: string; name: string }[];
+  commentCount: number;
   archivedAt: string | null;
 }
 
@@ -233,6 +234,23 @@ describe('issues list (integration)', () => {
 
     const archived = await list('?archived=true');
     expect(archived.page.issues.map((i) => i.id)).toEqual([gone.id]);
+  });
+
+  it('returns the live comment count on each card (commentCount)', async () => {
+    const quiet = await createIssue({ title: 'Quiet' });
+    const chatty = await createIssue({ title: 'Chatty' });
+    for (const content of ['first', 'second', 'third']) {
+      const res = await request
+        .post(`/api/v1/workspaces/${ws.slug}/issues/${chatty.id}/comments`)
+        .set('Cookie', owner.cookies)
+        .send({ content });
+      expect(res.status).toBe(201);
+    }
+
+    const fresh = await list('');
+    const byId = new Map(fresh.page.issues.map((i) => [i.id, i]));
+    expect(byId.get(quiet.id)!.commentCount).toBe(0);
+    expect(byId.get(chatty.id)!.commentCount).toBe(3);
   });
 
   // ── Filters ────────────────────────────────────────────────────────────

@@ -148,6 +148,7 @@ export function toCard(row: IssueRow): IssueCard {
     blocked: row.blocked,
     blockedReason: row.blockedReason,
     labels: row.labels.map((join) => toLabelCard(join.label)),
+    commentCount: row._count.comments,
     archivedAt: row.archivedAt ? row.archivedAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

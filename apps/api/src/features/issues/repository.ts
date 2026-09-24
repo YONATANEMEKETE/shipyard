@@ -19,6 +19,7 @@ export function issueInclude() {
     assignee: { select: { id: true, name: true, email: true, image: true } },
     creator: { select: { id: true, name: true, email: true, image: true } },
     labels: { include: { label: true }, orderBy: { label: { name: 'asc' } } },
+    _count: { select: { comments: true } },
   } satisfies Prisma.IssueInclude;
 }
 

@@ -1,0 +1,58 @@
+name: Feature request
+description: Suggest a capability or an improvement to Shipyard
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Shipyard is planned before it is built: product, UX, and engineering decisions live in
+        [shipyard-design](https://github.com/YONATANEMEKETE/shipyard-design), and this repository
+        implements them. A request here is still welcome — it is how something gets into that
+        planning. Requests about setup, self-hosting, or the documentation are in scope too.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Describe the situation, not the implementation. What is hard or impossible today?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: What would you like to happen?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of Shipyard does this touch?
+      options:
+        - Issues
+        - Projects
+        - Cycles
+        - Comments and mentions
+        - Notifications
+        - Search
+        - Dashboard and activity
+        - Members and workspaces
+        - Settings
+        - Authentication
+        - Agents (MCP server)
+        - Self-hosting, setup, or documentation
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: Including how you work around it today, if you do.
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else
+      description: Screenshots, links, or examples from other tools.
+    validations:
+      required: false

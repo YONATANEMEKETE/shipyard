@@ -1,14 +1,22 @@
+import { startTelemetry } from './common/telemetry/index.js';
 import * as Sentry from '@sentry/node';
 import { env } from './common/config/env.js';
 
 /**
- * Error monitoring (Sentry). This file is loaded before any other application
- * module — via `--import` in the dev and start scripts (apps/api/package.json,
- * apps/api/scripts/start.sh) — because the SDK must be initialised before
- * Express and pg are loaded for its hooks to take effect.
- *
- * Errors only: `tracesSampleRate` / `tracesSampler` are deliberately absent.
- * Setting either of them (even to 0) turns tracing on.
+ * Telemetry preload. This file is loaded before any other application module —
+ * via `--import` in the dev and start scripts (apps/api/package.json,
+ * apps/api/scripts/start.sh) — because the SDKs must be initialised before
+ * Express, pg and pino are loaded for their hooks to take effect.
+ */
+
+// Server telemetry (OpenTelemetry → Grafana Cloud): traces, metrics and the
+// trace/span ids pino log lines carry. Stays off without an OTLP endpoint.
+startTelemetry();
+
+/**
+ * Error monitoring (Sentry). Errors only: `tracesSampleRate` /
+ * `tracesSampler` are deliberately absent. Setting either of them (even to 0)
+ * turns tracing on.
  */
 Sentry.init({
   dsn: env.SENTRY_API_DSN,

@@ -20,30 +20,33 @@ pnpm licenses:notices
 
 | Licence                             | Packages |
 | ----------------------------------- | -------: |
-| MIT                                 |     1050 |
-| Apache-2.0                          |      106 |
-| ISC                                 |       63 |
-| BSD-3-Clause                        |       23 |
-| BSD-2-Clause                        |       17 |
+| MIT                                 |     1142 |
+| Apache-2.0                          |      194 |
+| ISC                                 |       64 |
+| BSD-3-Clause                        |       25 |
+| BSD-2-Clause                        |       20 |
 | BlueOak-1.0.0                       |        8 |
 | MPL-2.0                             |        5 |
 | Unlicense                           |        4 |
 | MIT-0                               |        3 |
+| FSL-1.1-MIT                         |        2 |
 | CC0-1.0                             |        2 |
 | 0BSD                                |        2 |
+| (MIT OR CC0-1.0)                    |        2 |
 | LGPL-3.0-or-later                   |        1 |
 | MIT and ISC                         |        1 |
 | Python-2.0                          |        1 |
 | CC-BY-4.0                           |        1 |
+| (MPL-2.0 OR Apache-2.0)             |        1 |
 | EPL-2.0                             |        1 |
 | (MIT OR WTFPL)                      |        1 |
+| (Apache-2.0 AND MIT)                |        1 |
 | (BSD-2-Clause OR MIT OR Apache-2.0) |        1 |
-| (MIT OR CC0-1.0)                    |        1 |
-| **Total**                           | **1291** |
+| **Total**                           | **1482** |
 
 ## Packages by licence
 
-### MIT — 1050 packages
+### MIT — 1142 packages
 
 - `@adobe/css-tools@4.5.0` — Copyright (c) 2012 TJ Holowaychuk <tj@vision-media.ca>
 - `@alloc/quick-lru@5.2.0` — Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
@@ -154,12 +157,14 @@ pnpm licenses:notices
 - `@jridgewell/gen-mapping@0.3.13` — Copyright 2024 Justin Ridgewell <justin@ridgewell.name>
 - `@jridgewell/remapping@2.3.5` — Copyright 2024 Justin Ridgewell <justin@ridgewell.name>
 - `@jridgewell/resolve-uri@3.1.2` — Copyright 2019 Justin Ridgewell <jridgewell@google.com>
+- `@jridgewell/source-map@0.3.11` — Copyright 2024 Justin Ridgewell <justin@ridgewell.name>
 - `@jridgewell/sourcemap-codec@1.5.5` — Copyright 2024 Justin Ridgewell <justin@ridgewell.name>
 - `@jridgewell/trace-mapping@0.3.31` — Copyright 2024 Justin Ridgewell <justin@ridgewell.name>
 - `@js-sdsl/ordered-map@4.4.2` — Copyright (c) 2021 Zilong Yao
 - `@kwsites/file-exists@1.1.1` — Copyright (c) 2015 Steve King
 - `@mrleebo/prisma-ast@0.13.1` — Copyright (c) 2021 Jeremy Liberman
 - `@mswjs/interceptors@0.41.9` — Copyright (c) 2018–present Artem Zakharchenko
+- `@napi-rs/lzma-linux-x64-gnu@1.5.1`
 - `@next/env@16.3.5`
 - `@next/eslint-plugin-next@16.3.1`
 - `@next/swc-linux-x64-gnu@16.3.5`
@@ -179,6 +184,9 @@ pnpm licenses:notices
 - `@pinojs/redact@0.4.0` — Copyright (c) 2025 pinojs contributors
 - `@pkgjs/parseargs@0.11.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@polka/url@1.0.0-next.29`
+- `@posthog/browser-common@0.9.0`
+- `@posthog/core@1.55.1` — Copyright 2020 Posthog / Hiberly, Inc.
+- `@posthog/types@1.412.4` — Copyright 2020 Posthog / Hiberly, Inc.
 - `@radix-ui/number@1.1.3` — Copyright (c) 2022 WorkOS
 - `@radix-ui/primitive@1.1.3` — Copyright (c) 2022 WorkOS
 - `@radix-ui/primitive@1.1.7` — Copyright (c) 2022 WorkOS
@@ -251,8 +259,29 @@ pnpm licenses:notices
 - `@react-email/ui@6.9.2` — Copyright 2024 Plus Five Five, Inc
 - `@rolldown/binding-linux-x64-gnu@1.2.5`
 - `@rolldown/pluginutils@1.0.1` — Copyright (c) 2026-present, rolldown/plugins repository contributors
+- `@rollup/plugin-commonjs@28.0.1` — Copyright (c) 2019 RollupJS Plugin Contributors (https://github.com/rollup/plugins/graphs/contributors)
+- `@rollup/pluginutils@5.4.0` — Copyright (c) 2019 RollupJS Plugin Contributors (https://github.com/rollup/plugins/graphs/contributors)
+- `@rollup/rollup-linux-x64-gnu@4.63.4`
 - `@rtsao/scc@1.1.0` — Copyright (c) 2019 Ryan Tsao
 - `@selderee/plugin-htmlparser2@0.11.0` — Copyright (c) 2021-2022 KillyMXI <killy@mxii.eu.org>
+- `@sentry/babel-plugin-component-annotate@5.3.0` — Copyright (c) 2024, Sentry
+- `@sentry/browser-utils@10.75.1` — Copyright (c) 2020 Functional Software, Inc. dba Sentry
+- `@sentry/browser@10.75.1` — Copyright (c) 2019 Functional Software, Inc. dba Sentry
+- `@sentry/bundler-plugin-core@5.3.0` — Copyright (c) 2022, Sentry
+- `@sentry/bundler-plugins@10.75.1` — Copyright (c) 2022-2026, Sentry
+- `@sentry/conventions@0.16.0` — Copyright (c) 2023-2025 Functional Software, Inc. dba Sentry
+- `@sentry/core@10.75.1` — Copyright (c) 2019 Functional Software, Inc. dba Sentry
+- `@sentry/feedback@10.75.1` — Copyright (c) 2023 Functional Software, Inc. dba Sentry
+- `@sentry/nextjs@10.75.1` — Copyright (c) 2021 Functional Software, Inc. dba Sentry
+- `@sentry/node-core@10.75.1` — Copyright (c) 2025 Functional Software, Inc. dba Sentry
+- `@sentry/node@10.75.1` — Copyright (c) 2023 Functional Software, Inc. dba Sentry
+- `@sentry/opentelemetry@10.75.1` — Copyright (c) 2023 Functional Software, Inc. dba Sentry
+- `@sentry/react@10.75.1` — Copyright (c) 2019 Functional Software, Inc. dba Sentry
+- `@sentry/replay-canvas@10.75.1` — Copyright (c) 2024 Functional Software, Inc. dba Sentry
+- `@sentry/replay@10.75.1` — Copyright (c) 2022 Functional Software, Inc. dba Sentry
+- `@sentry/server-utils@10.75.1`
+- `@sentry/vercel-edge@10.75.1` — Copyright (c) 2023 Functional Software, Inc. dba Sentry
+- `@sentry/webpack-plugin@5.4.0` — Copyright (c) 2022, Sentry
 - `@simple-libs/child-process-utils@2.0.0` — Copyright (c) 2016 - present, TrigenSoftware
 - `@simple-libs/stream-utils@2.0.0` — Copyright (c) 2016 - present, TrigenSoftware
 - `@socket.io/component-emitter@3.1.2` — Copyright (c) 2014 Component contributors <dev@component.io>
@@ -272,6 +301,7 @@ pnpm licenses:notices
 - `@testing-library/user-event@14.6.5` — Copyright (c) 2020 Giorgio Polvara
 - `@turbo/linux-64@2.10.10` — Copyright (c) 2026 Vercel, Inc
 - `@types/aria-query@5.0.4` — Copyright (c) Microsoft Corporation.
+- `@types/aws-lambda@8.10.163` — Copyright (c) Microsoft Corporation.
 - `@types/body-parser@1.19.6` — Copyright (c) Microsoft Corporation.
 - `@types/chai@5.2.3` — Copyright (c) Microsoft Corporation.
 - `@types/connect@3.4.38` — Copyright (c) Microsoft Corporation.
@@ -300,10 +330,13 @@ pnpm licenses:notices
 - `@types/json-schema@7.0.15` — Copyright (c) Microsoft Corporation.
 - `@types/json5@0.0.29`
 - `@types/lodash@4.17.25` — Copyright (c) Microsoft Corporation.
+- `@types/memcached@2.2.10` — Copyright (c) Microsoft Corporation.
 - `@types/methods@1.1.4` — Copyright (c) Microsoft Corporation.
 - `@types/multer@2.2.0` — Copyright (c) Microsoft Corporation.
 - `@types/node@18.19.130` — Copyright (c) Microsoft Corporation.
 - `@types/node@26.2.0` — Copyright (c) Microsoft Corporation.
+- `@types/pg-pool@2.0.7` — Copyright (c) Microsoft Corporation.
+- `@types/pg@8.15.6` — Copyright (c) Microsoft Corporation.
 - `@types/pg@8.23.1` — Copyright (c) Microsoft Corporation.
 - `@types/qs@6.15.1` — Copyright (c) Microsoft Corporation.
 - `@types/range-parser@1.2.7` — Copyright (c) Microsoft Corporation.
@@ -318,6 +351,7 @@ pnpm licenses:notices
 - `@types/statuses@2.0.6` — Copyright (c) Microsoft Corporation.
 - `@types/superagent@8.1.11` — Copyright (c) Microsoft Corporation.
 - `@types/supertest@7.2.1` — Copyright (c) Microsoft Corporation.
+- `@types/trusted-types@2.0.7` — Copyright (c) Microsoft Corporation.
 - `@types/ws@8.18.1` — Copyright (c) Microsoft Corporation.
 - `@typescript-eslint/eslint-plugin@8.67.0` — Copyright (c) 2019 typescript-eslint and other contributors
 - `@typescript-eslint/parser@8.67.0` — Copyright (c) 2019 typescript-eslint and other contributors
@@ -348,6 +382,20 @@ pnpm licenses:notices
 - `@vitest/spy@4.1.11` — Copyright (c) 2021-Present VoidZero Inc. and Vitest contributors
 - `@vitest/ui@4.1.11` — Copyright (c) 2021-Present VoidZero Inc. and Vitest contributors
 - `@vitest/utils@4.1.11` — Copyright (c) 2021-Present VoidZero Inc. and Vitest contributors
+- `@webassemblyjs/ast@1.14.1` — Copyright (c) 2018 Sven Sauleau <sven@sauleau.com>
+- `@webassemblyjs/floating-point-hex-parser@1.13.2` — Copyright (c) 2017 Mauro Bringolf
+- `@webassemblyjs/helper-api-error@1.13.2` — Copyright (c) 2018 Sven Sauleau <sven@sauleau.com>
+- `@webassemblyjs/helper-buffer@1.14.1` — Copyright (c) 2018 Sven Sauleau <sven@sauleau.com>
+- `@webassemblyjs/helper-numbers@1.13.2` — Copyright (c) 2018 Sven Sauleau <sven@sauleau.com>
+- `@webassemblyjs/helper-wasm-bytecode@1.13.2` — Copyright (c) 2018 Sven Sauleau <sven@sauleau.com>
+- `@webassemblyjs/helper-wasm-section@1.14.1` — Copyright (c) 2018 Sven Sauleau <sven@sauleau.com>
+- `@webassemblyjs/ieee754@1.13.2` — Copyright (c) 2018 Sven Sauleau <sven@sauleau.com>
+- `@webassemblyjs/utf8@1.13.2` — Copyright (c) 2018 Sven Sauleau <sven@sauleau.com>
+- `@webassemblyjs/wasm-edit@1.14.1` — Copyright (c) 2018 Sven Sauleau <sven@sauleau.com>
+- `@webassemblyjs/wasm-gen@1.14.1` — Copyright (c) 2018 Sven Sauleau <sven@sauleau.com>
+- `@webassemblyjs/wasm-opt@1.14.1` — Copyright (c) 2018 Sven Sauleau <sven@sauleau.com>
+- `@webassemblyjs/wasm-parser@1.14.1` — Copyright (c) 2018 Sven Sauleau <sven@sauleau.com>
+- `@webassemblyjs/wast-printer@1.14.1` — Copyright (c) 2018 Sven Sauleau <sven@sauleau.com>
 - `@zag-js/accordion@1.43.3` — Copyright (c) 2021 Chakra UI
 - `@zag-js/anatomy@1.43.3` — Copyright (c) 2021 Chakra UI
 - `@zag-js/angle-slider@1.43.3` — Copyright (c) 2021 Chakra UI
@@ -430,7 +478,10 @@ pnpm licenses:notices
 - `accepts@2.0.0` — Copyright (c) 2014 Jonathan Ong <me@jongleberry.com>
 - `acorn-jsx@5.3.2` — Copyright (C) 2012-2017 by Ingvar Stepanyan
 - `acorn@8.18.0` — Copyright (C) 2012-2022 by various contributors (see AUTHORS)
+- `agent-base@6.0.2`
+- `agent-base@7.1.4`
 - `ajv-formats@3.0.1` — Copyright (c) 2020 Evgeny Poberezkin
+- `ajv-keywords@5.1.0` — Copyright (c) 2016 Evgeny Poberezkin
 - `ajv@6.15.0` — Copyright (c) 2015-2017 Evgeny Poberezkin
 - `ajv@8.20.0` — Copyright (c) 2015-2017 Evgeny Poberezkin
 - `ansi-regex@5.0.1` — Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
@@ -473,6 +524,7 @@ pnpm licenses:notices
 - `better-result@2.10.0` — Copyright (c) 2026 Dillon Mulroy
 - `better-sqlite3@12.11.1` — Copyright (c) 2017 Joshua Wise
 - `bidi-js@1.0.3` — Copyright (c) 2021 Jason Johnston
+- `bignumber.js@9.3.1`
 - `bindings@1.5.0` — Copyright (c) 2012 Nathan Rajlich &lt;nathan@tootallnate.net&gt;
 - `bl@4.1.0` — Copyright (c) 2013-2019 bl contributors
 - `body-parser@2.3.0` — Copyright (c) 2014 Jonathan Ong <me@jongleberry.com>
@@ -501,7 +553,9 @@ pnpm licenses:notices
 - `chalk@5.6.2` — Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
 - `chokidar@4.0.3` — Copyright (c) 2012 Paul Miller (https://paulmillr.com), Elan Shanker
 - `chokidar@5.0.0` — Copyright (c) 2012 Paul Miller (https://paulmillr.com), Elan Shanker
+- `chrome-trace-event@1.0.4` — Copyright (c) 2015 Joyent Inc. All rights reserved.
 - `citty@0.2.2` — Copyright (c) Pooya Parsa <pooya@pi0.io>
+- `cjs-module-lexer@2.2.1` — Copyright (C) 2018-2020 Guy Bedford
 - `classnames@2.5.1` — Copyright (c) 2018 Jed Watson
 - `client-only@0.0.1`
 - `clsx@2.1.1` — Copyright (c) Luke Edwards <luke.edwards05@gmail.com> (lukeed.com)
@@ -511,6 +565,8 @@ pnpm licenses:notices
 - `combined-stream@1.0.8`
 - `commander@12.1.0` — Copyright (c) 2011 TJ Holowaychuk <tj@vision-media.ca>
 - `commander@13.1.0` — Copyright (c) 2011 TJ Holowaychuk <tj@vision-media.ca>
+- `commander@2.20.3` — Copyright (c) 2011 TJ Holowaychuk <tj@vision-media.ca>
+- `commondir@1.0.1` — Copyright (c) 2013 James Halliday (mail@substack.net)
 - `component-emitter@1.3.1` — Copyright (c) 2014 Component contributors <dev@component.io>
 - `compress-commons@6.0.2` — Copyright (c) 2014 Chris Talkington, contributors.
 - `concat-map@0.0.1` — The above copyright notice and this permission notice shall be included in all
@@ -526,6 +582,7 @@ pnpm licenses:notices
 - `cookie@0.7.2` — Copyright (c) 2012-2014 Roman Shtylman <shtylman@gmail.com>
 - `cookie@1.1.1` — Copyright (c) 2012-2014 Roman Shtylman <shtylman@gmail.com>
 - `cookiejar@2.1.4` — Copyright (c) 2013 Bradley Meck
+- `core-js@3.50.0` — Copyright (c) 2013–2025 Denis Pushkarev (zloirock.ru)
 - `core-util-is@1.0.3` — Copyright Node.js contributors. All rights reserved.
 - `cors@2.8.6` — Copyright (c) 2013 Troy Goode <troygoode@gmail.com>
 - `cosmiconfig-typescript-loader@6.3.0`
@@ -536,6 +593,7 @@ pnpm licenses:notices
 - `css-tree@3.2.1` — Copyright (C) 2016-2026 by Roman Dvornov
 - `css.escape@1.5.1`
 - `csstype@3.2.3` — Copyright (c) 2017-2018 Fredrik Nicol
+- `data-uri-to-buffer@4.0.1`
 - `data-urls@7.0.0` — Copyright © Domenic Denicola <d@domenic.me>
 - `data-view-buffer@1.0.2` — Copyright (c) 2023 Jordan Harband
 - `data-view-byte-length@1.0.2` — Copyright (c) 2024 Jordan Harband
@@ -580,6 +638,7 @@ pnpm licenses:notices
 - `engine.io-parser@5.2.3` — Copyright (c) 2014-present Guillermo Rauch and Socket.IO contributors
 - `engine.io@6.6.9` — Copyright (c) 2014-present Guillermo Rauch and Socket.IO contributors
 - `enhanced-resolve@5.24.5` — Copyright JS Foundation and other contributors
+- `enhanced-resolve@5.25.1` — Copyright JS Foundation and other contributors
 - `env-paths@2.2.1` — Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
 - `env-paths@3.0.0` — Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
 - `error-ex@1.3.4` — Copyright (c) 2015 JD Ballard
@@ -589,6 +648,7 @@ pnpm licenses:notices
 - `es-errors@1.3.0` — Copyright (c) 2024 Jordan Harband
 - `es-iterator-helpers@1.4.0` — Copyright (c) 2022 ECMAScript Shims
 - `es-module-lexer@2.3.2` — Copyright (C) 2018-2022 Guy Bedford
+- `es-module-lexer@3.0.2` — Copyright (C) 2018-2022 Guy Bedford
 - `es-object-atoms@1.1.2` — Copyright (c) 2024 Jordan Harband
 - `es-set-tostringtag@2.1.0` — Copyright (c) 2022 ECMAScript Shims
 - `es-shim-unscopables@1.1.0` — Copyright (c) 2022 Jordan Harband
@@ -609,6 +669,7 @@ pnpm licenses:notices
 - `eslint-plugin-react@7.37.5` — Copyright (c) 2014 Yannick Croissant
 - `eslint@10.8.1` — Copyright OpenJS Foundation and other contributors, <www.openjsf.org>
 - `eslint@9.39.5` — Copyright OpenJS Foundation and other contributors, <www.openjsf.org>
+- `estree-walker@2.0.2` — Copyright (c) 2015-20 [these people](https://github.com/Rich-Harris/estree-walker/graphs/contributors)
 - `estree-walker@3.0.3` — Copyright (c) 2015-20 [these people](https://github.com/Rich-Harris/estree-walker/graphs/contributors)
 - `etag@1.8.1` — Copyright (c) 2014-2016 Douglas Christopher Wilson
 - `event-target-shim@5.0.1` — Copyright (c) 2015 Toru Nagashima
@@ -616,6 +677,7 @@ pnpm licenses:notices
 - `express-rate-limit@8.6.2` — Copyright 2023 Nathan Friedly, Vedant K
 - `express@5.2.1` — Copyright (c) 2009-2014 TJ Holowaychuk <tj@vision-media.ca>
 - `exsolve@1.1.1` — Copyright (c) Pooya Parsa <pooya@pi0.io>
+- `extend@3.0.2` — Copyright (c) 2014 Stefan Thomas
 - `fast-check@3.23.2` — Copyright (c) 2017 Nicolas DUBIEN
 - `fast-copy@4.0.4` — Copyright (c) 2025 Tony Quetano
 - `fast-decode-uri-component@1.0.1` — Copyright (c) 2018 Tomas Della Vedova
@@ -630,7 +692,9 @@ pnpm licenses:notices
 - `fast-string-width@3.0.2` — Copyright (c) 2024-present Fabio Spampinato
 - `fast-wrap-ansi@0.2.2` — Copyright (c) 2025 James Garbutt
 - `fdir@6.5.0` — Copyright 2023 Abdullah Atta
-- `fflate@0.8.3` — Copyright (c) 2026 Arjun Barrett
+- `fetch-blob@3.2.0` — Copyright (c) 2019 David Frank
+- `fflate@0.4.9` — Copyright (c) 2020 Arjun Barrett
+- `fflate@0.8.3` — Copyright (c) 2020 Arjun Barrett
 - `file-entry-cache@8.0.0` — Copyright (c) Roy Riojas & Jared Wray
 - `file-uri-to-path@1.0.0` — Copyright (c) 2014 Nathan Rajlich <nathan@tootallnate.net>
 - `fill-range@7.1.1` — Copyright (c) 2014-present, Jon Schlinkert.
@@ -640,7 +704,9 @@ pnpm licenses:notices
 - `flat-cache@4.0.1` — Copyright (c) Roy Riojas and Jared Wray
 - `for-each@0.3.5` — Copyright (c) 2012 Raynos.
 - `form-data@4.0.6`
+- `formdata-polyfill@4.0.10` — Copyright (c) 2016 Jimmy Karl Roland Wärting
 - `formidable@3.5.4` — Copyright (c) 2011-present Felix Geisendörfer, and contributors.
+- `forwarded-parse@2.1.2` — Copyright (c) 2015 Luigi Pinca
 - `forwarded@0.2.0` — Copyright (c) 2014-2017 Douglas Christopher Wilson
 - `framer-motion@13.1.1` — Copyright (c) 2018 Framer B.V.
 - `fresh@2.0.0` — Copyright (c) 2012 TJ Holowaychuk <tj@vision-media.ca>
@@ -687,6 +753,8 @@ pnpm licenses:notices
 - `html5parser@3.0.0` — Copyright (c) 2020 acrazing
 - `htmlparser2@8.0.2` — Copyright 2010, 2011, Chris Winberry <chris@winberry.net>. All rights reserved.
 - `http-errors@2.0.1` — Copyright (c) 2014 Jonathan Ong me@jongleberry.com
+- `https-proxy-agent@5.0.1`
+- `https-proxy-agent@7.0.6`
 - `husky@9.1.7` — Copyright (c) 2021 typicode
 - `iconv-lite@0.7.3` — Copyright (c) 2011 Alexander Shtuchkin
 - `ignore@5.3.2`
@@ -724,6 +792,7 @@ pnpm licenses:notices
 - `is-potential-custom-element-name@1.0.1`
 - `is-promise@4.0.0` — Copyright (c) 2014 Forbes Lindesay
 - `is-property@1.0.2` — Copyright (c) 2013 Mikola Lysenko
+- `is-reference@1.2.1`
 - `is-regex@1.2.1` — Copyright (c) 2014 Jordan Harband
 - `is-set@2.0.3` — Copyright (c) 2019 Inspect JS
 - `is-shared-array-buffer@1.0.4` — Copyright (c) 2021 Inspect JS
@@ -739,6 +808,7 @@ pnpm licenses:notices
 - `isarray@1.0.0`
 - `isarray@2.0.5`
 - `iterator.prototype@1.1.5` — Copyright (c) 2022 Jordan Harband
+- `jest-worker@27.5.1` — Copyright (c) Facebook, Inc. and its affiliates.
 - `jiti@2.6.1` — Copyright (c) Pooya Parsa <pooya@pi0.io>
 - `jiti@2.7.0` — Copyright (c) Pooya Parsa <pooya@pi0.io>
 - `jose@6.2.10` — Copyright (c) 2018 Filip Skokan
@@ -748,6 +818,7 @@ pnpm licenses:notices
 - `js-yaml@4.3.2` — Copyright (C) 2011-2015 by Vitaly Puzrin
 - `jsdom@30.0.1` — Copyright (c) 2010 Elijah Insua
 - `jsesc@3.1.0`
+- `json-bigint@1.0.0` — Copyright (c) 2013 Andrey Sidorov
 - `json-buffer@3.0.1` — Copyright (c) 2013 Dominic Tarr
 - `json-parse-even-better-errors@2.3.1` — Copyright 2017 Kat Marchán
 - `json-schema-traverse@0.4.1` — Copyright (c) 2017 Evgeny Poberezkin
@@ -783,6 +854,7 @@ pnpm licenses:notices
 - `media-typer@0.3.0` — Copyright (c) 2014 Douglas Christopher Wilson
 - `media-typer@1.1.1` — Copyright (c) 2014 Douglas Christopher Wilson
 - `merge-descriptors@2.0.0` — Copyright (c) Jonathan Ong <me@jongleberry.com>
+- `merge-stream@2.0.0` — Copyright (c) Stephen Sugden <me@stephensugden.com> (stephensugden.com)
 - `merge2@1.4.1` — Copyright (c) 2014-2020 Teambition
 - `methods@1.1.2` — Copyright (c) 2013-2014 TJ Holowaychuk <tj@vision-media.ca>
 - `micromatch@4.0.8` — Copyright (c) 2014-present, Jon Schlinkert.
@@ -795,8 +867,10 @@ pnpm licenses:notices
 - `mimic-response@3.1.0` — Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
 - `min-indent@1.0.1` — Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com), James Kyle <me@thejameskyle.com> (thejamesky...
 - `minimist@1.2.8` — The above copyright notice and this permission notice shall be included in all
+- `minimizer-webpack-plugin@5.11.0` — Copyright JS Foundation and other contributors
 - `mkdirp-classic@0.5.3` — Copyright (c) 2020 James Halliday (mail@substack.net) and Mathias Buus
 - `mkdirp@3.0.1` — Copyright (c) 2011-2023 James Halliday (mail@substack.net) and Isaac Z. Schlueter (i@izs.me)
+- `module-details-from-path@1.0.4` — Copyright (c) 2016-2025 Thomas Watson Steen
 - `motion-dom@13.1.1` — Copyright (c) 2024 [Motion](https://motion.dev) B.V.
 - `motion-utils@13.0.0` — Copyright (c) 2024 [Motion](https://motion.dev) B.V.
 - `motion@13.1.1` — Copyright (c) 2024 [Motion](https://motion.dev) B.V.
@@ -817,7 +891,10 @@ pnpm licenses:notices
 - `next-themes@0.4.6` — Copyright (c) 2022 Paco Coursey
 - `next@16.3.5` — Copyright (c) 2025 Vercel, Inc.
 - `node-abi@3.95.0` — Copyright (c) 2016 Lukas Geiger
+- `node-domexception@1.0.0` — Copyright (c) 2021 Jimmy Wärting
 - `node-exports-info@1.6.2` — Copyright (c) 2022 Inspect JS
+- `node-fetch@2.7.0` — Copyright (c) 2016 David Frank
+- `node-fetch@3.3.2` — Copyright (c) 2016 David Frank
 - `node-releases@2.0.53` — Copyright (c) 2017 Sergey Rubanov (https://github.com/chicoxyzzy)
 - `normalize-path@3.0.0` — Copyright (c) 2014-2018, Jon Schlinkert.
 - `nypm@0.6.6` — Copyright (c) Pooya Parsa <pooya@pi0.io>
@@ -878,6 +955,8 @@ pnpm licenses:notices
 - `postgres-bytea@1.0.1` — Copyright (c) Ben Drucker <bvdrucker@gmail.com> (bendrucker.me)
 - `postgres-date@1.0.7` — Copyright (c) Ben Drucker <bvdrucker@gmail.com> (bendrucker.me)
 - `postgres-interval@1.2.0` — Copyright (c) Ben Drucker <bvdrucker@gmail.com> (bendrucker.me)
+- `posthog-node@5.52.5` — Copyright 2020 Posthog / Hiberly, Inc.
+- `preact@10.29.8` — Copyright (c) 2015-present Jason Miller
 - `prebuild-install@7.1.3` — Copyright (c) 2015 Mathias Buus
 - `prelude-ls@1.2.1` — Copyright (c) George Zahariev
 - `prettier@3.9.6` — Copyright © James Long and contributors
@@ -886,16 +965,19 @@ pnpm licenses:notices
 - `process-nextick-args@2.0.1` — # Copyright (c) 2015 Calvin Metcalf
 - `process-warning@5.1.0` — Copyright (c) 2020-present The Fastify team <https://github.com/fastify/fastify#team>
 - `process@0.11.10` — Copyright (c) 2013 Roman Shtylman <shtylman@gmail.com>
+- `progress@2.0.3` — Copyright (c) 2017 TJ Holowaychuk <tj@vision-media.ca>
 - `prompts@2.4.2` — Copyright (c) 2018 Terkel Gjervig Nielsen
 - `prop-types@15.8.1` — Copyright (c) 2013-present, Facebook, Inc.
 - `proper-lockfile@4.1.2` — Copyright (c) 2018 Made With MOXY Lda <hello@moxy.studio>
 - `properties-reader@3.0.1` — Copyright (c) 2026 Steve King
 - `proxy-addr@2.0.7` — Copyright (c) 2014-2016 Douglas Christopher Wilson
 - `proxy-compare@3.0.1` — Copyright (c) 2020 Daishi Kato
+- `proxy-from-env@1.1.0` — Copyright (C) 2016-2018 Rob Wu <rob@robwu.nl>
 - `proxy-memoize@3.0.1` — Copyright (c) 2020 Daishi Kato
 - `pump@3.0.4` — Copyright (c) 2014 Mathias Buus
 - `punycode@2.3.1`
 - `pure-rand@6.1.0` — Copyright (c) 2018 Nicolas DUBIEN
+- `query-selector-shadow-dom@1.0.1` — Copyright (c) 2020 George Griffiths
 - `queue-microtask@1.2.3` — Copyright (c) Feross Aboukhadijeh
 - `quick-format-unescaped@4.0.4` — Copyright (c) 2016-2019 David Mark Clements
 - `radix-ui@1.6.7` — Copyright (c) 2022 WorkOS
@@ -926,6 +1008,7 @@ pnpm licenses:notices
 - `remeda@2.33.4`
 - `require-directory@2.1.1` — Copyright (c) 2011 Troy Goode <troygoode@gmail.com>
 - `require-from-string@2.0.2` — Copyright (c) Vsevolod Strukchinsky <floatdrop@gmail.com> (github.com/floatdrop)
+- `require-in-the-middle@8.0.1` — Copyright (c) 2016-2019, Thomas Watson Steen
 - `reselect@5.3.0` — Copyright (c) 2015-2018 Reselect Contributors
 - `resend@6.22.1` — Copyright (c) 2023 Plus Five Five, Inc.
 - `resolve-from@4.0.0` — Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
@@ -937,6 +1020,7 @@ pnpm licenses:notices
 - `rettime@0.11.11` — Copyright (c) 2024—present Artem Zakharchenko
 - `reusify@1.1.0` — Copyright (c) 2015-2024 Matteo Collina
 - `rolldown@1.2.5` — Copyright (c) 2024-present VoidZero Inc. & Contributors
+- `rollup@4.63.4` — Copyright (c) 2017 [these people](https://github.com/rollup/rollup/graphs/contributors)
 - `rou3@0.9.2` — Copyright (c) Pooya Parsa <pooya@pi0.io>
 - `router@2.2.0` — Copyright (c) 2013 Roman Shtylman
 - `run-applescript@7.1.0` — Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
@@ -950,6 +1034,7 @@ pnpm licenses:notices
 - `safe-stable-stringify@2.5.0` — Copyright (c) Ruben Bridgewater
 - `safer-buffer@2.1.2` — Copyright (c) 2018 Nikita Skovoroda <chalkerx@gmail.com>
 - `scheduler@0.27.0` — Copyright (c) Meta Platforms, Inc. and affiliates.
+- `schema-utils@4.5.0` — Copyright JS Foundation and other contributors
 - `selderee@0.11.0` — Copyright (c) 2021-2022 KillyMXI <killy@mxii.eu.org>
 - `send@1.2.1` — Copyright (c) 2012 TJ Holowaychuk
 - `serve-static@2.2.1` — Copyright (c) 2010 Sencha Inc.
@@ -971,11 +1056,13 @@ pnpm licenses:notices
 - `socket.io-parser@4.2.7` — Copyright (c) 2014-present Guillermo Rauch and Socket.IO contributors
 - `socket.io@4.8.3` — Copyright (c) 2014-present Guillermo Rauch and Socket.IO contributors
 - `sonic-boom@4.2.1` — Copyright (c) 2017 Matteo Collina
+- `source-map-support@0.5.21` — Copyright (c) 2014 Evan Wallace
 - `sql-escaper@1.5.1` — Copyright (c) 2026 Weslley Araújo, Andrey Sidorov, Douglas Wilson, and contributors.
 - `ssh-remote-port-forward@1.0.4` — Copyright (c) 2019-2020 Cristian Greco
 - `ssh2@1.17.0` — Copyright Brian White. All rights reserved.
 - `stable-hash@0.0.5`
 - `stackback@0.0.2`
+- `stacktrace-parser@0.1.11` — Copyright (c) 2014-2019 Georg Tavonius
 - `standardwebhooks@1.0.0`
 - `statuses@2.0.2` — Copyright (c) 2014 Jonathan Ong <me@jongleberry.com>
 - `std-env@3.10.0`
@@ -1010,8 +1097,10 @@ pnpm licenses:notices
 - `superagent@10.3.0` — Copyright (c) 2014-2016 TJ Holowaychuk <tj@vision-media.ca>
 - `supertest@7.2.2` — Copyright (c) 2014 TJ Holowaychuk <tj@vision-media.ca> and other
 - `supports-color@7.2.0` — Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
+- `supports-color@8.1.1` — Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
 - `supports-preserve-symlinks-flag@1.0.0` — Copyright (c) 2022 Inspect JS
 - `symbol-tree@3.2.4` — Copyright (c) 2015 Joris van der Wel
+- `systeminformation@5.33.13` — Copyright (c) 2014-2026 Sebastian Hildebrandt
 - `tagged-tag@1.0.0` — Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
 - `tailwind-merge@3.6.0` — Copyright (c) 2021 Dany Castillo
 - `tailwind-variants@3.3.1` — Copyright (c) 2020 Tailwid Variants
@@ -1034,7 +1123,8 @@ pnpm licenses:notices
 - `to-regex-range@5.0.1` — Copyright (c) 2015-present, Jon Schlinkert.
 - `toidentifier@1.0.1` — Copyright (c) 2016 Douglas Christopher Wilson <doug@somethingdoug.com>
 - `totalist@3.0.1` — Copyright (c) Luke Edwards <luke.edwards05@gmail.com> (lukeed.com)
-- `tr46@6.0.0` — Copyright (c) Sebastian Mayr
+- `tr46@0.0.3`
+- `tr46@6.0.0`
 - `ts-api-utils@2.5.0` — The above copyright notice and this permission notice shall be
 - `tsconfig-paths@3.15.0` — Copyright (c) 2016 Jonas Kello
 - `tsconfig-paths@4.2.0` — Copyright (c) 2016 Jonas Kello
@@ -1069,9 +1159,14 @@ pnpm licenses:notices
 - `vite@8.2.2` — Copyright (c) 2019-present, VoidZero Inc. and Vite contributors
 - `vitest@4.1.11` — Copyright (c) 2021-Present VoidZero Inc. and Vitest contributors
 - `w3c-xmlserializer@5.0.0` — Copyright © Sebastian Mayr
+- `watchpack@2.5.2` — Copyright JS Foundation and other contributors
+- `web-streams-polyfill@3.3.3` — Copyright (c) 2024 Mattias Buelens
+- `webpack-sources@3.5.1` — Copyright (c) 2017 JS Foundation and other contributors
+- `webpack@5.111.1` — Copyright JS Foundation and other contributors
 - `whatwg-mimetype@5.0.0` — Copyright © Domenic Denicola <d@domenic.me>
-- `whatwg-url@16.0.1` — Copyright (c) Sebastian Mayr
-- `whatwg-url@17.1.0` — Copyright (c) Sebastian Mayr
+- `whatwg-url@16.0.1` — Copyright (c) 2015–2016 Sebastian Mayr
+- `whatwg-url@17.1.0` — Copyright (c) 2015–2016 Sebastian Mayr
+- `whatwg-url@5.0.0` — Copyright (c) 2015–2016 Sebastian Mayr
 - `when-exit@2.1.5` — Copyright (c) 2022-present Fabio Spampinato
 - `which-boxed-primitive@1.1.1` — Copyright (c) 2019 Jordan Harband
 - `which-builtin-type@1.2.1` — Copyright (c) 2020 ECMAScript Shims
@@ -1096,7 +1191,7 @@ pnpm licenses:notices
 - `zod-validation-error@4.0.2` — Copyright 2022 Causaly, Inc <front-end@causaly.com>
 - `zod@4.4.3` — Copyright (c) 2025 Colin McDonnell
 
-### Apache-2.0 — 106 packages
+### Apache-2.0 — 194 packages
 
 - `@aws-sdk/checksums@3.1000.29` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@aws-sdk/client-s3@3.1126.0` — "Licensor" shall mean the copyright owner or entity authorized by
@@ -1145,7 +1240,88 @@ pnpm licenses:notices
 - `@img/sharp-linux-x64@0.35.4` — "Licensor" shall mean the copyright owner or entity authorized by the copyright
 - `@internationalized/date@3.12.3` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@internationalized/number@3.6.7` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/api-logs@0.220.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/api-logs@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/api@1.9.1` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/auto-instrumentations-node@0.80.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/configuration@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/context-async-hooks@2.11.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/core@2.11.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/exporter-logs-otlp-grpc@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/exporter-logs-otlp-http@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/exporter-logs-otlp-proto@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/exporter-metrics-otlp-grpc@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/exporter-metrics-otlp-http@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/exporter-metrics-otlp-proto@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/exporter-prometheus@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/exporter-trace-otlp-grpc@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/exporter-trace-otlp-http@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/exporter-trace-otlp-proto@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/exporter-zipkin@2.11.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-amqplib@0.69.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-aws-lambda@0.74.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-aws-sdk@0.77.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-bunyan@0.67.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-cassandra-driver@0.67.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-connect@0.65.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-cucumber@0.38.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-dataloader@0.39.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-dns@0.65.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-express@0.70.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-fs@0.41.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-generic-pool@0.65.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-graphql@0.70.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-grpc@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-hapi@0.68.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-host-metrics@0.5.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-http@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-ioredis@0.70.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-kafkajs@0.31.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-knex@0.66.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-koa@0.70.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-lru-memoizer@0.66.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-memcached@0.65.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-mongodb@0.75.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-mongoose@0.68.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-mysql@0.68.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-mysql2@0.68.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-nestjs-core@0.68.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-net@0.66.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-openai@0.20.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-oracledb@0.47.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-pg@0.74.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-pino@0.68.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-redis@0.70.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-restify@0.67.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-router@0.66.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-runtime-node@0.35.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-socket.io@0.69.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-tedious@0.41.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-undici@0.32.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation-winston@0.66.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation@0.220.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/otlp-exporter-base@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/otlp-grpc-exporter-base@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/otlp-transformer@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/propagator-aws-xray@2.2.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/propagator-b3@2.11.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/propagator-jaeger@2.11.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/redis-common@0.38.3` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/resource-detector-alibaba-cloud@0.37.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/resource-detector-aws@2.22.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/resource-detector-azure@0.30.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/resource-detector-container@0.8.13` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/resource-detector-gcp@0.57.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/resources@2.11.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/sdk-logs@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/sdk-metrics@2.11.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/sdk-node@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/sdk-trace-base@2.11.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/sdk-trace-node@2.11.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/sdk-trace@2.11.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/semantic-conventions@1.43.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/sql-common@0.42.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@playwright/test@1.62.1` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@prisma/adapter-pg@7.9.1` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@prisma/client-runtime-utils@7.9.1` — "Licensor" shall mean the copyright owner or entity authorized by
@@ -1170,6 +1346,8 @@ pnpm licenses:notices
 - `@smithy/signature-v4@5.7.3` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@smithy/types@4.18.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@swc/helpers@0.5.23` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@webassemblyjs/leb128@1.13.2` — Copyright 2012 The Obvious Corporation.
+- `@xtuc/long@4.2.2` — "Licensor" shall mean the copyright owner or entity authorized by
 - `aria-query@5.3.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `aria-query@5.3.2` — "Licensor" shall mean the copyright owner or entity authorized by
 - `axobject-query@4.1.0` — "Licensor" shall mean the copyright owner or entity authorized by
@@ -1194,6 +1372,10 @@ pnpm licenses:notices
 - `eslint-visitor-keys@5.0.1` — "Licensor" shall mean the copyright owner or entity authorized by
 - `events-universal@1.0.1` — "Licensor" shall mean the copyright owner or entity authorized by
 - `expect-type@1.4.0` — Copyright 2024 Misha Kaletsky
+- `gaxios@7.1.3` — "Licensor" shall mean the copyright owner or entity authorized by
+- `gcp-metadata@8.1.4` — "Licensor" shall mean the copyright owner or entity authorized by
+- `google-logging-utils@1.1.3` — "Licensor" shall mean the copyright owner or entity authorized by
+- `import-in-the-middle@3.5.1` — "Licensor" shall mean the copyright owner or entity authorized by
 - `long@5.3.2` — "Licensor" shall mean the copyright owner or entity authorized by
 - `playwright-core@1.62.1` — "Licensor" shall mean the copyright owner or entity authorized by
 - `playwright@1.62.1` — "Licensor" shall mean the copyright owner or entity authorized by
@@ -1203,9 +1385,10 @@ pnpm licenses:notices
 - `text-decoder@1.2.7` — "Licensor" shall mean the copyright owner or entity authorized by
 - `tunnel-agent@0.6.0` — "Licensor" shall mean the copyright owner or entity authorized by the copyright owner that is granting the License.
 - `typescript@5.9.3` — "Licensor" shall mean the copyright owner or entity authorized by the copyright owner that is granting the License.
+- `web-vitals@6.2.1` — "Licensor" shall mean the copyright owner or entity authorized by
 - `xml-name-validator@5.0.0` — "Licensor" shall mean the copyright owner or entity authorized by
 
-### ISC — 63 packages
+### ISC — 64 packages
 
 - `@isaacs/cliui@8.0.2` — Copyright (c) 2015, Contributors
 - `@prisma/dev@0.24.17`
@@ -1254,6 +1437,7 @@ pnpm licenses:notices
 - `once@1.4.0` — Copyright (c) Isaac Z. Schlueter and Contributors
 - `pg-int8@1.0.1` — Copyright © 2017, Charmander <~@charmander.me>
 - `picocolors@1.1.1` — Copyright (c) 2021-2024 Oleksii Raspopov, Kostiantyn Denysov, Anton Verinov
+- `rimraf@5.0.10` — Copyright (c) 2011-2023 Isaac Z. Schlueter and Contributors
 - `saxes@6.0.0`
 - `semver@6.3.1` — Copyright (c) Isaac Z. Schlueter and Contributors
 - `semver@7.8.5` — Copyright (c) Isaac Z. Schlueter and Contributors
@@ -1271,7 +1455,7 @@ pnpm licenses:notices
 - `yargs-parser@21.1.1` — Copyright (c) 2016, Contributors
 - `yargs-parser@22.0.0` — Copyright (c) 2016, Contributors
 
-### BSD-3-Clause — 23 packages
+### BSD-3-Clause — 25 packages
 
 - `@protobufjs/aspromise@1.1.2` — Copyright (c) 2016, Daniel Wirtz All rights reserved.
 - `@protobufjs/base64@1.1.2` — Copyright (c) 2016, Daniel Wirtz All rights reserved.
@@ -1282,6 +1466,7 @@ pnpm licenses:notices
 - `@protobufjs/path@1.1.2` — Copyright (c) 2016, Daniel Wirtz All rights reserved.
 - `@protobufjs/pool@1.1.0` — Copyright (c) 2016, Daniel Wirtz All rights reserved.
 - `@protobufjs/utf8@1.1.2` — Copyright (c) 2016, Daniel Wirtz All rights reserved.
+- `@xtuc/ieee754@1.2.0` — Copyright (c) 2008, Fair Oaks Labs, Inc.
 - `bcrypt-pbkdf@1.0.2` — Copyright 1997 Niels Provos <provos@physnet.uni-hamburg.de>
 - `deepmerge-ts@8.0.1` — Copyright (c) 2021, Rebecca Stevens
 - `esquery@1.7.0`
@@ -1294,15 +1479,17 @@ pnpm licenses:notices
 - `qs@6.16.0` — Copyright (c) 2014, Nathan LaFreniere and other [contributors](https://github.com/ljharb/qs/graphs/contributors)
 - `secure-json-parse@4.1.0` — Copyright (c) 2019, Sideway Inc, and project contributors
 - `source-map-js@1.2.1` — Copyright (c) 2009-2011, Mozilla Foundation and contributors
+- `source-map@0.6.1` — Copyright (c) 2009-2011, Mozilla Foundation and contributors
 - `tough-cookie@6.0.2` — Copyright (c) 2015, Salesforce.com, Inc.
 - `zrender@6.1.0` — Copyright (c) 2017, Baidu Inc.
 
-### BSD-2-Clause — 17 packages
+### BSD-2-Clause — 20 packages
 
 - `damerau-levenshtein@1.0.8` — Copyright (c) 2018, Tadeusz Łazurski
 - `domelementtype@2.3.0` — Copyright (c) Felix Böhm
 - `domhandler@5.0.3` — Copyright (c) Felix Böhm
 - `domutils@3.2.2` — Copyright (c) Felix Böhm
+- `dotenv@16.6.1` — Copyright (c) 2015, Scott Motte
 - `dotenv@17.4.2` — Copyright (c) 2015, Scott Motte
 - `entities@4.5.0` — Copyright (c) Felix Böhm
 - `entities@8.0.0` — Copyright (c) Felix Böhm
@@ -1314,7 +1501,9 @@ pnpm licenses:notices
 - `estraverse@5.3.0`
 - `esutils@2.0.3`
 - `json-schema-typed@8.0.2` — Original source code is copyright (c) 2019-2025 Remy Rylan
+- `terser@5.51.2` — Copyright 2012-2018 (c) Mihai Bazon <mihai.bazon@gmail.com>
 - `uri-js@4.4.1` — Copyright 2011 Gary Court. All rights reserved.
+- `webidl-conversions@3.0.1` — Copyright (c) 2014, Domenic Denicola
 - `webidl-conversions@8.0.1` — Copyright (c) 2014, Domenic Denicola
 
 ### BlueOak-1.0.0 — 8 packages
@@ -1349,6 +1538,11 @@ pnpm licenses:notices
 - `@csstools/css-syntax-patches-for-csstree@1.1.8` — Copyright © CSSTools Contributors
 - `postal-mime@2.7.5` — Copyright (c) 2021-2025 Andris Reinman
 
+### FSL-1.1-MIT — 2 packages
+
+- `@sentry/cli-linux-x64@2.58.6`
+- `@sentry/cli@2.58.6` — Copyright 2008-2025 Functional Software, Inc. dba Sentry
+
 ### CC0-1.0 — 2 packages
 
 - `language-subtag-registry@0.3.23`
@@ -1358,6 +1552,11 @@ pnpm licenses:notices
 
 - `tslib@2.3.0` — Copyright (c) Microsoft Corporation.
 - `tslib@2.8.1` — Copyright (c) Microsoft Corporation.
+
+### (MIT OR CC0-1.0) — 2 packages
+
+- `type-fest@0.7.1` — Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
+- `type-fest@5.8.0` — Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
 
 ### LGPL-3.0-or-later — 1 package
 
@@ -1375,6 +1574,10 @@ pnpm licenses:notices
 
 - `caniuse-lite@1.0.30001809` — original works of authorship and other material subject to copyright
 
+### (MPL-2.0 OR Apache-2.0) — 1 package
+
+- `dompurify@3.4.15` — "Licensor" shall mean the copyright owner or entity authorized by
+
 ### EPL-2.0 — 1 package
 
 - `elkjs@0.11.1` — grants Recipient a non-exclusive, worldwide, royalty-free copyright
@@ -1383,13 +1586,13 @@ pnpm licenses:notices
 
 - `expand-template@2.0.3` — Copyright (c) 2018 Lars-Magnus Skog
 
+### (Apache-2.0 AND MIT) — 1 package
+
+- `posthog-js@1.434.7` — Copyright 2020 Posthog / Hiberly, Inc.
+
 ### (BSD-2-Clause OR MIT OR Apache-2.0) — 1 package
 
 - `rc@1.2.8`
-
-### (MIT OR CC0-1.0) — 1 package
-
-- `type-fest@5.8.0`
 
 ## Bundled fonts
 
@@ -1424,7 +1627,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 
 ### Apache-2.0
 
-Declared by 107 packages, including `@aws-sdk/checksums@3.1000.29`, `@aws-sdk/client-s3@3.1126.0`, `@aws-sdk/core@3.977.9`.
+Declared by 197 packages, including `@aws-sdk/checksums@3.1000.29`, `@aws-sdk/client-s3@3.1126.0`, `@aws-sdk/core@3.977.9`.
 
 ```text
 Apache License
@@ -1504,7 +1707,7 @@ limitations under the License.
 
 ### BSD-2-Clause
 
-Declared by 18 packages, including `damerau-levenshtein@1.0.8`, `domelementtype@2.3.0`, `domhandler@5.0.3`.
+Declared by 21 packages, including `damerau-levenshtein@1.0.8`, `domelementtype@2.3.0`, `domhandler@5.0.3`.
 
 The reproduced text is the template SPDX publishes; the copyright notices for the packages that use it are the lines listed with each package above.
 
@@ -1522,7 +1725,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 ### BSD-3-Clause
 
-Declared by 23 packages, including `@protobufjs/aspromise@1.1.2`, `@protobufjs/base64@1.1.2`, `@protobufjs/codegen@2.0.5`.
+Declared by 25 packages, including `@protobufjs/aspromise@1.1.2`, `@protobufjs/base64@1.1.2`, `@protobufjs/codegen@2.0.5`.
 
 The reproduced text is the template SPDX publishes; the copyright notices for the packages that use it are the lines listed with each package above.
 
@@ -1767,7 +1970,7 @@ Creative Commons may be contacted at creativecommons.org.
 
 ### CC0-1.0
 
-Declared by 3 packages, including `language-subtag-registry@0.3.23`, `mdn-data@2.27.1`, `type-fest@5.8.0`.
+Declared by 4 packages, including `language-subtag-registry@0.3.23`, `mdn-data@2.27.1`, `type-fest@0.7.1`.
 
 ```text
 Creative Commons Legal Code
@@ -1978,6 +2181,123 @@ Simply including a copy of this Agreement, including this Exhibit A is not suffi
 If it is not possible or desirable to put the notice in a particular file, then You may include the notice in a location (such as a LICENSE file in a relevant directory) where a recipient would be likely to look for such a notice.
 
 You may add additional accurate notices of copyright ownership.
+```
+
+### FSL-1.1-MIT
+
+Declared by 2 packages, including `@sentry/cli-linux-x64@2.58.6`, `@sentry/cli@2.58.6`.
+
+```text
+# Functional Source License, Version 1.1, MIT Future License
+
+## Abbreviation
+
+FSL-1.1-MIT
+
+## Notice
+
+Copyright ${year} ${licensor name}
+
+## Terms and Conditions
+
+### Licensor ("We")
+
+The party offering the Software under these Terms and Conditions.
+
+### The Software
+
+The "Software" is each version of the software that we make available under
+these Terms and Conditions, as indicated by our inclusion of these Terms and
+Conditions with the Software.
+
+### License Grant
+
+Subject to your compliance with this License Grant and the Patents,
+Redistribution and Trademark clauses below, we hereby grant you the right to
+use, copy, modify, create derivative works, publicly perform, publicly display
+and redistribute the Software for any Permitted Purpose identified below.
+
+### Permitted Purpose
+
+A Permitted Purpose is any purpose other than a Competing Use. A Competing Use
+means making the Software available to others in a commercial product or
+service that:
+
+1. substitutes for the Software;
+
+2. substitutes for any other product or service we offer using the Software
+   that exists as of the date we make the Software available; or
+
+3. offers the same or substantially similar functionality as the Software.
+
+Permitted Purposes specifically include using the Software:
+
+1. for your internal use and access;
+
+2. for non-commercial education;
+
+3. for non-commercial research; and
+
+4. in connection with professional services that you provide to a licensee
+   using the Software in accordance with these Terms and Conditions.
+
+### Patents
+
+To the extent your use for a Permitted Purpose would necessarily infringe our
+patents, the license grant above includes a license under our patents. If you
+make a claim against any party that the Software infringes or contributes to
+the infringement of any patent, then your patent license to the Software ends
+immediately.
+
+### Redistribution
+
+The Terms and Conditions apply to all copies, modifications and derivatives of
+the Software.
+
+If you redistribute any copies, modifications or derivatives of the Software,
+you must include a copy of or a link to these Terms and Conditions and not
+remove any copyright notices provided in or with the Software.
+
+### Disclaimer
+
+THE SOFTWARE IS PROVIDED "AS IS" AND WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING WITHOUT LIMITATION WARRANTIES OF FITNESS FOR A PARTICULAR
+PURPOSE, MERCHANTABILITY, TITLE OR NON-INFRINGEMENT.
+
+IN NO EVENT WILL WE HAVE ANY LIABILITY TO YOU ARISING OUT OF OR RELATED TO THE
+SOFTWARE, INCLUDING INDIRECT, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES,
+EVEN IF WE HAVE BEEN INFORMED OF THEIR POSSIBILITY IN ADVANCE.
+
+### Trademarks
+
+Except for displaying the License Details and identifying us as the origin of
+the Software, you have no right under these Terms and Conditions to use our
+trademarks, trade names, service marks or product names.
+
+## Grant of Future License
+
+We hereby irrevocably grant you an additional license to use the Software under
+the MIT license that is effective on the second anniversary of the date we make
+the Software available. On or after that date, you may use the Software under
+the MIT license, in which case the following will apply:
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 ```
 
 ### GPL-3.0-only
@@ -2223,7 +2543,7 @@ The GNU General Public License does not permit incorporating your program into p
 
 ### ISC
 
-Declared by 64 packages, including `@isaacs/cliui@8.0.2`, `@prisma/dev@0.24.17`, `@visx/vendor@4.0.0-alpha.0`.
+Declared by 65 packages, including `@isaacs/cliui@8.0.2`, `@prisma/dev@0.24.17`, `@visx/vendor@4.0.0-alpha.0`.
 
 The reproduced text is the template SPDX publishes; the copyright notices for the packages that use it are the lines listed with each package above.
 
@@ -2554,7 +2874,7 @@ The GNU General Public License does not permit incorporating your program into p
 
 ### MIT
 
-Declared by 1054 packages, including `@adobe/css-tools@4.5.0`, `@alloc/quick-lru@5.2.0`, `@ark-ui/react@5.39.1`.
+Declared by 1148 packages, including `@adobe/css-tools@4.5.0`, `@alloc/quick-lru@5.2.0`, `@ark-ui/react@5.39.1`.
 
 The reproduced text is the template SPDX publishes; the copyright notices for the packages that use it are the lines listed with each package above.
 
@@ -2604,7 +2924,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ### MPL-2.0
 
-Declared by 5 packages, including `axe-core@4.13.0`, `lightningcss-linux-x64-gnu@1.32.0`, `lightningcss-linux-x64-gnu@1.33.0`.
+Declared by 6 packages, including `axe-core@4.13.0`, `dompurify@3.4.15`, `lightningcss-linux-x64-gnu@1.32.0`.
 
 ```text
 Mozilla Public License Version 2.0

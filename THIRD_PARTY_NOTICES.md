@@ -20,8 +20,8 @@ pnpm licenses:notices
 
 | Licence                             | Packages |
 | ----------------------------------- | -------: |
-| MIT                                 |     1142 |
-| Apache-2.0                          |      194 |
+| MIT                                 |     1143 |
+| Apache-2.0                          |      198 |
 | ISC                                 |       64 |
 | BSD-3-Clause                        |       25 |
 | BSD-2-Clause                        |       20 |
@@ -42,11 +42,11 @@ pnpm licenses:notices
 | (MIT OR WTFPL)                      |        1 |
 | (Apache-2.0 AND MIT)                |        1 |
 | (BSD-2-Clause OR MIT OR Apache-2.0) |        1 |
-| **Total**                           | **1482** |
+| **Total**                           | **1487** |
 
 ## Packages by licence
 
-### MIT — 1142 packages
+### MIT — 1143 packages
 
 - `@adobe/css-tools@4.5.0` — Copyright (c) 2012 TJ Holowaychuk <tj@vision-media.ca>
 - `@alloc/quick-lru@5.2.0` — Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
@@ -476,6 +476,7 @@ pnpm licenses:notices
 - `abort-controller@3.0.0` — Copyright (c) 2017 Toru Nagashima
 - `accepts@1.3.8` — Copyright (c) 2014 Jonathan Ong <me@jongleberry.com>
 - `accepts@2.0.0` — Copyright (c) 2014 Jonathan Ong <me@jongleberry.com>
+- `acorn-import-attributes@1.9.5` — Copyright (c) 2023 Sven Sauleau
 - `acorn-jsx@5.3.2` — Copyright (C) 2012-2017 by Ingvar Stepanyan
 - `acorn@8.18.0` — Copyright (C) 2012-2022 by various contributors (see AUTHORS)
 - `agent-base@6.0.2`
@@ -1191,7 +1192,7 @@ pnpm licenses:notices
 - `zod-validation-error@4.0.2` — Copyright 2022 Causaly, Inc <front-end@causaly.com>
 - `zod@4.4.3` — Copyright (c) 2025 Colin McDonnell
 
-### Apache-2.0 — 194 packages
+### Apache-2.0 — 198 packages
 
 - `@aws-sdk/checksums@3.1000.29` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@aws-sdk/client-s3@3.1126.0` — "Licensor" shall mean the copyright owner or entity authorized by
@@ -1240,6 +1241,7 @@ pnpm licenses:notices
 - `@img/sharp-linux-x64@0.35.4` — "Licensor" shall mean the copyright owner or entity authorized by the copyright
 - `@internationalized/date@3.12.3` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@internationalized/number@3.6.7` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/api-logs@0.207.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/api-logs@0.220.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/api-logs@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/api@1.9.1` — "Licensor" shall mean the copyright owner or entity authorized by
@@ -1299,6 +1301,7 @@ pnpm licenses:notices
 - `@opentelemetry/instrumentation-tedious@0.41.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/instrumentation-undici@0.32.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/instrumentation-winston@0.66.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/instrumentation@0.207.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/instrumentation@0.220.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/instrumentation@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/otlp-exporter-base@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
@@ -1336,6 +1339,7 @@ pnpm licenses:notices
 - `@prisma/fetch-engine@7.9.1` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@prisma/get-platform@7.2.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@prisma/get-platform@7.9.1` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@prisma/instrumentation@7.10.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@prisma/query-plan-executor@7.2.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@prisma/streams-local@0.1.11` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@prisma/studio-core@0.33.0`
@@ -1375,6 +1379,7 @@ pnpm licenses:notices
 - `gaxios@7.1.3` — "Licensor" shall mean the copyright owner or entity authorized by
 - `gcp-metadata@8.1.4` — "Licensor" shall mean the copyright owner or entity authorized by
 - `google-logging-utils@1.1.3` — "Licensor" shall mean the copyright owner or entity authorized by
+- `import-in-the-middle@2.0.6` — "Licensor" shall mean the copyright owner or entity authorized by
 - `import-in-the-middle@3.5.1` — "Licensor" shall mean the copyright owner or entity authorized by
 - `long@5.3.2` — "Licensor" shall mean the copyright owner or entity authorized by
 - `playwright-core@1.62.1` — "Licensor" shall mean the copyright owner or entity authorized by
@@ -1627,7 +1632,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 
 ### Apache-2.0
 
-Declared by 197 packages, including `@aws-sdk/checksums@3.1000.29`, `@aws-sdk/client-s3@3.1126.0`, `@aws-sdk/core@3.977.9`.
+Declared by 201 packages, including `@aws-sdk/checksums@3.1000.29`, `@aws-sdk/client-s3@3.1126.0`, `@aws-sdk/core@3.977.9`.
 
 ```text
 Apache License
@@ -2874,7 +2879,7 @@ The GNU General Public License does not permit incorporating your program into p
 
 ### MIT
 
-Declared by 1148 packages, including `@adobe/css-tools@4.5.0`, `@alloc/quick-lru@5.2.0`, `@ark-ui/react@5.39.1`.
+Declared by 1149 packages, including `@adobe/css-tools@4.5.0`, `@alloc/quick-lru@5.2.0`, `@ark-ui/react@5.39.1`.
 
 The reproduced text is the template SPDX publishes; the copyright notices for the packages that use it are the lines listed with each package above.
 

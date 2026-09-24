@@ -29,6 +29,7 @@
     "@opentelemetry/sdk-node": "^0.222.0",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
+    "@prisma/instrumentation": "^7.10.0",
     "@sentry/node": "^10.75.1",
     "@shipyard/email": "workspace:*",
     "@shipyard/shared": "workspace:*",

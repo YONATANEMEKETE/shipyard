@@ -4,6 +4,7 @@ import {
   resourceFromAttributes,
 } from '@opentelemetry/resources';
 import { NodeSDK } from '@opentelemetry/sdk-node';
+import { PrismaInstrumentation } from '@prisma/instrumentation';
 import { env } from '../config/env.js';
 
 let sdk: NodeSDK | undefined;
@@ -50,6 +51,9 @@ export function startTelemetry(): void {
         // One span per file read: high volume, no signal.
         '@opentelemetry/instrumentation-fs': { enabled: false },
       }),
+      // Prisma's own instrumentation: `prisma:client:operation` spans carrying
+      // the model and method, which the pg layer underneath cannot name.
+      new PrismaInstrumentation(),
     ],
   });
 

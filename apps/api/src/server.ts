@@ -5,6 +5,7 @@ import { flushAnalytics } from './common/analytics/index.js';
 import { env } from './common/config/env.js';
 import { logger } from './common/logger/index.js';
 import { setReady } from './common/health/readiness.js';
+import { shutdownTelemetry } from './common/telemetry/index.js';
 
 const server = app.listen(env.API_PORT, () => {
   setReady(true);
@@ -91,6 +92,14 @@ async function shutdown(signal: string, exitCode = 0): Promise<void> {
       // Buffered events are events a crash can lose: give them the same
       // bounded chance to leave that the logger and Sentry get.
       await flushAnalytics();
+    } catch {
+      finalExitCode = 1;
+    }
+
+    try {
+      // Traces and metrics are batched in memory too: flush them before exit
+      // so a crash's own telemetry is not lost with the process.
+      await shutdownTelemetry();
     } catch {
       finalExitCode = 1;
     }

@@ -66,3 +66,13 @@ services:
         sync: false
       - key: POSTHOG_HOST
         value: https://us.i.posthog.com
+      # Server telemetry (OpenTelemetry → Grafana Cloud). The endpoint and
+      # headers come from the stack's OpenTelemetry tile; the headers value is
+      # a secret. Self-hosters bring their own, or leave it unset to keep
+      # telemetry off.
+      - key: OTEL_EXPORTER_OTLP_ENDPOINT
+        sync: false
+      - key: OTEL_EXPORTER_OTLP_HEADERS
+        sync: false
+      - key: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: http/protobuf

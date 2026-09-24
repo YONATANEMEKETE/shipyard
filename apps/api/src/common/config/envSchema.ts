@@ -117,6 +117,20 @@ export const envSchema = z.object({
     z.string().optional(),
   ),
 
+  // Server telemetry (OpenTelemetry → Grafana Cloud). Optional by design —
+  // with no endpoint the SDK never starts, which keeps tests and local dev
+  // silent. The endpoint, headers and protocol are the standard OTLP
+  // variables; the SDK reads them from the environment itself.
+  // See apps/api/src/common/telemetry/index.ts.
+  OTEL_EXPORTER_OTLP_ENDPOINT: z.preprocess(
+    (value) =>
+      typeof value === 'string' && value.trim() === '' ? undefined : value,
+    z
+      .string()
+      .url('OTEL_EXPORTER_OTLP_ENDPOINT must be a valid URL')
+      .optional(),
+  ),
+
   // Product analytics (PostHog). Optional by design — with no token the
   // reporter is a no-op that sends nothing, which keeps tests and local
   // development silent. One token per product; Render holds production's.

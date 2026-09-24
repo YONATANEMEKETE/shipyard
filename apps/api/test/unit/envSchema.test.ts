@@ -182,4 +182,25 @@ describe('envSchema (startup validation)', () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it('leaves telemetry off when the OTLP endpoint is blank', () => {
+    const result = envSchema.safeParse({
+      ...validEnv(),
+      OTEL_EXPORTER_OTLP_ENDPOINT: '',
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) throw new Error('should succeed');
+    expect(result.data.OTEL_EXPORTER_OTLP_ENDPOINT).toBeUndefined();
+  });
+
+  it('rejects an OTEL_EXPORTER_OTLP_ENDPOINT that is not a URL', () => {
+    // The Grafana Cloud tile hands out a full https URL; a bare host is the
+    // plausible paste mistake.
+    const result = envSchema.safeParse({
+      ...validEnv(),
+      OTEL_EXPORTER_OTLP_ENDPOINT:
+        'otlp-gateway-prod-eu-west-0.grafana.net/otlp',
+    });
+    expect(result.success).toBe(false);
+  });
 });

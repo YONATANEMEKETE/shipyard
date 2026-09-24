@@ -19,6 +19,7 @@ import {
 } from '@shipyard/shared';
 import { RateLimitError } from '../../common/errors/httpErrors.js';
 import { logger } from '../../common/logger/index.js';
+import { telemetryTracer } from '../../common/telemetry/signals.js';
 import { resolveMcpAuth } from './auth.js';
 import {
   invalidArgumentsResult,
@@ -676,56 +677,82 @@ export async function handleMcpMessage(
 
       const startedAt = Date.now();
 
-      try {
-        const result = await entry.handler(parsed.data, {
-          context: auth.context,
-          credential: auth.credential,
-          ...(requestId !== undefined ? { requestId } : {}),
-        });
-
-        logger.info(
-          {
-            requestId,
-            method,
-            tool: name,
-            tokenId: auth.credential.tokenId,
-            workspaceId: auth.context.workspaceId,
-            argumentKeys,
-            durationMs: Date.now() - startedAt,
-            isError: result.isError === true,
-            resultBytes: JSON.stringify(result).length,
+      // One span per tool execution — the semantic layer the transport spans
+      // cannot see. Argument values never land on it: only the tool's name,
+      // the era it was called through, and the outcome.
+      return telemetryTracer.startActiveSpan(
+        'mcp.tool_call',
+        {
+          attributes: {
+            'mcp.tool.name': name,
+            'mcp.era': legacyEra ? MCP_ERA.legacy : MCP_ERA.modern,
           },
-          'mcp.tool.called',
-        );
+        },
+        async (span) => {
+          try {
+            const result = await entry.handler(parsed.data, {
+              context: auth.context,
+              credential: auth.credential,
+              ...(requestId !== undefined ? { requestId } : {}),
+            });
 
-        return {
-          status: 200,
-          body: jsonRpcResult(id, toolResultForEra(result)),
-        };
-      } catch (error) {
-        logger.error(
-          {
-            requestId,
-            method,
-            tool: name,
-            tokenId: auth.credential.tokenId,
-            durationMs: Date.now() - startedAt,
-            err: error,
-          },
-          'mcp.tool.failed',
-        );
+            span.setAttribute(
+              'mcp.result',
+              result.isError === true ? 'error' : 'ok',
+            );
 
-        // A domain failure becomes text the caller can act on; anything else
-        // becomes the generic sentence plus the request id — never the driver's
-        // own words (§8.2).
-        return {
-          status: 200,
-          body: jsonRpcResult(
-            id,
-            toolResultForEra(toToolResultFromError(error, requestId)),
-          ),
-        };
-      }
+            logger.info(
+              {
+                requestId,
+                method,
+                tool: name,
+                tokenId: auth.credential.tokenId,
+                workspaceId: auth.context.workspaceId,
+                argumentKeys,
+                durationMs: Date.now() - startedAt,
+                isError: result.isError === true,
+                resultBytes: JSON.stringify(result).length,
+              },
+              'mcp.tool.called',
+            );
+
+            return {
+              status: 200,
+              body: jsonRpcResult(id, toolResultForEra(result)),
+            };
+          } catch (error) {
+            span.setAttribute('mcp.result', 'error');
+            span.recordException(
+              error instanceof Error ? error : String(error),
+            );
+
+            logger.error(
+              {
+                requestId,
+                method,
+                tool: name,
+                tokenId: auth.credential.tokenId,
+                durationMs: Date.now() - startedAt,
+                err: error,
+              },
+              'mcp.tool.failed',
+            );
+
+            // A domain failure becomes text the caller can act on; anything else
+            // becomes the generic sentence plus the request id — never the driver's
+            // own words (§8.2).
+            return {
+              status: 200,
+              body: jsonRpcResult(
+                id,
+                toolResultForEra(toToolResultFromError(error, requestId)),
+              ),
+            };
+          } finally {
+            span.end();
+          }
+        },
+      );
     }
 
     default:

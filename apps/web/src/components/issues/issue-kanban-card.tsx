@@ -204,7 +204,8 @@ export function IssueKanbanCard({
             {formatDue(issue.dueDate)}
           </span>
           <span className="flex items-center gap-1 text-[11px] leading-none text-ds-text-muted">
-            <MessageSquare className="size-3 shrink-0" aria-hidden />0
+            <MessageSquare className="size-3 shrink-0" aria-hidden />
+            {issue.commentCount}
           </span>
         </span>
       </span>

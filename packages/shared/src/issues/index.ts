@@ -239,6 +239,9 @@ export const issueCardSchema = z.object({
   blocked: z.boolean(),
   blockedReason: z.string().nullable(),
   labels: z.array(labelCardSchema),
+  // Live comment count for card badges (board/list). Cheaper than shipping
+  // comment rows; the conversation view fetches its own full list.
+  commentCount: z.number().int().nonnegative(),
   archivedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),

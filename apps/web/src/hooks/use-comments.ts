@@ -20,6 +20,7 @@ import {
   updateComment,
   type ListCommentsResponse,
 } from '@/lib/api/comments';
+import { issueKeys } from '@/hooks/use-issues';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Comment queries + mutations — keyed per issue so invalidations stay precise
@@ -110,6 +111,9 @@ export function useCreateComment(
           ),
         };
       });
+      // The issue card badge (commentCount) is now stale — the count lives in
+      // the issues list cache, not the comment thread cache.
+      void queryClient.invalidateQueries({ queryKey: issueKeys.lists() });
       onSuccess?.(card, variables, context, mutation);
     },
   });
@@ -192,6 +196,8 @@ export function useDeleteComment(
           })),
         };
       });
+      // Same staleness rule as create: the card badge count changed.
+      void queryClient.invalidateQueries({ queryKey: issueKeys.lists() });
       onSuccess?.(response, variables, context, mutation);
     },
   });

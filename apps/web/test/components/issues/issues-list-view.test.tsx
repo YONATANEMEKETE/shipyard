@@ -25,6 +25,7 @@ function issue(overrides: Partial<IssueCard> = {}): IssueCard {
     blocked: false,
     blockedReason: null,
     labels: [],
+    commentCount: 0,
     archivedAt: null,
     createdAt: '2026-12-02T14:32:00.000Z',
     updatedAt: '2026-12-02T14:32:00.000Z',

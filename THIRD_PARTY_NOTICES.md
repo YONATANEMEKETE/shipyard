@@ -20,8 +20,8 @@ pnpm licenses:notices
 
 | Licence                             | Packages |
 | ----------------------------------- | -------: |
-| MIT                                 |     1143 |
-| Apache-2.0                          |      198 |
+| MIT                                 |     1144 |
+| Apache-2.0                          |      209 |
 | ISC                                 |       64 |
 | BSD-3-Clause                        |       25 |
 | BSD-2-Clause                        |       20 |
@@ -42,11 +42,11 @@ pnpm licenses:notices
 | (MIT OR WTFPL)                      |        1 |
 | (Apache-2.0 AND MIT)                |        1 |
 | (BSD-2-Clause OR MIT OR Apache-2.0) |        1 |
-| **Total**                           | **1487** |
+| **Total**                           | **1499** |
 
 ## Packages by licence
 
-### MIT — 1143 packages
+### MIT — 1144 packages
 
 - `@adobe/css-tools@4.5.0` — Copyright (c) 2012 TJ Holowaychuk <tj@vision-media.ca>
 - `@alloc/quick-lru@5.2.0` — Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
@@ -944,6 +944,7 @@ pnpm licenses:notices
 - `picospinner@3.1.2` — Copyright (c) 2024 PondWader
 - `pino-abstract-transport@3.0.0` — Copyright (c) 2021 pino
 - `pino-http@11.0.0` — Copyright (c) 2024 Matteo Collina
+- `pino-opentelemetry-transport@4.0.2` — Copyright (c) 2022 Vladimir Adamić
 - `pino-pretty@13.1.3` — Copyright (c) 2019 the Pino team listed at https://github.com/pinojs/pino#the-team
 - `pino-std-serializers@7.1.0` — Copyright Mateo Collina, David Mark Clements, James Sumners
 - `pino@10.3.1` — Copyright (c) 2016-2025 Matteo Collina, David Mark Clements and the Pino contributors listed at <https://github.com/p...
@@ -1192,7 +1193,7 @@ pnpm licenses:notices
 - `zod-validation-error@4.0.2` — Copyright 2022 Causaly, Inc <front-end@causaly.com>
 - `zod@4.4.3` — Copyright (c) 2025 Colin McDonnell
 
-### Apache-2.0 — 198 packages
+### Apache-2.0 — 209 packages
 
 - `@aws-sdk/checksums@3.1000.29` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@aws-sdk/client-s3@3.1126.0` — "Licensor" shall mean the copyright owner or entity authorized by
@@ -1249,8 +1250,12 @@ pnpm licenses:notices
 - `@opentelemetry/configuration@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/context-async-hooks@2.11.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/core@2.11.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/core@2.9.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/exporter-logs-otlp-grpc@0.220.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/exporter-logs-otlp-grpc@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/exporter-logs-otlp-http@0.220.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/exporter-logs-otlp-http@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/exporter-logs-otlp-proto@0.220.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/exporter-logs-otlp-proto@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/exporter-metrics-otlp-grpc@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/exporter-metrics-otlp-http@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
@@ -1304,8 +1309,11 @@ pnpm licenses:notices
 - `@opentelemetry/instrumentation@0.207.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/instrumentation@0.220.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/instrumentation@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/otlp-exporter-base@0.220.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/otlp-exporter-base@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/otlp-grpc-exporter-base@0.220.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/otlp-grpc-exporter-base@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/otlp-transformer@0.220.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/otlp-transformer@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/propagator-aws-xray@2.2.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/propagator-b3@2.11.0` — "Licensor" shall mean the copyright owner or entity authorized by
@@ -1317,12 +1325,16 @@ pnpm licenses:notices
 - `@opentelemetry/resource-detector-container@0.8.13` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/resource-detector-gcp@0.57.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/resources@2.11.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/resources@2.9.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/sdk-logs@0.220.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/sdk-logs@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/sdk-metrics@2.11.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/sdk-metrics@2.9.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/sdk-node@0.222.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/sdk-trace-base@2.11.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/sdk-trace-node@2.11.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/sdk-trace@2.11.0` — "Licensor" shall mean the copyright owner or entity authorized by
+- `@opentelemetry/sdk-trace@2.9.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/semantic-conventions@1.43.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@opentelemetry/sql-common@0.42.0` — "Licensor" shall mean the copyright owner or entity authorized by
 - `@playwright/test@1.62.1` — "Licensor" shall mean the copyright owner or entity authorized by
@@ -1632,7 +1644,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 
 ### Apache-2.0
 
-Declared by 201 packages, including `@aws-sdk/checksums@3.1000.29`, `@aws-sdk/client-s3@3.1126.0`, `@aws-sdk/core@3.977.9`.
+Declared by 212 packages, including `@aws-sdk/checksums@3.1000.29`, `@aws-sdk/client-s3@3.1126.0`, `@aws-sdk/core@3.977.9`.
 
 ```text
 Apache License
@@ -2879,7 +2891,7 @@ The GNU General Public License does not permit incorporating your program into p
 
 ### MIT
 
-Declared by 1149 packages, including `@adobe/css-tools@4.5.0`, `@alloc/quick-lru@5.2.0`, `@ark-ui/react@5.39.1`.
+Declared by 1150 packages, including `@adobe/css-tools@4.5.0`, `@alloc/quick-lru@5.2.0`, `@ark-ui/react@5.39.1`.
 
 The reproduced text is the template SPDX publishes; the copyright notices for the packages that use it are the lines listed with each package above.
 

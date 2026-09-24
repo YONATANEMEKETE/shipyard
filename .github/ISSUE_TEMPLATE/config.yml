@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/YONATANEMEKETE/shipyard/security/advisories/new
+    about: Report it privately through GitHub. Never open a public issue for a vulnerability.
+  - name: Self-hosting and local setup
+    url: https://github.com/YONATANEMEKETE/shipyard/blob/main/README.md#self-hosting
+    about: The README covers the required environment, the API image, the database, and what the operator owns.
+  - name: Product, UX, and engineering planning
+    url: https://github.com/YONATANEMEKETE/shipyard-design
+    about: Feature specifications, architecture decisions, and the design system live in shipyard-design.

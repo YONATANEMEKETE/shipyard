@@ -2,13 +2,16 @@
 
 Thank you for contributing to Shipyard.
 
-Shipyard follows a plan-first workflow. Product decisions, UX, UI, architecture, and feature specifications are maintained in the separate [`shipyard-design`](https://github.com/YONATANEMEKETE/shipyard-design) repository. Application changes in this repository should be backed by the relevant planning documents.
+Shipyard follows a plan-first workflow. Product decisions, UX, UI, architecture, and feature
+specifications are maintained in the separate
+[`shipyard-design`](https://github.com/YONATANEMEKETE/shipyard-design) repository. Application
+changes in this repository should be backed by the relevant planning documents.
 
 ## Requirements
 
-- Node.js greater than `24`
-- The exact version in `.nvmrc`
+- Node.js greater than `24` — the exact version is in `.nvmrc`
 - pnpm `11.5.2`
+- Docker — the local database and the API integration tests both use containers
 - Git
 
 Shipyard uses pnpm only. Do not use npm, Yarn, or Bun in this repository.
@@ -24,6 +27,14 @@ corepack enable pnpm
 pnpm install
 ```
 
+Create the API's environment file, start the database, and apply migrations:
+
+```bash
+cp .env.example .env
+pnpm db:up
+pnpm --filter @shipyard/api db:migrate
+```
+
 Start the applications:
 
 ```bash
@@ -32,6 +43,43 @@ pnpm dev
 
 The web application runs on `http://localhost:3000` and the API runs on `http://localhost:4000`.
 
+The API validates its environment when it starts and refuses to boot with a missing or malformed
+required variable. `DATABASE_URL` matches the container above out of the box, but
+`BETTER_AUTH_SECRET`, `RESEND_API_KEY`, the Google and GitHub OAuth credentials, and the five `R2_*`
+storage variables need real values. The README's local development section lists each one and where
+to get it. Sentry, PostHog, and OpenTelemetry are optional and stay off while their variables are
+empty.
+
+## Database and migrations
+
+- The schema is `apps/api/prisma/schema.prisma`; migrations live in `apps/api/prisma/migrations/`.
+- Create a migration with a snake_case name:
+
+  ```bash
+  pnpm --filter @shipyard/api exec prisma migrate dev --name add_issue_watchers
+  ```
+
+- Never edit a migration that has already been applied — add a new one instead.
+- The Prisma client is generated into `apps/api/src/generated/`, which is gitignored. `pnpm install`
+  regenerates it through the root `prepare` script, so never commit generated files.
+- The API integration tests deploy every migration onto a fresh PostgreSQL container, so a broken
+  migration fails the suite rather than a review. The cycles migration creates the `btree_gist`
+  extension, which needs `CREATE` on the database — a role without that privilege fails fast with a
+  clear extension error.
+
+## Tests
+
+| Scope      | Command                                | What it covers                                                 |
+| ---------- | -------------------------------------- | -------------------------------------------------------------- |
+| Everything | `pnpm test`                            | Both suites through Turborepo                                  |
+| API        | `pnpm --filter @shipyard/api test`     | Unit and integration tests (`apps/api/test/`), Vitest          |
+| Web        | `pnpm --filter @shipyard/web test`     | Unit and component tests (`apps/web/test/`), Vitest with jsdom |
+| End to end | `pnpm --filter @shipyard/web test:e2e` | Playwright specs in `apps/web/e2e/`                            |
+
+The API suite starts its own PostgreSQL 17 container, so Docker must be running — it never touches
+your development database. The Playwright suite is not wired into CI; run it locally when a change
+touches a flow it covers.
+
 ## Monorepo rules
 
 Run project-wide commands from the repository root:
@@ -39,6 +87,7 @@ Run project-wide commands from the repository root:
 ```bash
 pnpm lint
 pnpm typecheck
+pnpm test
 pnpm format:check
 pnpm build
 ```
@@ -58,16 +107,18 @@ Add repository-wide tooling at the root:
 pnpm add -Dw <dependency>
 ```
 
-Use `workspace:*` for local package dependencies. Applications should consume shared contracts through `@shipyard/shared`, not through relative imports that cross package boundaries.
+Use `workspace:*` for local package dependencies. Applications should consume shared contracts
+through `@shipyard/shared`, not through relative imports that cross package boundaries. Email
+templates belong in `@shipyard/email` for the same reason.
 
 ## Environment files
 
-Never commit real environment files or secrets.
-
-Allowed:
+Never commit real environment files or secrets. Each app reads its own file — the repository root
+belongs to the API, `apps/web` to the web app:
 
 ```text
-.env.example
+.env                  API (from .env.example)
+apps/web/.env.local   Web (from apps/web/.env.example)
 ```
 
 Ignored:
@@ -79,7 +130,9 @@ Ignored:
 .env.production
 ```
 
-Use placeholder values only in example files. Do not commit passwords, tokens, OAuth credentials, database URLs, or private keys.
+Use placeholder values only in example files. Do not commit passwords, tokens, OAuth credentials,
+database URLs, or private keys. `NEXT_PUBLIC_*` values are inlined when the web app is built, so a
+change to one needs a rebuild rather than a restart.
 
 ## Branches
 
@@ -131,7 +184,9 @@ refactor(shared): simplify issue schema
 test: add issue service tests
 ```
 
-The commit-msg hook rejects messages that do not follow this format.
+The commit-msg hook rejects messages that do not follow this format. Keep the body wrapped at 100
+characters per line — `body-max-line-length` in `@commitlint/config-conventional` rejects longer
+lines.
 
 ## Hooks
 
@@ -152,6 +207,7 @@ Format and verify the repository:
 ```bash
 pnpm format
 pnpm check
+pnpm test
 git diff --check
 ```
 
@@ -165,7 +221,8 @@ lint
 → build
 ```
 
-For visible UI changes, manually verify the affected flow and include screenshots in the pull request.
+For visible UI changes, manually verify the affected flow and include screenshots in the pull
+request.
 
 ## Pull requests
 
@@ -173,11 +230,19 @@ For visible UI changes, manually verify the affected flow and include screenshot
 2. Open a pull request into `main`.
 3. Complete the pull request template.
 4. Explain the problem, solution, and verification steps.
-5. Wait for the `quality` CI check to pass.
+5. Wait for both the `quality` and `test` CI checks to pass.
 6. Resolve all review conversations.
 7. Rebase if `main` has advanced.
 8. Request review from the code owner when applicable.
 9. Use the repository's rebase merge strategy after approval.
+
+CI runs the same gates locally available through `pnpm check` and `pnpm test`:
+
+```text
+quality:  repository policy → frozen pnpm install → dependency audit → lint
+          → typecheck → format check → build
+test:     frozen pnpm install → API and web test suites
+```
 
 If the base branch has advanced:
 
@@ -197,9 +262,11 @@ Every pull request should:
 - Include relevant planning references when applicable.
 - Avoid unrelated formatting or dependency changes.
 - Include tests or explain why tests are not applicable.
-- Pass lint, typecheck, formatting, audit, and build checks.
+- Pass lint, typecheck, formatting, audit, build, and test checks.
 - Avoid committing secrets or generated output.
 - Include screenshots for visible UI changes.
+- Update the documentation in this repository when a change alters how the project is set up,
+  configured, or self-hosted.
 
 ## Keeping the repository healthy
 
@@ -210,9 +277,12 @@ pnpm audit --audit-level=high
 pnpm outdated
 ```
 
-Do not add a dependency to an individual app when it belongs at the root, and do not add application dependencies to the root just because the root can resolve them. Keep package dependency boundaries explicit.
+Do not add a dependency to an individual app when it belongs at the root, and do not add application
+dependencies to the root just because the root can resolve them. Keep package dependency boundaries
+explicit.
 
-Generated directories such as `node_modules`, `.turbo`, `.next`, `dist`, and TypeScript build-info files should not be committed.
+Generated directories such as `node_modules`, `.turbo`, `.next`, `dist`, `coverage`, and TypeScript
+build-info files should not be committed.
 
 ## Licensing
 
@@ -239,3 +309,8 @@ to what you send:
 
 If you want your contribution attributed differently than your commit author line, say so in the
 pull request.
+
+## Reporting security issues
+
+Do not open a public issue for a vulnerability. Follow [`SECURITY.md`](SECURITY.md) and report it
+privately through GitHub's private vulnerability reporting.

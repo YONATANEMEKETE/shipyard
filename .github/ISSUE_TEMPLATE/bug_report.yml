@@ -1,0 +1,70 @@
+name: Bug report
+description: Something in Shipyard is broken or behaves differently than documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a problem. Please do not include secrets — API keys,
+        tokens, connection strings, or personal data from a workspace you do not own.
+
+        For a security vulnerability, stop here and follow [SECURITY.md](https://github.com/YONATANEMEKETE/shipyard/blob/main/SECURITY.md) instead.
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where are you running Shipyard?
+      options:
+        - The hosted instance (shipyard.yonatanem.com)
+        - My own self-hosted instance
+        - Locally from source
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The shortest sequence that shows the problem.
+      placeholder: |
+        1. Open ...
+        2. Click ...
+        3. See ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: The deployment you are on, or `git rev-parse HEAD` when running from source.
+    validations:
+      required: false
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser and OS, and for a self-hosted or local instance the Node version and how the app is hosted.
+      placeholder: Firefox 143 on Linux; Node 26.7.0; Docker on a VPS
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, console output, or screenshots
+      description: Paste anything that shows the failure. Redact secrets and other people's data first.
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues for the same problem.
+          required: true
+        - label: This report contains no secrets, tokens, or another workspace's data.
+          required: true
